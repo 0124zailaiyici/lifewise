@@ -1,5 +1,7 @@
 package com.lifewise.service.impl;
 
+import com.lifewise.entity.Message;
+import com.lifewise.repository.MessageRepository;
 import com.lifewise.service.AiService;
 import com.lifewise.service.KnowledgeBaseService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +16,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -21,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 public class AiServiceImpl implements AiService {
 
     private final KnowledgeBaseService knowledgeBaseService;
+    private final MessageRepository messageRepository;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -34,7 +39,7 @@ public class AiServiceImpl implements AiService {
     private String model;
 
     @Override
-    public String chat(String message, String scene, Long userId) {
+    public String chat(String message, String scene, Long userId, Long conversationId) {
         // 1. 先查知识库缓存
         String cached = knowledgeBaseService.findAnswer(message, scene);
         if (cached != null) {
@@ -43,7 +48,7 @@ public class AiServiceImpl implements AiService {
         }
 
         // 2. 知识库未命中，调真实 AI
-        String answer = callAI(message, scene);
+        String answer = callAI(message, scene, conversationId);
 
         // 3. 保存到知识库
         knowledgeBaseService.saveAnswer(message, answer, scene);
@@ -51,29 +56,48 @@ public class AiServiceImpl implements AiService {
         return answer;
     }
 
-    private String callAI(String message, String scene) {
+    private String callAI(String message, String scene, Long conversationId) {
         if (apiKey == null || apiKey.isEmpty()) {
             log.warn("未配置 AI API Key，使用模拟回答");
             return mockResponse(message, scene);
         }
 
         try {
-            return callLLMApi(message, scene);
+            return callLLMApi(message, scene, conversationId);
         } catch (Exception e) {
             log.error("AI API 调用失败: {}", e.getMessage());
             return mockResponse(message, scene);
         }
     }
 
-    private String callLLMApi(String message, String scene) throws Exception {
-        String systemPrompt = buildSystemPrompt(scene) + "\n用户问题：" + message;
+    private String callLLMApi(String message, String scene, Long conversationId) throws Exception {
+        // 构建消息列表
+        List<String> messageJsons = new ArrayList<>();
 
+        // 1. system prompt
+        String systemPrompt = buildSystemPrompt(scene);
+        messageJsons.add("{\"role\":\"system\",\"content\":" + toJsonString(systemPrompt) + "}");
+
+        // 2. 对话历史（如果有 conversationId）
+        if (conversationId != null) {
+            List<Message> history = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+            for (Message msg : history) {
+                String content = msg.getContent();
+                if (msg.getImageUrl() != null && !msg.getImageUrl().isEmpty()) {
+                    content += " [图片: " + msg.getImageUrl() + "]";
+                }
+                messageJsons.add("{\"role\":\"" + msg.getRole() + "\",\"content\":" + toJsonString(content) + "}");
+            }
+        }
+
+        // 3. 当前用户消息
+        messageJsons.add("{\"role\":\"user\",\"content\":" + toJsonString(message) + "}");
+
+        // 组装请求体
+        String messagesArray = "[" + String.join(",", messageJsons) + "]";
         String body = String.format("""
-            {"model":"%s","messages":[
-              {"role":"system","content":%s},
-              {"role":"user","content":%s}
-            ],"temperature":0.7,"max_tokens":2000}
-            """, model, toJsonString(systemPrompt), toJsonString(message));
+            {"model":"%s","messages":%s,"temperature":0.7,"max_tokens":2000}
+            """, model, messagesArray);
 
         HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(apiUrl))
@@ -116,8 +140,6 @@ public class AiServiceImpl implements AiService {
             case "cooking":
                 schema = """
 ## 场景：做饭助手
-你是一个新手做饭助手。用户可能完全不会下厨，请给出傻瓜式指导。
-
 输出 JSON 格式：
 {
   "title": "菜名",
@@ -138,8 +160,6 @@ public class AiServiceImpl implements AiService {
             case "shopping":
                 schema = """
 ## 场景：买菜/水果挑选指南
-你是一个买菜水果挑选专家。回答要实用、可操作，给出具体的挑选方法。
-
 输出 JSON 格式：
 {
   "category": "品类名称",
@@ -156,8 +176,6 @@ public class AiServiceImpl implements AiService {
             case "repair":
                 schema = """
 ## 场景：家庭修理指南
-你是一个家庭修理小助手。安全第一，先判断问题严重程度。小问题给步骤，大问题建议找专业人士。
-
 输出 JSON 格式：
 {
   "problem": "问题描述",
@@ -174,8 +192,6 @@ public class AiServiceImpl implements AiService {
             case "housework":
                 schema = """
 ## 场景：家务技巧
-你是一个家务技巧专家。回答要简单有效，推荐最常见的方法和替代方案。
-
 输出 JSON 格式：
 {
   "problem": "问题描述",
@@ -194,8 +210,6 @@ public class AiServiceImpl implements AiService {
             case "health":
                 schema = """
 ## 场景：健康常识
-你是一个健康生活助手。回答要科学、通俗。涉及疾病症状时，先提示「建议咨询医生」，再给常识性建议。
-
 输出 JSON 格式：
 {
   "question": "问题描述",
@@ -212,8 +226,6 @@ public class AiServiceImpl implements AiService {
             case "fashion":
                 schema = """
 ## 场景：穿搭指南
-你是一个穿搭顾问。去繁就简，给出可直接照做的方案。
-
 输出 JSON 格式：
 {
   "occasion": "场合",
@@ -230,8 +242,6 @@ public class AiServiceImpl implements AiService {
             case "etiquette":
                 schema = """
 ## 场景：社交礼仪
-你是一个社交礼仪顾问。回答要得体、实用，给出具体的礼仪规范和行为建议。
-
 输出 JSON 格式：
 {
   "occasion": "场合",
@@ -249,8 +259,6 @@ public class AiServiceImpl implements AiService {
             case "pet":
                 schema = """
 ## 场景：宠物照顾
-你是一个宠物照顾助手。适合养宠新手，回答要详细、安全第一。
-
 输出 JSON 格式：
 {
   "pet_type": "宠物类型",
@@ -267,8 +275,6 @@ public class AiServiceImpl implements AiService {
             default:
                 schema = """
 ## 通用模式
-如果用户的问题不属于以上任何分类，请用自己的知识回答。
-
 输出 JSON 格式：
 {
   "question": "用户问题",

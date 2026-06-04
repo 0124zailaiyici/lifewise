@@ -16,47 +16,43 @@ class AiServiceTest {
 
     @Test
     void shouldReturnMockResponseWithoutApiKey() {
-        // 没有配置 API Key 时，应该返回 mock 回答
-        String response = aiService.chat("西红柿炒鸡蛋怎么做", "cooking", 1L);
-
+        String response = aiService.chat("西红柿炒鸡蛋怎么做", "cooking", 1L, null);
         assertNotNull(response);
         assertFalse(response.isEmpty());
-        // mock 是 JSON 格式，应包含 title
         assertTrue(response.contains("title") || response.contains("西红柿"));
     }
 
     @Test
     void shouldHandleDifferentScenes() {
-        String response = aiService.chat("怎么挑西瓜", "shopping", 1L);
+        String response = aiService.chat("怎么挑西瓜", "shopping", 1L, null);
         assertNotNull(response);
         assertFalse(response.isEmpty());
 
-        String response2 = aiService.chat("水龙头滴水怎么办", "repair", 1L);
+        String response2 = aiService.chat("水龙头滴水怎么办", "repair", 1L, null);
         assertNotNull(response2);
         assertFalse(response2.isEmpty());
 
-        String response3 = aiService.chat("衣服染色了怎么洗", "housework", 1L);
+        String response3 = aiService.chat("衣服染色了怎么洗", "housework", 1L, null);
         assertNotNull(response3);
         assertFalse(response3.isEmpty());
     }
 
     @Test
     void shouldHandleUnknownScene() {
-        String response = aiService.chat("你好", "unknown", 1L);
+        String response = aiService.chat("你好", "unknown", 1L, null);
         assertNotNull(response);
         assertFalse(response.isEmpty());
     }
 
     @Test
     void shouldHandleEmptyMessage() {
-        String response = aiService.chat("", "cooking", 1L);
+        String response = aiService.chat("", "cooking", 1L, null);
         assertNotNull(response);
     }
 
     @Test
     void shouldReturnValidJsonForCookingQuery() {
-        String response = aiService.chat("西红柿炒鸡蛋", "cooking", 1L);
-        // 对于包含"西红柿"和"鸡蛋"的 cooking 查询，mock 应返回结构化 JSON
+        String response = aiService.chat("西红柿炒鸡蛋", "cooking", 1L, null);
         if (!response.isEmpty() && response.trim().startsWith("{")) {
             try {
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();

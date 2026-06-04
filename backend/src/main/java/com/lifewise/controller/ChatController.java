@@ -46,7 +46,7 @@ public class ChatController {
         if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
             fullMessage += "\n[用户上传了图片: " + request.getImageUrl() + "]";
         }
-        String aiResponse = aiService.chat(fullMessage, request.getScene(), userId);
+        String aiResponse = aiService.chat(fullMessage, request.getScene(), userId, convId);
 
         Message aiMsg = new Message();
         aiMsg.setConversationId(convId);

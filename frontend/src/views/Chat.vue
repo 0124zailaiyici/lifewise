@@ -147,7 +147,16 @@ async function send() {
     }
   }
 
-  messages.value.push({ role: 'user', content: text || '[图片]', imageUrl: imageUrl || undefined })
+  // 图片单独作为一条消息
+  if (imageUrl) {
+    messages.value.push({ role: 'user', content: '[图片]', imageUrl })
+  }
+  // 文字单独作为一条消息
+  if (text) {
+    messages.value.push({ role: 'user', content: text })
+  }
+  // 如果没有文字也没有图片就不发
+  if (!imageUrl && !text) { loading.value = false; return }
   inputText.value = ''
   scrollBottom()
 

@@ -6,6 +6,7 @@ import Favorites from '../views/Favorites.vue'
 import Profile from '../views/Profile.vue'
 import Search from '../views/Search.vue'
 import Login from '../views/Login.vue'
+import Dashboard from '../views/Dashboard.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -16,6 +17,7 @@ const routes = [
   { path: '/history', component: History },
   { path: '/favorites', component: Favorites },
   { path: '/profile', component: Profile },
+  { path: '/dashboard', component: Dashboard },
   { path: '/search', component: Search }
 ]
 

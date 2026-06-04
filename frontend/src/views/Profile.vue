@@ -26,6 +26,11 @@
             <span>我的收藏</span>
             <el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
+          <div class="menu-item" @click="$router.push('/dashboard')">
+            <el-icon><DataAnalysis /></el-icon>
+            <span>数据统计</span>
+            <el-icon class="menu-arrow"><ArrowRight /></el-icon>
+          </div>
         </div>
       </div>
 
@@ -58,7 +63,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { HomeFilled, Timer, Star, User, ArrowRight, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -67,7 +72,9 @@ const user = computed(() => userStore.user)
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
-    confirmButtonText: '退出', cancelButtonText: '取消', type: 'warning'
+    confirmButtonText: '退出',
+    cancelButtonText: '取消',
+    type: 'warning'
   }).then(() => {
     userStore.logout()
     router.push('/login')

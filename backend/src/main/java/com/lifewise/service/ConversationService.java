@@ -8,4 +8,6 @@ public interface ConversationService {
     ConversationResponse getConversation(Long conversationId);
     List<ConversationResponse> getUserConversations(Long userId);
     List<ConversationResponse> getUserConversationsByScene(Long userId, String scene);
+    void deleteConversation(Long conversationId, Long userId);
 }
+

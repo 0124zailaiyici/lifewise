@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -22,7 +22,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    const msg = error.response?.data?.message || '网络错误'
+    const msg = error.response?.data?.message || '缃戠粶閿欒'
     console.error(msg)
     return Promise.reject(error)
   }
@@ -73,6 +73,14 @@ export function removeFavorite(messageId) {
 
 export function search(q) {
   return api.get('/search', { params: { q } })
+}
+
+export function getDashboard() {
+  return api.get('/stats/dashboard')
+}
+
+export function deleteConversation(id) {
+  return api.delete('/chat/conversations/' + id)
 }
 
 export function uploadImage(file) {

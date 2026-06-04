@@ -17,22 +17,22 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     private final KnowledgeBaseRepository knowledgeBaseRepository;
 
-    // 匹配阈值：至少命中 3 个关键词
-    private static final int MIN_KEYWORD_MATCH = 3;
+    /** Jaccard 相似度阈值：≥ 0.55 认为相似 */
+    private static final double SIMILARITY_THRESHOLD = 0.55;
 
-    // 中文停用词
-    private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
-        "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一",
-        "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着",
-        "没有", "看", "好", "自己", "这", "他", "她", "它", "们",
-        "怎么", "如何", "什么", "哪个", "哪些", "哪里", "为什么", "多少",
-        "可以", "能", "会", "应该", "需要", "想要", "打算",
-        "吗", "呢", "啊", "吧", "呀", "嘛", "哦", "嗯",
-        "做", "弄", "搞", "处理", "解决", "回事",
-        "请问", "请教", "求教", "求助",
-        "一下", "一点", "一些", "之后", "时候", "方法",
-        "步骤", "技巧", "注意", "事项", "流程"
-    ));
+    /** 最小绝对重叠字符数 */
+    private static final int MIN_OVERLAP_CHARS = 3;
+
+    /** 常见疑问前缀——提问时的开头虚词 */
+    private static final String[] QUESTION_PREFIXES = {
+        "怎么", "如何", "怎样", "怎么样", "请问", "请教", "求教", "求助"
+    };
+
+    /** 常见疑问后缀——提问时的结尾虚词 */
+    private static final String[] QUESTION_SUFFIXES = {
+        "怎么做", "如何做", "怎么弄", "怎么办", "怎么处理", "怎么解决",
+        "怎么选", "怎么挑", "怎么判断", "怎么看", "怎么吃", "怎么用"
+    };
 
     @Override
     public String findAnswer(String question, String scene) {
@@ -43,61 +43,53 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             list = knowledgeBaseRepository.findAll();
         }
 
-        // 标准化问题
         String normalized = normalizeQuestion(question);
-        // 提取关键词
-        Set<String> keywords = extractKeywords(normalized);
+        if (normalized.isEmpty()) return null;
 
-        if (keywords.isEmpty()) return null;
-
-        log.debug("知识库查询: question={}, keywords={}", question, keywords);
+        // 提取核心内容（去掉"怎么做"等前缀/后缀）
+        String core = extractCore(normalized);
+        if (core.isEmpty()) return null;
 
         KnowledgeBase best = null;
-        int bestScore = 0;
-        int bestExactBonus = 0;
+        double bestScore = 0;
 
         for (KnowledgeBase kb : list) {
             if (kb.getQuestion() == null) continue;
 
-            String kbQuestion = normalizeQuestion(kb.getQuestion());
-            int score = 0;
-            int matchedCount = 0;
+            String kbNormalized = normalizeQuestion(kb.getQuestion());
+            if (kbNormalized.isEmpty()) continue;
 
-            for (String kw : keywords) {
-                if (kbQuestion.contains(kw)) {
-                    // 长关键词权重更高
-                    int weight = Math.max(1, kw.length() - 1);
-                    score += weight;
-                    matchedCount++;
-                }
+            String kbCore = extractCore(kbNormalized);
+            if (kbCore.isEmpty()) continue;
+
+            // 1) 精确匹配（归一化后完全相同）
+            if (kbNormalized.equals(normalized)) {
+                log.info("知识库精确命中: question={}", kb.getQuestion());
+                return kb.getAnswer();
             }
 
-            // 精确匹配奖励
-            int exactBonus = 0;
-            if (kbQuestion.equals(normalized)) {
-                exactBonus = 100;
-            } else if (kbQuestion.contains(normalized) || normalized.contains(kbQuestion)) {
-                exactBonus = 50;
+            // 2) 核心内容完全相同（如 "西红柿炒鸡蛋怎么做" vs "如何做西红柿炒鸡蛋"）
+            if (kbCore.equals(core)) {
+                log.info("知识库核心命中: question={} ≈ core={}", kb.getQuestion(), core);
+                return kb.getAnswer();
             }
 
-            score += exactBonus;
-
-            // 比较：先比分数，再比精确匹配加成，再比有用次数
-            if (matchedCount >= MIN_KEYWORD_MATCH || exactBonus > 0) {
-                if (score > bestScore ||
-                    (score == bestScore && exactBonus > bestExactBonus) ||
-                    (score == bestScore && exactBonus == bestExactBonus &&
-                     best != null && kb.getHelpfulCount() > best.getHelpfulCount())) {
-                    bestScore = score;
-                    bestExactBonus = exactBonus;
-                    best = kb;
+            // 3) 核心内容 Jaccard 相似度
+            double sim = jaccardSimilarity(kbCore, core);
+            if (sim >= SIMILARITY_THRESHOLD) {
+                // 同时要求绝对重叠字符数
+                int overlap = charOverlap(kbCore, core);
+                if (overlap >= MIN_OVERLAP_CHARS) {
+                    if (sim > bestScore) {
+                        bestScore = sim;
+                        best = kb;
+                    }
                 }
             }
         }
 
         if (best != null) {
-            log.info("知识库命中: question={}, score={}, helpful={}",
-                best.getQuestion(), bestScore, best.getHelpfulCount());
+            log.info("知识库相似命中: question={}, sim={}", best.getQuestion(), String.format("%.2f", bestScore));
             return best.getAnswer();
         }
 
@@ -107,11 +99,20 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     @Override
     public void saveAnswer(String question, String answer, String scene) {
         try {
-            // 检查是否已存在相似问题，避免重复存储
+            if (question == null || question.trim().isEmpty()) return;
+            if (answer == null || answer.trim().isEmpty()) return;
+
+            // 去重检查：归一化后相同 OR 核心内容相同 都算重复
             String normalized = normalizeQuestion(question);
+            String core = extractCore(normalized);
+
             List<KnowledgeBase> existing = knowledgeBaseRepository.findBySceneOrderByHelpfulCountDesc(scene);
             for (KnowledgeBase kb : existing) {
-                if (kb.getQuestion() != null && normalizeQuestion(kb.getQuestion()).equals(normalized)) {
+                if (kb.getQuestion() == null) continue;
+                String kbNorm = normalizeQuestion(kb.getQuestion());
+                String kbCore = extractCore(kbNorm);
+
+                if (kbNorm.equals(normalized) || (!core.isEmpty() && kbCore.equals(core))) {
                     log.info("知识库已存在相似问题: {}", kb.getQuestion());
                     return;
                 }
@@ -122,7 +123,6 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             kb.setAnswer(answer);
             kb.setScene(scene);
             kb.setHelpfulCount(0);
-            kb.setTags(extractTags(question, scene, answer));
             knowledgeBaseRepository.save(kb);
             log.info("知识库新增: question={}, scene={}", kb.getQuestion(), scene);
         } catch (Exception e) {
@@ -139,16 +139,10 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             return knowledgeBaseRepository.findAll();
         }
 
-        // 先按包含关键词查找
         List<KnowledgeBase> results = knowledgeBaseRepository.findByQuestionContaining(keyword.trim());
 
-        // 按得分排序
-        String normalized = normalizeQuestion(keyword);
         results.sort((a, b) -> {
-            int scoreA = scoreQuestion(normalizeQuestion(a.getQuestion() != null ? a.getQuestion() : ""), normalized);
-            int scoreB = scoreQuestion(normalizeQuestion(b.getQuestion() != null ? b.getQuestion() : ""), normalized);
-            int cmp = Integer.compare(scoreB, scoreA);
-            if (cmp == 0) cmp = Integer.compare(
+            int cmp = Integer.compare(
                 b.getHelpfulCount() != null ? b.getHelpfulCount() : 0,
                 a.getHelpfulCount() != null ? a.getHelpfulCount() : 0);
             return cmp;
@@ -165,102 +159,83 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         });
     }
 
+    // ======================== 相似度算法 ========================
+
     /**
-     * 标准化问题：去空格、去标点、统一大小写、移除停用词片段
+     * 标准化问题：去空格、去标点、去换行
      */
     private String normalizeQuestion(String question) {
         if (question == null) return "";
-        // 去空格
         String s = question.trim();
-        // 去标点符号（中英文）
-        s = s.replaceAll("[\\p{P}\\p{S}，。！？、；：·……—\u3000]", "");
+        s = s.replaceAll("[\\p{P}\\p{S}，。！？、；：＂＇…—·\u3000]", "");
+        s = s.replaceAll("[\\n\\r\\t]", "").trim();
         return s;
     }
 
     /**
-     * 提取关键词：2~6 字中文片段，过滤停用词
+     * 提取核心内容：去掉"怎么做"、"如何"等疑问前缀/后缀
+     * 例: "西红柿炒鸡蛋怎么做" → "西红柿炒鸡蛋"
+     * 例: "如何做西红柿炒鸡蛋" → "西红柿炒鸡蛋"
      */
-    private Set<String> extractKeywords(String text) {
-        if (text == null || text.length() < 2) {
-            if (text != null && text.length() == 1) {
-                Set<String> single = new HashSet<>();
-                single.add(text);
-                return single;
-            }
-            return new HashSet<>();
-        }
+    private String extractCore(String normalized) {
+        String s = normalized;
 
-        Set<String> keywords = new LinkedHashSet<>();
-        int maxLen = Math.min(6, text.length());
-
-        // 提取所有 2~6 字片段
-        for (int len = 2; len <= maxLen; len++) {
-            for (int i = 0; i <= text.length() - len; i++) {
-                String seg = text.substring(i, i + len);
-                // 必须包含中文或英文字母
-                if (!seg.matches(".*[\\u4e00-\\u9fa5a-zA-Z]+.*")) continue;
-                // 过滤停用词
-                if (isStopWord(seg)) continue;
-                keywords.add(seg);
+        // 去掉前缀
+        for (String prefix : QUESTION_PREFIXES) {
+            if (s.startsWith(prefix)) {
+                s = s.substring(prefix.length());
+                break;
             }
         }
 
-        // 如果整个问题是关键词，添加进去
-        if (text.length() >= 2 && text.length() <= 10 && !isStopWord(text)) {
-            keywords.add(text);
+        // 去掉后缀
+        for (String suffix : QUESTION_SUFFIXES) {
+            if (s.endsWith(suffix)) {
+                s = s.substring(0, s.length() - suffix.length());
+                break;
+            }
         }
 
-        return keywords;
-    }
-
-    private boolean isStopWord(String word) {
-        if (STOP_WORDS.contains(word)) return true;
-        // 过滤纯数字
-        if (word.matches("\\d+")) return true;
-        // 过滤单字（除非是有效中文词的一部分）
-        if (word.length() == 1) return true;
-        return false;
+        return s.trim();
     }
 
     /**
-     * 评分函数：一个问题和关键词的匹配程度
+     * Jaccard 相似度：两个字符串字符集的交集大小 / 并集大小
      */
-    private int scoreQuestion(String kbQuestion, String normalized) {
-        if (kbQuestion.isEmpty()) return 0;
-        if (kbQuestion.equals(normalized)) return 100;
-        if (kbQuestion.contains(normalized) || normalized.contains(kbQuestion)) return 50;
+    private double jaccardSimilarity(String a, String b) {
+        if (a == null || b == null) return 0;
+        if (a.isEmpty() && b.isEmpty()) return 1;
 
-        // 关键词匹配：提取标准化的关键词
-        Set<String> keywords = extractKeywords(normalized);
-        int score = 0;
-        for (String kw : keywords) {
-            if (kbQuestion.contains(kw)) {
-                score += Math.max(1, kw.length() - 1);
-            }
-        }
-        return score;
+        Set<Character> setA = new HashSet<>();
+        for (char c : a.toCharArray()) setA.add(c);
+
+        Set<Character> setB = new HashSet<>();
+        for (char c : b.toCharArray()) setB.add(c);
+
+        // 交集
+        Set<Character> intersection = new HashSet<>(setA);
+        intersection.retainAll(setB);
+
+        // 并集
+        Set<Character> union = new HashSet<>(setA);
+        union.addAll(setB);
+
+        if (union.isEmpty()) return 0;
+        return (double) intersection.size() / union.size();
     }
 
     /**
-     * 提取标签：从问题和回答中提取有意义的关键词
+     * 两个字符串的公共字符数
      */
-    private String extractTags(String question, String scene, String answer) {
-        StringBuilder tags = new StringBuilder();
-        if (scene != null) tags.append(scene).append(",");
+    private int charOverlap(String a, String b) {
+        Set<Character> setA = new HashSet<>();
+        for (char c : a.toCharArray()) setA.add(c);
 
-        String normalized = normalizeQuestion(question != null ? question : "");
-        Set<String> keywords = extractKeywords(normalized);
+        Set<Character> intersection = new HashSet<>(setA);
+        Set<Character> setB = new HashSet<>();
+        for (char c : b.toCharArray()) setB.add(c);
+        intersection.retainAll(setB);
 
-        // 取最长的一些关键词作为标签（最多 5 个）
-        List<String> sorted = keywords.stream()
-            .sorted((a, b) -> Integer.compare(b.length(), a.length()))
-            .limit(5)
-            .collect(Collectors.toList());
-
-        if (!sorted.isEmpty()) {
-            tags.append(String.join(",", sorted));
-        }
-
-        return tags.length() > 200 ? tags.substring(0, 200) : tags.toString();
+        return intersection.size();
     }
 }

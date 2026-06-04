@@ -32,16 +32,8 @@ public class ChatController {
             convId = conv.getId();
         }
 
-        // 构造传给 AI 的消息（含图片信息），但保存时用原始内容
-        String aiMessage = request.getMessage();
-        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
-            aiMessage += "\n[用户上传了图片: " + request.getImageUrl() + "]";
-        }
+        String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId, convId, request.getImageUrl());
 
-        // 先调 AI（历史消息从数据库加载，不含当前未保存的消息）
-        String aiResponse = aiService.chat(aiMessage, request.getScene(), userId, convId);
-
-        // AI 返回后再保存用户消息（保存原始内容）和 AI 消息
         Message userMsg = new Message();
         userMsg.setConversationId(convId);
         userMsg.setRole("user");
@@ -65,6 +57,13 @@ public class ChatController {
         resp.setCreatedAt(aiMsg.getCreatedAt());
 
         return ApiResponse.success(resp);
+    }
+
+    @DeleteMapping("/conversations/{id}")
+    public ApiResponse<?> deleteConversation(@RequestAttribute Long userId,
+                                                  @PathVariable Long id) {
+        conversationService.deleteConversation(id, userId);
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/conversations")

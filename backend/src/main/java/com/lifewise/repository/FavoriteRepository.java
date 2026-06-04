@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
+    long countByUserId(Long userId);
     List<Favorite> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Favorite> findByUserIdAndMessageId(Long userId, Long messageId);
     boolean existsByUserIdAndMessageId(Long userId, Long messageId);

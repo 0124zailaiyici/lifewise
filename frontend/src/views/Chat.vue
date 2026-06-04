@@ -131,6 +131,7 @@ async function send() {
   if (currentTyping.value) return
 
   loading.value = true
+  const _sendTime = Date.now() // 记录发送时间，用于判断是否为缓存命中
 
   // 先上传图片
   let imageUrl = ''
@@ -161,7 +162,7 @@ async function send() {
   scrollBottom()
 
   try {
-    const res = await sendChat(text || '[图片]', currentScene.value, convId.value, imageUrl || undefined)
+    const res = await sendChat(text || '请分析这张图片', currentScene.value, convId.value, imageUrl || undefined)
     const reply = res.data
     const fullContent = reply.content
 
@@ -184,25 +185,38 @@ async function send() {
 
     const msgIdx = messages.value.length - 1
     const fullHtml = renderContent(fullContent)
-    let charIdx = 0
-    const speed = 50
-    const batchSize = 5
+    const elapsed = Date.now() - _sendTime
 
-    const timer = setInterval(() => {
+    // 快速响应（<800ms）说明缓存命中，直接显示不用打字动画
+    if (elapsed < 800) {
       const m = messages.value[msgIdx]
-      if (!m) { clearInterval(timer); return }
-      charIdx += batchSize
-      if (charIdx >= fullHtml.length) {
-        clearInterval(timer)
+      if (m) {
         m._typing = false
         m._displayHtml = fullHtml
         currentTyping.value = false
         scrollBottom()
-        return
       }
-      m._displayHtml = fullHtml.substring(0, charIdx)
-      if (charIdx % 15 < batchSize) scrollBottom()
-    }, speed)
+    } else {
+      let charIdx = 0
+      const speed = 50
+      const batchSize = 5
+
+      const timer = setInterval(() => {
+        const m = messages.value[msgIdx]
+        if (!m) { clearInterval(timer); return }
+        charIdx += batchSize
+        if (charIdx >= fullHtml.length) {
+          clearInterval(timer)
+          m._typing = false
+          m._displayHtml = fullHtml
+          currentTyping.value = false
+          scrollBottom()
+          return
+        }
+        m._displayHtml = fullHtml.substring(0, charIdx)
+        if (charIdx % 15 < batchSize) scrollBottom()
+      }, speed)
+    }
 
   } catch (e) {
     loading.value = false
@@ -320,7 +334,33 @@ function renderContent(content) {
   if (!content) return ''
   const data = tryParseJsonSafe(content)
   if (data) return renderStructured(data)
-  return escapeHtml(content).replace(/\n/g, '<br>')
+  // 非 JSON 内容：渲染为 Markdown
+  return renderMarkdown(content)
+}
+
+// 基础 Markdown 渲染
+function renderMarkdown(text) {
+  let html = escapeHtml(text)
+    // 代码块
+    // 标题 (## 和 ###)
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    // 粗体和斜体
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // 行内代码
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // 无序列表
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    // 有序列表
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    // 换行
+    .replace(/\n/g, '<br>')
+    // 合并连续的 li
+    .replace(/(<li>.*?<\/li>)(<br>\s*)(?=<li>)/g, '$1\n')
+    // 包裹列表
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+  return '<div class="md-content">' + html + '</div>'
 }
 
 function tryParseJsonSafe(text) {
@@ -457,6 +497,42 @@ function renderStructured(data) {
   if (data.summary_slogan) parts.push(`<div class="rc-tip">📝 ${escapeHtml(data.summary_slogan)}</div>`)
   if (data.disclaimer) parts.push(`<div class="rc-tip">${escapeHtml(data.disclaimer)}</div>`)
 
+  // 食谱推荐：一周计划
+  if (Array.isArray(data.weekly_plan)) {
+    parts.push('<div class="rc-sec">📅 一周食谱</div>')
+    data.weekly_plan.forEach(day => {
+      let dayHtml = '<div class="rc-day-plan">'
+      dayHtml += '<div class="rc-day-title">' + escapeHtml(day.day || '') + '</div>'
+      if (Array.isArray(day.meals)) {
+        day.meals.forEach(meal => {
+          dayHtml += '<div class="rc-meal">'
+          dayHtml += '<span class="rc-meal-type">' + escapeHtml(meal.type || '') + '</span>'
+          dayHtml += '<span class="rc-meal-name">' + escapeHtml(meal.name || '') + '</span>'
+          if (meal.time) dayHtml += '<span class="rc-meal-time">⏱️ ' + escapeHtml(meal.time) + '</span>'
+          if (meal.difficulty) dayHtml += '<span class="rc-meal-diff">' + escapeHtml(meal.difficulty) + '</span>'
+          dayHtml += '</div>'
+        })
+      }
+      dayHtml += '</div>'
+      parts.push(dayHtml)
+    })
+  }
+
+  // 食谱推荐：购物清单
+  if (Array.isArray(data.shopping_list)) {
+    parts.push('<div class="rc-sec">🛒 购物清单</div>')
+    data.shopping_list.forEach(cat => {
+      let catHtml = '<div class="rc-shop-cat">'
+      catHtml += '<div class="rc-shop-title">' + escapeHtml(cat.category || '') + '</div>'
+      if (Array.isArray(cat.items)) {
+        cat.items.forEach(item => {
+          catHtml += '<div class="rc-item">· ' + escapeHtml(item) + '</div>'
+        })
+      }
+      catHtml += '</div>'
+      parts.push(catHtml)
+    })
+  }
   // 兜底：未处理的字段
   for (const [key, val] of Object.entries(data)) {
     if (['title','difficulty','time','servings','ingredients','materials','steps','selection_steps','挑选步骤','tools','suggestions','outfits','do_list','dont_list','common_mistakes','误區','常见误区','key_principles','color_palette','avoid','safety_tip','prevention','professional_advice','when_to_see_vet','when_to_see_doctor','storage_tip','style','occasion','cultural_notes','pet_type','topic','category','tips','key_point','summary_slogan','disclaimer','answer','severity','question','problem','品类','need_professional','season'].includes(key)) continue
@@ -533,6 +609,15 @@ function renderDoItem(parts, d) {
 .preview-full { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
 .preview-close { position: fixed; top: 20px; right: 24px; color: #fff; font-size: 28px; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,.15); }
 
+.md-content { line-height: 1.8; font-size: 14px; color: #333; }
+.md-content h3 { font-size: 16px; margin: 16px 0 8px; color: #1a1a1a; }
+.md-content h4 { font-size: 14px; margin: 12px 0 6px; color: #333; }
+.md-content strong { color: #1a1a1a; }
+.md-content code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 13px; color: #e11d48; }
+.md-content ul { margin: 4px 0; padding-left: 20px; }
+.md-content li { margin: 2px 0; }
+.md-content em { color: #666; }
+
 .rc-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin: 4px 0; }
 .rc-card h4 { font-size: 16px; margin: 0 0 4px; }
 .rc-tags { font-size: 12px; color: #666; margin-bottom: 10px; }
@@ -544,4 +629,14 @@ function renderDoItem(parts, d) {
 .rc-guide-step { margin: 8px 0; }
 .rc-guide-title { font-weight: 600; font-size: 13px; color: #444; margin-bottom: 4px; }
 .rc-color-tag { display: inline-block; background: #f0f0f0; border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 2px; }
+.rc-day-plan { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; margin: 6px 0; }
+.rc-day-title { font-weight: 600; font-size: 14px; color: #1a202c; margin-bottom: 6px; }
+.rc-meal { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; border-bottom: 1px solid #e2e8f0; }
+.rc-meal:last-child { border-bottom: none; }
+.rc-meal-type { background: #22c55e; color: #fff; border-radius: 4px; padding: 1px 6px; font-size: 11px; white-space: nowrap; }
+.rc-meal-name { flex: 1; color: #333; }
+.rc-meal-time { color: #888; font-size: 12px; white-space: nowrap; }
+.rc-meal-diff { color: #999; font-size: 11px; white-space: nowrap; }
+.rc-shop-cat { margin: 6px 0; }
+.rc-shop-title { font-weight: 600; font-size: 13px; color: #444; margin-bottom: 4px; }
 </style>

@@ -9,6 +9,8 @@ public enum Scene {
     fashion("👔", "穿搭指南"),
     etiquette("🤝", "社交礼仪"),
     pet("🐾", "宠物照顾"),
+    writing("✍️", "写作助手"),
+    mealplan("📅", "食谱推荐"),
     other("📝", "其他");
 
     public final String icon;

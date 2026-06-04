@@ -36,7 +36,7 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public ConversationResponse getConversation(Long conversationId) {
         Conversation conv = conversationRepository.findById(conversationId)
-            .orElseThrow(() -> new RuntimeException("对话不存在"));
+            .orElseThrow(() -> new RuntimeException("瀵硅瘽涓嶅瓨鍦?"));
         ConversationResponse resp = toResponse(conv);
         List<Message> messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
         resp.setMessages(messages.stream().map(this::toMessageResponse).collect(Collectors.toList()));
@@ -68,6 +68,18 @@ public class ConversationServiceImpl implements ConversationService {
         r.setSceneLabel(s.label);
         r.setMessages(new ArrayList<>());
         return r;
+    }
+
+    @Override
+    @Transactional
+    public void deleteConversation(Long conversationId, Long userId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+            .orElseThrow(() -> new RuntimeException("对话不存在"));
+        if (!conv.getUserId().equals(userId)) {
+            throw new RuntimeException("无权删除此对话");
+        }
+        messageRepository.deleteByConversationId(conversationId);
+        conversationRepository.delete(conv);
     }
 
     private MessageResponse toMessageResponse(Message msg) {

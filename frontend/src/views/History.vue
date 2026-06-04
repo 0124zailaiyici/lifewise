@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <h3>📋 历史记录</h3>
@@ -9,7 +9,7 @@
         <div class="loading-text">加载中...</div>
       </div>
       <div v-else-if="groups.length === 0" class="empty-state">
-        <div class="empty-icon">📭</div>
+        <div class="empty-icon">📥</div>
         <div class="empty-text">暂无历史记录</div>
       </div>
 
@@ -22,6 +22,9 @@
             <div class="title">{{ conv.title }}</div>
             <div class="meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
           </div>
+          <el-button text type="danger" size="small" class="del-btn" @click.stop="handleDelete(conv.id)">
+            <el-icon><Delete /></el-icon>
+          </el-button>
         </div>
       </div>
     </div>
@@ -37,8 +40,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getConversations } from '../api'
-import { HomeFilled, Timer, Star, User } from '@element-plus/icons-vue'
+import { getConversations, deleteConversation } from '../api'
+import { HomeFilled, Timer, Star, User, Delete } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const loading = ref(true)
 const groups = ref([])
@@ -57,6 +61,19 @@ onMounted(async () => {
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 })
+
+async function handleDelete(id) {
+  try {
+    await deleteConversation(id)
+    ElMessage.success('已删除')
+    groups.value = groups.value.map(g => ({
+      ...g,
+      items: g.items.filter(c => c.id !== id)
+    })).filter(g => g.items.length > 0)
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
+}
 
 function formatTime(t) {
   if (!t) return ''
@@ -77,6 +94,7 @@ function formatTime(t) {
 .info { flex: 1; }
 .title { font-size: 14px; font-weight: 500; color: #333; }
 .meta { font-size: 12px; color: #888; margin-top: 3px; }
+.del-btn { flex-shrink: 0; margin-left: 8px; }
 
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
 .empty-icon, .loading-text { font-size: 48px; margin-bottom: 12px; }

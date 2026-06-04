@@ -64,7 +64,9 @@ const scenes = [
   { key: 'health', icon: '🏥', label: '健康常识', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' },
   { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' },
   { key: 'etiquette', icon: '🤝', label: '社交礼仪', bg: 'linear-gradient(135deg, #ecfdf5, #a7f3d0)' },
-  { key: 'pet', icon: '🐾', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' }
+  { key: 'pet', icon: '🐾', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' },
+  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'linear-gradient(135deg, #f0f9ff, #bae6fd)' },
+  { key: 'mealplan', icon: '📅', label: '食谱推荐', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' }
 ]
 
 onMounted(async () => {

@@ -33,8 +33,13 @@ ai:
   api-url: https://api.deepseek.com/v1/chat/completions
   api-key: sk-e85e1e7be2c14f6eb8555c3eff46e4ce
   model: deepseek-v4-flash
+  # 图片识别（多模态）配置 - 使用小米 MiMo Omni
+  vision-api-url: https://token-plan-cn.xiaomimimo.com/v1/chat/completions
+  vision-api-key: tp-c71j70frfnzpxd1kzwkmi7c7mux4gter70i1zydnmeb5bl23
+  vision-model: mimo-v2-omni
 
 app:
+  vision-enabled: true
   upload-dir: ./uploads
 
 logging:

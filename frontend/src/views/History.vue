@@ -1,12 +1,17 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="page-header">
       <h3>📋 历史记录</h3>
     </div>
 
     <div class="content">
-      <div v-if="loading" class="loading">加载中...</div>
-      <div v-else-if="groups.length === 0" class="empty">暂无历史记录</div>
+      <div v-if="loading" class="loading-state">
+        <div class="loading-text">加载中...</div>
+      </div>
+      <div v-else-if="groups.length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">暂无历史记录</div>
+      </div>
 
       <div v-for="group in groups" :key="group.date" class="group">
         <div class="date-label">{{ group.date }}</div>
@@ -49,11 +54,8 @@ onMounted(async () => {
       map[date].items.push(conv)
     })
     groups.value = Object.values(map)
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loading.value = false
-  }
+  } catch (e) { console.error(e) }
+  finally { loading.value = false }
 })
 
 function formatTime(t) {
@@ -63,18 +65,24 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 16px 20px; border-bottom: 1px solid #eee; }
-.page-header h3 { font-size: 17px; font-weight: 600; color: #333; }
+.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; }
+.page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
 .content { padding: 16px 20px 80px; }
-.group { margin-bottom: 20px; }
-.date-label { font-size: 12px; color: #999; margin-bottom: 8px; }
-.history-item { display: flex; align-items: center; padding: 12px; background: #fafafa; border-radius: 12px; margin-bottom: 8px; cursor: pointer; }
-.icon { font-size: 24px; margin-right: 12px; }
+
+.group { margin-bottom: 24px; }
+.date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; }
+.history-item { display: flex; align-items: center; padding: 14px; background: #f5f5f5; border-radius: 14px; border: 1px solid #eee; margin-bottom: 10px; cursor: pointer; transition: .15s; }
+.history-item:active { transform: scale(.98); }
+.icon { font-size: 26px; margin-right: 14px; }
 .info { flex: 1; }
 .title { font-size: 14px; font-weight: 500; color: #333; }
-.meta { font-size: 12px; color: #999; margin-top: 2px; }
-.loading, .empty { text-align: center; padding: 60px 0; color: #999; font-size: 14px; }
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 56px; background: #fff; border-top: 1px solid #eee; display: flex; }
+.meta { font-size: 12px; color: #888; margin-top: 3px; }
+
+.loading-state, .empty-state { text-align: center; padding: 80px 20px; }
+.empty-icon, .loading-text { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; color: #777; }
+
+.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 60px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding-bottom: 4px; }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

@@ -296,6 +296,8 @@ function fallbackCopy(text) {
   } catch { ElMessage.error('复制失败') }
 }
 
+function previewImage(url) { previewImg.value = url }
+
 async function toggleFavorite(index) {
   const msg = messages.value[index]
   if (!msg || !msg._id) { ElMessage.warning('无法收藏该消息'); return }

@@ -75,6 +75,7 @@ public class ConversationServiceImpl implements ConversationService {
         r.setId(msg.getId());
         r.setRole(msg.getRole());
         r.setContent(msg.getContent());
+        r.setImageUrl(msg.getImageUrl());
         r.setCreatedAt(msg.getCreatedAt());
         return r;
     }

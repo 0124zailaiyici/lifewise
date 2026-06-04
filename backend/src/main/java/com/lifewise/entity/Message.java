@@ -21,6 +21,9 @@ public class Message {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(length = 500)
+    private String imageUrl;
+
     private LocalDateTime createdAt;
 
     @PrePersist

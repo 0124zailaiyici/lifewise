@@ -15,7 +15,14 @@
       <div v-for="(msg, i) in messages" :key="i" :class="'msg msg-' + msg.role">
         <div class="bubble">
           <div v-if="msg._typing"><span v-html="msg._displayHtml"></span><span class="cursor">|</span></div>
-          <div v-else v-html="renderContent(msg.content)"></div>
+          <div v-else>
+            <!-- 用户图片 -->
+            <div v-if="msg.imageUrl" class="msg-image" @click="previewImage(msg.imageUrl)">
+              <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" />
+            </div>
+            <!-- 内容 -->
+            <div v-html="renderContent(msg.content)"></div>
+          </div>
         </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
           <el-button text size="small" @click="copyMsg(i)">📋 复制</el-button>
@@ -32,10 +39,22 @@
       </div>
     </div>
 
+    <!-- 图片预览弹窗 -->
+    <div v-if="previewImg" class="image-overlay" @click="previewImg = null">
+      <img :src="imgUrl(previewImg)" class="preview-full" />
+      <div class="preview-close" @click="previewImg = null">✕</div>
+    </div>
+
     <div class="input-area">
+      <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
+      <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
+      <div v-if="pendingImage" class="pending-preview">
+        <img :src="pendingImage" />
+        <span class="pending-remove" @click="pendingImage = null; pendingFile = null">✕</span>
+      </div>
       <el-input v-model="inputText" ref="inputRef" placeholder="输入你的问题..." size="large"
                 @keyup.enter="send" :disabled="loading" clearable />
-      <el-button type="success" :icon="Promotion" circle @click="send" :disabled="loading || !inputText.trim()" />
+      <el-button type="success" :icon="Promotion" circle @click="send" :disabled="loading || !inputText.trim() && !pendingFile" />
     </div>
   </div>
 </template>
@@ -43,14 +62,15 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { sendChat, getConversation, addFavorite, removeFavorite } from '../api'
-import { Promotion } from '@element-plus/icons-vue'
+import { sendChat, getConversation, addFavorite, removeFavorite, uploadImage } from '../api'
+import { Promotion, Picture } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const msgBox = ref(null)
 const inputRef = ref(null)
+const fileInput = ref(null)
 const messages = ref([])
 const inputText = ref('')
 const loading = ref(false)
@@ -58,6 +78,32 @@ const convId = ref(null)
 const currentScene = ref(localStorage.getItem('currentScene') || '')
 const currentLabel = ref(localStorage.getItem('sceneLabel') || 'AI 助手')
 const currentTyping = ref(false)
+
+// 图片相关
+const pendingFile = ref(null)
+const pendingImage = ref(null)  // base64 preview
+const previewImg = ref(null)
+
+function imgUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return 'http://localhost:8080' + url
+}
+
+function triggerUpload() { fileInput.value?.click() }
+
+async function handleFileSelect(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { ElMessage.warning('请选择图片文件'); return }
+  if (file.size > 10 * 1024 * 1024) { ElMessage.warning('图片不能超过10MB'); return }
+  pendingFile.value = file
+  // 本地预览
+  const reader = new FileReader()
+  reader.onload = (ev) => { pendingImage.value = ev.target?.result }
+  reader.readAsDataURL(file)
+  e.target.value = ''
+}
 
 onMounted(async () => {
   await nextTick()
@@ -81,16 +127,32 @@ onMounted(async () => {
 
 async function send() {
   const text = inputText.value.trim()
-  if (!text || loading.value) return
+  if ((!text && !pendingFile.value) || loading.value) return
   if (currentTyping.value) return
 
-  messages.value.push({ role: 'user', content: text })
-  inputText.value = ''
   loading.value = true
+
+  // 先上传图片
+  let imageUrl = ''
+  if (pendingFile.value) {
+    try {
+      const uploadRes = await uploadImage(pendingFile.value)
+      imageUrl = uploadRes.data.url
+      pendingFile.value = null
+      pendingImage.value = null
+    } catch (e) {
+      ElMessage.error('图片上传失败')
+      loading.value = false
+      return
+    }
+  }
+
+  messages.value.push({ role: 'user', content: text || '[图片]', imageUrl: imageUrl || undefined })
+  inputText.value = ''
   scrollBottom()
 
   try {
-    const res = await sendChat(text, currentScene.value, convId.value)
+    const res = await sendChat(text || '[图片]', currentScene.value, convId.value, imageUrl || undefined)
     const reply = res.data
     const fullContent = reply.content
 
@@ -162,7 +224,6 @@ function copyMsg(index) {
 }
 
 function tryParseJson(text) {
-  // 去掉可能的 markdown 代码块标记
   let clean = text.trim()
   if (clean.startsWith('```')) {
     clean = clean.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
@@ -173,15 +234,13 @@ function tryParseJson(text) {
 function formatObjForCopy(obj) {
   let parts = []
   if (obj.title) parts.push('【' + obj.title + '】')
-  // 食材
   if (obj.ingredients) {
     parts.push(''); parts.push('食材：')
     obj.ingredients.forEach(i => {
-      if (typeof i === 'object') parts.push('  ' + formatIngredient(i))
+      if (typeof i === 'object') parts.push('  ' + (i.name || '') + (i.amount ? ' ' + i.amount : '') + (i.note ? '（' + i.note + '）' : ''))
       else parts.push('  ' + i)
     })
   }
-  // 材料
   if (obj.materials) {
     parts.push(''); parts.push('材料：')
     obj.materials.forEach(m => {
@@ -189,7 +248,6 @@ function formatObjForCopy(obj) {
       else parts.push('  ' + m)
     })
   }
-  // 步骤
   if (obj.steps) {
     parts.push(''); parts.push('步骤：')
     obj.steps.forEach(s => {
@@ -197,7 +255,6 @@ function formatObjForCopy(obj) {
       else parts.push('  ' + s)
     })
   }
-  // 挑选步骤
   const selSteps = obj.selection_steps || obj.挑选步骤
   if (selSteps) {
     selSteps.forEach(s => {
@@ -215,24 +272,11 @@ function formatObjForCopy(obj) {
   }
   if (obj.key_point) { parts.push(''); parts.push('关键：' + obj.key_point) }
   if (obj.summary_slogan) { parts.push(''); parts.push(obj.summary_slogan) }
-  if (obj.common_mistakes) {
-    parts.push(''); parts.push('误区：')
-    obj.common_mistakes.forEach(m => parts.push('  ' + m))
-  }
+  if (obj.common_mistakes) { parts.push(''); parts.push('误区：'); obj.common_mistakes.forEach(m => parts.push('  ' + m)) }
   if (obj.answer) parts.push(obj.answer)
-  if (obj.severity) parts.push('严重程度：' + obj.severity)
   if (obj.safety_tip) parts.push('安全提示：' + obj.safety_tip)
-  if (obj.when_to_see_doctor) parts.push('就医指征：' + obj.when_to_see_doctor)
   if (obj.storage_tip) parts.push('保存：' + obj.storage_tip)
-
   return parts.join('\n')
-}
-
-function formatIngredient(i) {
-  let s = i.name || ''
-  if (i.amount) s += ' ' + i.amount
-  if (i.note) s += '（' + i.note + '）'
-  return s
 }
 
 function doCopy(text) {
@@ -263,10 +307,8 @@ async function toggleFavorite(index) {
 
 function renderContent(content) {
   if (!content) return ''
-  // 先尝试解析 JSON（可能带 markdown 包裹）
   const data = tryParseJsonSafe(content)
   if (data) return renderStructured(data)
-  // 不是 JSON，按纯文本渲染
   return escapeHtml(content).replace(/\n/g, '<br>')
 }
 
@@ -286,7 +328,6 @@ function escapeHtml(s) {
 function renderStructured(data) {
   let parts = []
 
-  // ===== 标题行 =====
   if (data.title) {
     parts.push(`<h4>${escapeHtml(data.title)}</h4>`)
     let tags = ''
@@ -300,7 +341,6 @@ function renderStructured(data) {
     if (data.severity) parts.push(`<div class="rc-tags">严重程度：${escapeHtml(data.severity)}</div>`)
   } else if (data.question) parts.push(`<h4>${escapeHtml(data.question)}</h4>`)
 
-  // ===== 食材 / 材料 =====
   if (Array.isArray(data.ingredients)) {
     parts.push('<div class="rc-sec">🥘 食材</div>')
     data.ingredients.forEach(i => renderItem(parts, i))
@@ -310,7 +350,6 @@ function renderStructured(data) {
     data.materials.forEach(m => renderItem(parts, m))
   }
 
-  // ===== 步骤 =====
   if (Array.isArray(data.steps)) {
     parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
     data.steps.forEach(s => {
@@ -328,24 +367,20 @@ function renderStructured(data) {
     })
   }
 
-  // ===== 挑选步骤 =====
   const selSteps = data.selection_steps || data.挑选步骤
   if (Array.isArray(selSteps)) {
     parts.push('<div class="rc-sec">🔍 挑选步骤</div>')
     selSteps.forEach(s => {
-      if (typeof s === 'object') {
-        parts.push(`<div class="rc-guide-step"><div class="rc-guide-title">${escapeHtml(s.step_name || s.步骤名称 || '')}</div><div class="rc-item">${escapeHtml(s.action || s.具体操作 || '')}</div></div>`)
-      } else parts.push(`<div class="rc-item">· ${escapeHtml(s)}</div>`)
+      if (typeof s === 'object') parts.push(`<div class="rc-guide-step"><div class="rc-guide-title">${escapeHtml(s.step_name || s.步骤名称 || '')}</div><div class="rc-item">${escapeHtml(s.action || s.具体操作 || '')}</div></div>`)
+      else parts.push(`<div class="rc-item">· ${escapeHtml(s)}</div>`)
     })
   }
 
-  // ===== 工具 =====
   if (Array.isArray(data.tools)) {
     parts.push('<div class="rc-sec">🔧 工具</div>')
     data.tools.forEach(t => parts.push(`<div class="rc-item">· ${escapeHtml(t)}</div>`))
   }
 
-  // ===== 建议 =====
   if (Array.isArray(data.suggestions)) {
     parts.push('<div class="rc-sec">💡 建议</div>')
     data.suggestions.forEach(s => {
@@ -354,7 +389,6 @@ function renderStructured(data) {
     })
   }
 
-  // ===== 穿搭单品 =====
   if (Array.isArray(data.outfits)) {
     parts.push('<div class="rc-sec">👕 推荐穿搭</div>')
     data.outfits.forEach(o => {
@@ -363,7 +397,6 @@ function renderStructured(data) {
     })
   }
 
-  // ===== 该做/不该做 =====
   if (Array.isArray(data.do_list)) {
     parts.push('<div class="rc-sec">✅ 应该做</div>')
     data.do_list.forEach(d => renderDoItem(parts, d))
@@ -373,29 +406,24 @@ function renderStructured(data) {
     data.dont_list.forEach(d => renderDoItem(parts, d))
   }
 
-  // ===== 常见误区/错误 =====
   const mistakes = data.common_mistakes || data.误區 || data.常见误区
   if (Array.isArray(mistakes)) {
     parts.push('<div class="rc-sec">⚠️ 常见误区</div>')
     mistakes.forEach(m => parts.push(`<div class="rc-item">· ${escapeHtml(m)}</div>`))
   }
 
-  // ===== 关键原则 =====
   if (Array.isArray(data.key_principles)) {
     parts.push('<div class="rc-sec">📌 关键原则</div>')
     data.key_principles.forEach(p => parts.push(`<div class="rc-item">· ${escapeHtml(p)}</div>`))
   }
 
-  // ===== 颜色搭配 =====
   if (Array.isArray(data.color_palette)) {
     parts.push('<div class="rc-sec">🎨 推荐配色</div>')
     data.color_palette.forEach(c => parts.push(`<span class="rc-color-tag">${escapeHtml(c)}</span> `))
   }
 
-  // ===== 避免 =====
   if (data.avoid) parts.push(`<div class="rc-sec">🚫 避免</div><div class="rc-item">${escapeHtml(data.avoid)}</div>`)
 
-  // ===== 单行字段 =====
   if (data.safety_tip) parts.push(`<div class="rc-tip">⚠️ ${escapeHtml(data.safety_tip)}</div>`)
   if (data.prevention) parts.push(`<div class="rc-item"><strong>预防</strong>：${escapeHtml(data.prevention)}</div>`)
   if (data.professional_advice) parts.push(`<div class="rc-tip">🔧 ${escapeHtml(data.professional_advice)}</div>`)
@@ -409,18 +437,16 @@ function renderStructured(data) {
   if (data.topic) parts.push(`<div class="rc-item"><strong>主题</strong>：${escapeHtml(data.topic)}</div>`)
   if (data.category) parts.push(`<div class="rc-item"><strong>类别</strong>：${escapeHtml(data.category)}</div>`)
 
-  // ===== 提示 / tips =====
   if (data.tips) {
     if (typeof data.tips === 'string') parts.push(`<div class="rc-tip">💡 ${escapeHtml(data.tips)}</div>`)
     else if (Array.isArray(data.tips)) data.tips.forEach(t => parts.push(`<div class="rc-tip">💡 ${escapeHtml(t)}</div>`))
   }
 
-  // ===== 关键点、总结口诀 =====
   if (data.key_point) parts.push(`<div class="rc-item"><strong>🔥 关键</strong>：${escapeHtml(data.key_point)}</div>`)
   if (data.summary_slogan) parts.push(`<div class="rc-tip">📝 ${escapeHtml(data.summary_slogan)}</div>`)
   if (data.disclaimer) parts.push(`<div class="rc-tip">${escapeHtml(data.disclaimer)}</div>`)
 
-  // ===== 其余未处理的字段（兜底） =====
+  // 兜底：未处理的字段
   for (const [key, val] of Object.entries(data)) {
     if (['title','difficulty','time','servings','ingredients','materials','steps','selection_steps','挑选步骤','tools','suggestions','outfits','do_list','dont_list','common_mistakes','误區','常见误区','key_principles','color_palette','avoid','safety_tip','prevention','professional_advice','when_to_see_vet','when_to_see_doctor','storage_tip','style','occasion','cultural_notes','pet_type','topic','category','tips','key_point','summary_slogan','disclaimer','answer','severity','question','problem','品类','need_professional','season'].includes(key)) continue
     if (typeof val === 'string' && val.length < 200) {
@@ -428,7 +454,6 @@ function renderStructured(data) {
     }
   }
 
-  // ===== 回答 =====
   if (data.answer) {
     parts.push(`<div class="rc-item" style="margin-top:8px">${escapeHtml(data.answer).replace(/\n/g, '<br>')}</div>`)
   }
@@ -481,6 +506,21 @@ function renderDoItem(parts, d) {
 @keyframes cursorBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
 
 .input-area { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid #e0e0e0; background: #fff; box-shadow: 0 -2px 12px rgba(0,0,0,.05); }
+.upload-btn { flex-shrink: 0; }
+
+.pending-preview { position: relative; flex-shrink: 0; }
+.pending-preview img { height: 40px; border-radius: 6px; border: 1px solid #e0e0e0; }
+.pending-remove { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: #fff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; }
+
+/* 图片消息 */
+.msg-image { margin-bottom: 8px; cursor: pointer; }
+.msg-image img { max-width: 240px; max-height: 200px; border-radius: 10px; border: 1px solid #e0e0e0; display: block; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+.msg-user .msg-image img { border-color: rgba(255,255,255,.3); }
+
+/* 图片预览弹窗 */
+.image-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.85); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.preview-full { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+.preview-close { position: fixed; top: 20px; right: 24px; color: #fff; font-size: 28px; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,.15); }
 
 .rc-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin: 4px 0; }
 .rc-card h4 { font-size: 16px; margin: 0 0 4px; }

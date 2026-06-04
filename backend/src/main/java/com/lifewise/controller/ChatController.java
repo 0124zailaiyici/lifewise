@@ -36,9 +36,17 @@ public class ChatController {
         userMsg.setConversationId(convId);
         userMsg.setRole("user");
         userMsg.setContent(request.getMessage());
+        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
+            userMsg.setImageUrl(request.getImageUrl());
+        }
         messageRepository.save(userMsg);
 
-        String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId);
+        // 如果有图片，把图片信息也传给 AI
+        String fullMessage = request.getMessage();
+        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
+            fullMessage += "\n[用户上传了图片: " + request.getImageUrl() + "]";
+        }
+        String aiResponse = aiService.chat(fullMessage, request.getScene(), userId);
 
         Message aiMsg = new Message();
         aiMsg.setConversationId(convId);

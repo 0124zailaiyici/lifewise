@@ -9,5 +9,6 @@ public class ChatResponse {
     private Long conversationId;
     private String role;
     private String content;
+    private String imageUrl;
     private LocalDateTime createdAt;
 }

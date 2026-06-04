@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -44,8 +44,10 @@ export function resetPassword(phone, code, newPassword) {
   return api.post('/users/reset-password', { phone, code, newPassword })
 }
 
-export function sendChat(message, scene, conversationId) {
-  return api.post('/chat/send', { message, scene, conversationId })
+export function sendChat(message, scene, conversationId, imageUrl) {
+  const body = { message, scene, conversationId }
+  if (imageUrl) body.imageUrl = imageUrl
+  return api.post('/chat/send', body)
 }
 
 export function getConversations(scene) {
@@ -71,4 +73,12 @@ export function removeFavorite(messageId) {
 
 export function search(q) {
   return api.get('/search', { params: { q } })
+}
+
+export function uploadImage(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
 }

@@ -9,4 +9,5 @@ public class ChatRequest {
     private String message;
     private String scene;
     private Long conversationId;
+    private String imageUrl;
 }

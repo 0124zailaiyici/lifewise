@@ -30,3 +30,9 @@ frontend.log
 # Env
 .env
 *.local
+
+
+# Build artifacts
+backend/target/
+backend/data/
+*.bak

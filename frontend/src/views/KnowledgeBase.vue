@@ -51,6 +51,7 @@
 import { ref, onMounted } from "vue"
 import { HomeFilled, Timer, User, Notebook } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
+import { searchKnowledge, markHelpful as markHelpfulApi } from "../api"
 
 const keyword = ref("")
 const sceneFilter = ref("")
@@ -71,14 +72,8 @@ function sceneLabel(s) { return scenes.find(x => x.key === s)?.label || s || "�
 async function fetchData() {
   loading.value = true
   try {
-    const params = new URLSearchParams()
-    if (keyword.value.trim()) params.set("keyword", keyword.value.trim())
-    if (sceneFilter.value) params.set("scene", sceneFilter.value)
-    const res = await fetch("http://localhost:8080/api/kb/search?" + params.toString(), {
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    })
-    const json = await res.json()
-    list.value = json.data || []
+    const res = await searchKnowledge(keyword.value.trim(), sceneFilter.value)
+    list.value = res.data || []
     total.value = list.value.length
   } catch (e) { console.error(e) }
   finally { loading.value = false }
@@ -88,10 +83,7 @@ function doSearch() { fetchData() }
 
 async function markHelpful(id) {
   try {
-    await fetch("http://localhost:8080/api/kb/" + id + "/helpful", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + localStorage.getItem("token") }
-    })
+    await markHelpfulApi(id)
     const item = list.value.find(x => x.id === id)
     if (item) item.helpfulCount = (item.helpfulCount || 0) + 1
     ElMessage.success("感谢反馈")

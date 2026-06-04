@@ -87,6 +87,17 @@ export function deleteConversation(id) {
   return api.delete('/chat/conversations/' + id)
 }
 
+export function searchKnowledge(keyword, scene) {
+  const params = {}
+  if (keyword) params.keyword = keyword
+  if (scene) params.scene = scene
+  return api.get('/kb/search', { params })
+}
+
+export function markHelpful(id) {
+  return api.post('/kb/' + id + '/helpful')
+}
+
 export function uploadImage(file) {
   const formData = new FormData()
   formData.append('file', file)

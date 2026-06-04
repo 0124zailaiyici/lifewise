@@ -2,14 +2,12 @@
   <div class="page-container">
     <div class="header">
       <h2>LifeWise</h2>
-      <el-button text class="search-btn" @click="$router.push('/search')">
-        <el-icon><Search /></el-icon>
-      </el-button>
+
     </div>
 
     <div class="content">
       <div class="search-box" @click="$router.push('/chat')">
-        <el-icon><Search /></el-icon>
+        <el-icon><ChatDotSquare /></el-icon>
         <span class="placeholder">今天想解决什么问题？</span>
       </div>
 
@@ -22,20 +20,24 @@
         </div>
       </div>
 
-      <div class="recent-header">
-        <h3 class="section-title">📝 最近问答</h3>
-      </div>
-      <div v-if="conversations.length === 0" class="empty">
-        <div class="empty-icon">💬</div>
-        <div class="empty-text">暂无记录</div>
-      </div>
-      <div v-for="conv in conversations" :key="conv.id" class="conv-item" @click="$router.push('/chat/' + conv.id)">
-        <span class="conv-icon">{{ conv.sceneIcon || '💬' }}</span>
-        <div class="conv-info">
-          <div class="conv-title">{{ conv.title }}</div>
-          <div class="conv-meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
+      <div v-if="conversations.length > 0">
+        <div class="recent-header">
+          <h3 class="section-title">💬 最近问答</h3>
+          <el-button text type="primary" size="small" @click="$router.push('/history')">查看全部 →</el-button>
         </div>
-        <el-icon class="conv-arrow"><ArrowRight /></el-icon>
+        <div v-for="conv in conversations" :key="conv.id" class="conv-item" @click="$router.push('/chat/' + conv.id)">
+          <span class="conv-icon">{{ conv.sceneIcon || '💬' }}</span>
+          <div class="conv-info">
+            <div class="conv-title">{{ conv.title }}</div>
+            <div class="conv-meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
+          </div>
+          <el-icon class="conv-arrow"><ArrowRight /></el-icon>
+        </div>
+      </div>
+
+      <div v-else class="empty">
+        <div class="empty-icon">💡</div>
+        <div class="empty-text">选择一个场景开始对话吧</div>
       </div>
     </div>
 
@@ -52,7 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getConversations } from '../api'
-import { Search, ArrowRight, HomeFilled, Timer, Star, User } from '@element-plus/icons-vue'
+import { Search, ArrowRight, HomeFilled, Timer, Star, User, ChatDotSquare } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const conversations = ref([])
@@ -61,21 +63,27 @@ const scenes = [
   { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'linear-gradient(135deg, #f0fdf4, #bbf7d0)' },
   { key: 'repair', icon: '🔧', label: '修理指南', bg: 'linear-gradient(135deg, #eff6ff, #bfdbfe)' },
   { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'linear-gradient(135deg, #faf5ff, #e9d5ff)' },
-  { key: 'health', icon: '🏥', label: '健康常识', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' },
+  { key: 'health', icon: '🌞', label: '健康常识', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' },
   { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' },
-  { key: 'etiquette', icon: '🤝', label: '社交礼仪', bg: 'linear-gradient(135deg, #ecfdf5, #a7f3d0)' },
-  { key: 'pet', icon: '🐾', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' },
+  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'linear-gradient(135deg, #ecfdf5, #a7f3d0)' },
+  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' },
   { key: 'writing', icon: '✍️', label: '写作助手', bg: 'linear-gradient(135deg, #f0f9ff, #bae6fd)' },
-  { key: 'mealplan', icon: '📅', label: '食谱推荐', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' }
+  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' }
 ]
 
 onMounted(async () => {
-  try { const res = await getConversations(); conversations.value = res.data || [] } catch (e) { console.error(e) }
+  try {
+    const res = await getConversations()
+    conversations.value = (res.data || []).slice(0, 3) // 只取最近3条
+  } catch (e) { console.error(e) }
 })
 
 function startChat(scene, label) {
-  localStorage.setItem('currentScene', scene); localStorage.setItem('sceneLabel', label); router.push('/chat')
+  localStorage.setItem('currentScene', scene)
+  localStorage.setItem('sceneLabel', label)
+  router.push('/chat')
 }
+
 function formatTime(t) {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -100,6 +108,9 @@ function formatTime(t) {
 .scene-icon { font-size: 32px; margin-bottom: 6px; }
 .scene-label { font-size: 14px; font-weight: 600; color: #222; }
 
+.recent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.recent-header .section-title { margin-bottom: 0; }
+
 .conv-item { display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid #eee; cursor: pointer; }
 .conv-icon { font-size: 24px; margin-right: 16px; }
 .conv-info { flex: 1; }
@@ -107,7 +118,7 @@ function formatTime(t) {
 .conv-meta { font-size: 12px; color: #999; margin-top: 4px; }
 .conv-arrow { color: #ccc; font-size: 16px; }
 
-.empty { text-align: center; padding: 48px 0; }
+.empty { text-align: center; padding: 48px 0 0; }
 .empty-icon { font-size: 40px; margin-bottom: 8px; }
 .empty-text { font-size: 14px; color: #999; }
 

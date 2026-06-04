@@ -1,25 +1,30 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="page-header">
       <h3>📋 历史记录</h3>
+    </div>
+
+    <div class="search-bar">
+      <el-input v-model="keyword" placeholder="搜索历史对话..." size="default" clearable
+                prefix-icon="Search" @input="filterList" />
     </div>
 
     <div class="content">
       <div v-if="loading" class="loading-state">
         <div class="loading-text">加载中...</div>
       </div>
-      <div v-else-if="groups.length === 0" class="empty-state">
-        <div class="empty-icon">📥</div>
-        <div class="empty-text">暂无历史记录</div>
+      <div v-else-if="filteredGroups.length === 0" class="empty-state">
+        <div class="empty-icon">{{ keyword ? '🔍' : '📥' }}</div>
+        <div class="empty-text">{{ keyword ? '没有找到匹配的对话' : '暂无历史记录' }}</div>
       </div>
 
-      <div v-for="group in groups" :key="group.date" class="group">
+      <div v-for="group in filteredGroups" :key="group.date" class="group">
         <div class="date-label">{{ group.date }}</div>
         <div v-for="conv in group.items" :key="conv.id" class="history-item"
              @click="$router.push('/chat/' + conv.id)">
           <span class="icon">{{ conv.sceneIcon || '💬' }}</span>
           <div class="info">
-            <div class="title">{{ conv.title }}</div>
+            <div class="title" v-html="highlight(conv.title)"></div>
             <div class="meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
           </div>
           <el-button text type="danger" size="small" class="del-btn" @click.stop="handleDelete(conv.id)">
@@ -39,13 +44,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { getConversations, deleteConversation } from '../api'
 import { HomeFilled, Timer, Star, User, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(true)
 const groups = ref([])
+const keyword = ref('')
 
 onMounted(async () => {
   try {
@@ -61,6 +67,25 @@ onMounted(async () => {
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 })
+
+const filteredGroups = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return groups.value
+  return groups.value.map(g => ({
+    ...g,
+    items: g.items.filter(c => (c.title || '').toLowerCase().includes(kw))
+  })).filter(g => g.items.length > 0)
+})
+
+function filterList() {} // reactive via computed
+
+function highlight(text) {
+  const kw = keyword.value.trim()
+  if (!kw || !text) return text
+  const idx = text.toLowerCase().indexOf(kw.toLowerCase())
+  if (idx === -1) return text
+  return text.substring(0, idx) + '<mark>' + text.substring(idx, idx + kw.length) + '</mark>' + text.substring(idx + kw.length)
+}
 
 async function handleDelete(id) {
   try {
@@ -82,22 +107,27 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; }
+.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
-.content { padding: 16px 20px 80px; }
+
+.search-bar { padding: 12px 20px; }
+.search-bar :deep(.el-input__wrapper) { border-radius: 20px; }
+
+.content { padding: 0 20px 80px; }
 
 .group { margin-bottom: 24px; }
-.date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; }
+.date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
 .history-item { display: flex; align-items: center; padding: 14px; background: #f5f5f5; border-radius: 14px; border: 1px solid #eee; margin-bottom: 10px; cursor: pointer; transition: .15s; }
 .history-item:active { transform: scale(.98); }
 .icon { font-size: 26px; margin-right: 14px; }
 .info { flex: 1; }
 .title { font-size: 14px; font-weight: 500; color: #333; }
+.title :deep(mark) { background: #fde68a; color: #333; padding: 0 2px; border-radius: 2px; }
 .meta { font-size: 12px; color: #888; margin-top: 3px; }
 .del-btn { flex-shrink: 0; margin-left: 8px; }
 
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
-.empty-icon, .loading-text { font-size: 48px; margin-bottom: 12px; }
+.loading-text { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: #777; }
 
 .bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 60px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding-bottom: 4px; }

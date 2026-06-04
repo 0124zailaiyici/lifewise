@@ -32,6 +32,16 @@ public class ChatController {
             convId = conv.getId();
         }
 
+        // 构造传给 AI 的消息（含图片信息），但保存时用原始内容
+        String aiMessage = request.getMessage();
+        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
+            aiMessage += "\n[用户上传了图片: " + request.getImageUrl() + "]";
+        }
+
+        // 先调 AI（历史消息从数据库加载，不含当前未保存的消息）
+        String aiResponse = aiService.chat(aiMessage, request.getScene(), userId, convId);
+
+        // AI 返回后再保存用户消息（保存原始内容）和 AI 消息
         Message userMsg = new Message();
         userMsg.setConversationId(convId);
         userMsg.setRole("user");
@@ -40,13 +50,6 @@ public class ChatController {
             userMsg.setImageUrl(request.getImageUrl());
         }
         messageRepository.save(userMsg);
-
-        // 如果有图片，把图片信息也传给 AI
-        String fullMessage = request.getMessage();
-        if (request.getImageUrl() != null && !request.getImageUrl().isEmpty()) {
-            fullMessage += "\n[用户上传了图片: " + request.getImageUrl() + "]";
-        }
-        String aiResponse = aiService.chat(fullMessage, request.getScene(), userId, convId);
 
         Message aiMsg = new Message();
         aiMsg.setConversationId(convId);

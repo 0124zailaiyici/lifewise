@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -61,4 +61,8 @@ export function addFavorite(messageId, note) {
 
 export function removeFavorite(messageId) {
   return api.delete('/favorites', { params: { messageId } })
+}
+
+export function search(q) {
+  return api.get('/search', { params: { q } })
 }

@@ -1,9 +1,10 @@
-﻿import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Chat from '../views/Chat.vue'
 import History from '../views/History.vue'
 import Favorites from '../views/Favorites.vue'
 import Profile from '../views/Profile.vue'
+import Search from '../views/Search.vue'
 import Login from '../views/Login.vue'
 
 const routes = [
@@ -14,7 +15,8 @@ const routes = [
   { path: '/chat/:id', component: Chat },
   { path: '/history', component: History },
   { path: '/favorites', component: Favorites },
-  { path: '/profile', component: Profile }
+  { path: '/profile', component: Profile },
+  { path: '/search', component: Search }
 ]
 
 const router = createRouter({

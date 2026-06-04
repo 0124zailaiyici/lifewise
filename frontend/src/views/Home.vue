@@ -2,6 +2,9 @@
   <div class="page-container">
     <div class="header">
       <h2>LifeWise</h2>
+      <el-button text class="search-btn" @click="$router.push('/search')">
+        <el-icon><Search /></el-icon>
+      </el-button>
     </div>
 
     <div class="content">
@@ -78,8 +81,9 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.header { padding: 20px 20px 8px; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 8px; }
 .header h2 { font-size: 24px; font-weight: 800; color: #111; }
+.search-btn { font-size: 20px; color: #666; padding: 8px; }
 .content { padding: 0 20px 80px; }
 
 .search-box { display: flex; align-items: center; gap: 8px; height: 50px; background: #f0f0f0; border-radius: 25px; padding: 0 20px; margin-bottom: 28px; cursor: pointer; transition: .15s; }

@@ -15,8 +15,8 @@ public class User {
     @Column(unique = true, length = 50)
     private String username;
 
-    @Column(unique = true, length = 100)
-    private String email;
+    @Column(unique = true, length = 20)
+    private String phone;
 
     @Column(length = 255)
     private String password;

@@ -28,4 +28,16 @@ public class UserController {
     public ApiResponse<UserResponse> getCurrentUser(@RequestAttribute Long userId) {
         return ApiResponse.success(userService.getUserById(userId));
     }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ApiResponse.success(null);
+    }
 }

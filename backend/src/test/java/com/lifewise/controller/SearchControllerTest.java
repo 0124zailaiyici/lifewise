@@ -30,10 +30,9 @@ class SearchControllerTest {
 
     @BeforeEach
     void setUp() {
-        // 注册用户
         RegisterRequest reg = new RegisterRequest();
         reg.setUsername("searchtest");
-        reg.setEmail("search@test.com");
+        reg.setPhone("13800138008");
         reg.setPassword("pass123");
         try {
             userService.register(reg);
@@ -41,9 +40,8 @@ class SearchControllerTest {
             // 可能已存在
         }
 
-        // 登录获取 token
         LoginRequest login = new LoginRequest();
-        login.setEmail("search@test.com");
+        login.setPhone("13800138008");
         login.setPassword("pass123");
         var loginResp = userService.login(login);
         token = loginResp.getToken();

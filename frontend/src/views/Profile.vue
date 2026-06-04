@@ -1,55 +1,55 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
-      <h3>👤 我的</h3>
+      <h3>馃懁 鎴戠殑</h3>
     </div>
 
     <div class="content">
       <div class="user-card">
         <div class="avatar">{{ (user?.username || 'U')[0].toUpperCase() }}</div>
         <div class="user-info">
-          <div class="username">{{ user?.username || '未登录' }}</div>
-          <div class="email">{{ user?.email || '' }}</div>
+          <div class="username">{{ user?.username || '鏈櫥褰? }}</div>
+          <div class="phone">{{ user?.phone || '' }}</div>
         </div>
       </div>
 
       <div class="menu-section">
-        <div class="menu-label">功能</div>
+        <div class="menu-label">鍔熻兘</div>
         <div class="menu-list">
           <div class="menu-item" @click="$router.push('/history')">
             <el-icon><Timer /></el-icon>
-            <span>历史记录</span>
+            <span>鍘嗗彶璁板綍</span>
             <el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
           <div class="menu-item" @click="$router.push('/favorites')">
             <el-icon><Star /></el-icon>
-            <span>我的收藏</span>
+            <span>鎴戠殑鏀惰棌</span>
             <el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
         </div>
       </div>
 
       <div class="menu-section">
-        <div class="menu-label">账号</div>
+        <div class="menu-label">璐﹀彿</div>
         <div class="menu-list">
           <div class="menu-item logout" @click="handleLogout">
             <el-icon><SwitchButton /></el-icon>
-            <span>退出登录</span>
+            <span>閫€鍑虹櫥褰?/span>
           </div>
         </div>
       </div>
 
       <div class="footer-info">
         <div class="app-name">LifeWise v1.0</div>
-        <div class="app-desc">AI 生活常识助手</div>
+        <div class="app-desc">AI 鐢熸椿甯歌瘑鍔╂墜</div>
       </div>
     </div>
 
     <div class="bottom-tabs">
-      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
-      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
-      <div class="tab active"><el-icon><User /></el-icon><span>我的</span></div>
+      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>棣栭〉</span></div>
+      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>鍘嗗彶</span></div>
+      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>鏀惰棌</span></div>
+      <div class="tab active"><el-icon><User /></el-icon><span>鎴戠殑</span></div>
     </div>
   </div>
 </template>
@@ -66,8 +66,8 @@ const userStore = useUserStore()
 const user = computed(() => userStore.user)
 
 function handleLogout() {
-  ElMessageBox.confirm('确定退出登录吗？', '提示', {
-    confirmButtonText: '退出', cancelButtonText: '取消', type: 'warning'
+  ElMessageBox.confirm('纭畾閫€鍑虹櫥褰曞悧锛?, '鎻愮ず', {
+    confirmButtonText: '閫€鍑?, cancelButtonText: '鍙栨秷', type: 'warning'
   }).then(() => {
     userStore.logout()
     router.push('/login')
@@ -83,7 +83,7 @@ function handleLogout() {
 .user-card { display: flex; align-items: center; gap: 16px; padding: 20px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 18px; margin-bottom: 28px; }
 .avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; box-shadow: 0 3px 12px rgba(34,197,94,.25); }
 .username { font-size: 18px; font-weight: 600; color: #111; }
-.email { font-size: 13px; color: #666; margin-top: 4px; }
+.phone { font-size: 13px; color: #666; margin-top: 4px; }
 
 .menu-section { margin-bottom: 24px; }
 .menu-label { font-size: 12px; color: #999; margin-bottom: 8px; padding-left: 4px; font-weight: 500; }

@@ -6,16 +6,15 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class RegisterRequest {
-    @NotBlank
-    @Size(min = 2, max = 50)
-    private String username;
-
+public class ResetPasswordRequest {
     @NotBlank
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
     @NotBlank
+    private String code;
+
+    @NotBlank
     @Size(min = 6, max = 50)
-    private String password;
+    private String newPassword;
 }

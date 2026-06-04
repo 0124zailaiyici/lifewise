@@ -32,28 +32,28 @@ class UserServiceTest {
     void shouldRegisterUser() {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("testuser");
-        request.setEmail("test@example.com");
+        request.setPhone("13800138001");
         request.setPassword("password123");
 
         UserResponse response = userService.register(request);
 
         assertNotNull(response);
         assertEquals("testuser", response.getUsername());
-        assertEquals("test@example.com", response.getEmail());
+        assertEquals("13800138001", response.getPhone());
         assertNotNull(response.getId());
     }
 
     @Test
-    void shouldRejectDuplicateEmail() {
+    void shouldRejectDuplicatePhone() {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("user1");
-        request.setEmail("dup@example.com");
+        request.setPhone("13800138002");
         request.setPassword("pass123");
         userService.register(request);
 
         RegisterRequest request2 = new RegisterRequest();
         request2.setUsername("user2");
-        request2.setEmail("dup@example.com");
+        request2.setPhone("13800138002");
         request2.setPassword("pass456");
 
         assertThrows(RuntimeException.class, () -> userService.register(request2));
@@ -63,13 +63,13 @@ class UserServiceTest {
     void shouldRejectDuplicateUsername() {
         RegisterRequest r1 = new RegisterRequest();
         r1.setUsername("sameuser");
-        r1.setEmail("a@example.com");
+        r1.setPhone("13800138003");
         r1.setPassword("pass123");
         userService.register(r1);
 
         RegisterRequest r2 = new RegisterRequest();
         r2.setUsername("sameuser");
-        r2.setEmail("b@example.com");
+        r2.setPhone("13800138004");
         r2.setPassword("pass456");
 
         assertThrows(RuntimeException.class, () -> userService.register(r2));
@@ -79,12 +79,12 @@ class UserServiceTest {
     void shouldLoginWithCorrectPassword() {
         RegisterRequest reg = new RegisterRequest();
         reg.setUsername("logintest");
-        reg.setEmail("login@example.com");
+        reg.setPhone("13800138005");
         reg.setPassword("mypassword");
         userService.register(reg);
 
         LoginRequest login = new LoginRequest();
-        login.setEmail("login@example.com");
+        login.setPhone("13800138005");
         login.setPassword("mypassword");
 
         var response = userService.login(login);
@@ -98,12 +98,12 @@ class UserServiceTest {
     void shouldRejectWrongPassword() {
         RegisterRequest reg = new RegisterRequest();
         reg.setUsername("wrongpass");
-        reg.setEmail("wrong@example.com");
+        reg.setPhone("13800138006");
         reg.setPassword("correctpass");
         userService.register(reg);
 
         LoginRequest login = new LoginRequest();
-        login.setEmail("wrong@example.com");
+        login.setPhone("13800138006");
         login.setPassword("wrongpass");
 
         assertThrows(RuntimeException.class, () -> userService.login(login));
@@ -112,7 +112,7 @@ class UserServiceTest {
     @Test
     void shouldRejectNonExistentUser() {
         LoginRequest login = new LoginRequest();
-        login.setEmail("nobody@example.com");
+        login.setPhone("13900000000");
         login.setPassword("anypass");
 
         assertThrows(RuntimeException.class, () -> userService.login(login));
@@ -122,7 +122,7 @@ class UserServiceTest {
     void shouldGetUserById() {
         RegisterRequest reg = new RegisterRequest();
         reg.setUsername("getbyid");
-        reg.setEmail("getbyid@example.com");
+        reg.setPhone("13800138007");
         reg.setPassword("pass123");
         UserResponse created = userService.register(reg);
 

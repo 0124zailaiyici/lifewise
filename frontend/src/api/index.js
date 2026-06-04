@@ -1,11 +1,10 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
   timeout: 30000
 })
 
-// 自动带上 token
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -14,7 +13,6 @@ api.interceptors.request.use(config => {
   return config
 })
 
-// 处理 401 未登录
 api.interceptors.response.use(
   response => response.data,
   error => {
@@ -30,12 +28,20 @@ api.interceptors.response.use(
   }
 )
 
-export function login(email, password) {
-  return api.post('/users/login', { email, password })
+export function login(phone, password) {
+  return api.post('/users/login', { phone, password })
 }
 
-export function register(username, email, password) {
-  return api.post('/users/register', { username, email, password })
+export function register(username, phone, password) {
+  return api.post('/users/register', { username, phone, password })
+}
+
+export function forgotPassword(phone) {
+  return api.post('/users/forgot-password', { phone })
+}
+
+export function resetPassword(phone, code, newPassword) {
+  return api.post('/users/reset-password', { phone, code, newPassword })
 }
 
 export function sendChat(message, scene, conversationId) {

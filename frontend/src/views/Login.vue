@@ -13,30 +13,61 @@
         <p class="logo-sub">你的 AI 生活助手</p>
       </div>
 
-      <template v-if="!isRegister">
+      <!-- 登录 -->
+      <template v-if="mode === 'login'">
         <el-form :model="form" class="form" @keyup.enter="handleLogin">
-          <el-input v-model="form.email" placeholder="邮箱" size="large" class="input-field" />
+          <el-input v-model="form.phone" placeholder="手机号" size="large" class="input-field" maxlength="11" />
           <el-input v-model="form.password" type="password" placeholder="密码" size="large" class="input-field" show-password />
+          <div class="forgot-row">
+            <el-button text type="primary" size="small" @click="mode = 'forgot'">忘记密码？</el-button>
+          </div>
           <el-button type="success" size="large" class="login-btn" @click="handleLogin" :loading="loading">
             登 录
           </el-button>
         </el-form>
         <div class="switch-text">
           还没有账号？
-          <el-button text type="primary" @click="isRegister = true">立即注册</el-button>
+          <el-button text type="primary" @click="mode = 'register'">立即注册</el-button>
         </div>
       </template>
 
-      <template v-else>
+      <!-- 注册 -->
+      <template v-if="mode === 'register'">
         <el-form @keyup.enter="handleRegister" class="form">
           <el-input v-model="registerForm.username" placeholder="用户名" size="large" class="input-field" />
-          <el-input v-model="registerForm.email" placeholder="邮箱" size="large" class="input-field" />
+          <el-input v-model="registerForm.phone" placeholder="手机号" size="large" class="input-field" maxlength="11" />
           <el-input v-model="registerForm.password" type="password" placeholder="密码（至少6位）" size="large" class="input-field" show-password />
           <el-button type="success" size="large" class="login-btn" @click="handleRegister" :loading="loading">注 册</el-button>
         </el-form>
         <div class="switch-text">
           已有账号？
-          <el-button text type="primary" @click="isRegister = false">去登录</el-button>
+          <el-button text type="primary" @click="mode = 'login'">去登录</el-button>
+        </div>
+      </template>
+
+      <!-- 忘记密码 -->
+      <template v-if="mode === 'forgot'">
+        <template v-if="forgotStep === 1">
+          <p class="forgot-desc">请输入注册时使用的手机号，我们将发送验证码</p>
+          <el-form @keyup.enter="handleSendCode" class="form">
+            <el-input v-model="forgotForm.phone" placeholder="手机号" size="large" class="input-field" maxlength="11" />
+            <el-button type="success" size="large" class="login-btn" @click="handleSendCode" :loading="codeLoading">
+              发送验证码
+            </el-button>
+          </el-form>
+        </template>
+        <template v-if="forgotStep === 2">
+          <p class="forgot-desc">请输入验证码和新密码</p>
+          <el-form @keyup.enter="handleResetPassword" class="form">
+            <el-input v-model="forgotForm.code" placeholder="验证码" size="large" class="input-field" maxlength="6" />
+            <el-input v-model="forgotForm.newPassword" type="password" placeholder="新密码（至少6位）" size="large" class="input-field" show-password />
+            <el-button type="success" size="large" class="login-btn" @click="handleResetPassword" :loading="loading">
+              重置密码
+            </el-button>
+          </el-form>
+        </template>
+        <div class="switch-text">
+          <el-button text type="primary" @click="mode = 'login'">返回登录</el-button>
         </div>
       </template>
     </div>
@@ -47,21 +78,25 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { login, register } from '../api'
+import { login, register, forgotPassword, resetPassword } from '../api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-const isRegister = ref(false)
-const form = reactive({ email: 'demo@test.com', password: '123456' })
-const registerForm = reactive({ username: '', email: '', password: '' })
+const codeLoading = ref(false)
+const mode = ref('login')
+const forgotStep = ref(1)
+
+const form = reactive({ phone: '13800138000', password: '123456' })
+const registerForm = reactive({ username: '', phone: '', password: '' })
+const forgotForm = reactive({ phone: '', code: '', newPassword: '' })
 
 async function handleLogin() {
-  if (!form.email || !form.password) { ElMessage.warning('请填写邮箱和密码'); return }
+  if (!form.phone || !form.password) { ElMessage.warning('请填写手机号和密码'); return }
   loading.value = true
   try {
-    const res = await login(form.email, form.password)
+    const res = await login(form.phone, form.password)
     userStore.setUser(res.data)
     localStorage.setItem('token', res.data.token)
     ElMessage.success('登录成功')
@@ -71,13 +106,40 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-  if (!registerForm.username || !registerForm.email || !registerForm.password) { ElMessage.warning('请填写所有字段'); return }
+  if (!registerForm.username || !registerForm.phone || !registerForm.password) { ElMessage.warning('请填写所有字段'); return }
+  if (registerForm.phone.length !== 11) { ElMessage.warning('请输入正确的手机号'); return }
   loading.value = true
   try {
-    await register(registerForm.username, registerForm.email, registerForm.password)
+    await register(registerForm.username, registerForm.phone, registerForm.password)
     ElMessage.success('注册成功，请登录')
-    isRegister.value = false
+    mode.value = 'login'
   } catch (e) { ElMessage.error(e.response?.data?.message || '注册失败') }
+  finally { loading.value = false }
+}
+
+async function handleSendCode() {
+  if (!forgotForm.phone || forgotForm.phone.length !== 11) { ElMessage.warning('请输入正确的手机号'); return }
+  codeLoading.value = true
+  try {
+    await forgotPassword(forgotForm.phone)
+    ElMessage.success('验证码已发送（控制台查看）')
+    forgotStep.value = 2
+  } catch (e) { ElMessage.error(e.response?.data?.message || '发送失败') }
+  finally { codeLoading.value = false }
+}
+
+async function handleResetPassword() {
+  if (!forgotForm.code || !forgotForm.newPassword) { ElMessage.warning('请填写验证码和新密码'); return }
+  if (forgotForm.newPassword.length < 6) { ElMessage.warning('密码至少6位'); return }
+  loading.value = true
+  try {
+    await resetPassword(forgotForm.phone, forgotForm.code, forgotForm.newPassword)
+    ElMessage.success('密码重置成功，请登录')
+    mode.value = 'login'
+    forgotStep.value = 1
+    forgotForm.code = ''
+    forgotForm.newPassword = ''
+  } catch (e) { ElMessage.error(e.response?.data?.message || '重置失败') }
   finally { loading.value = false }
 }
 </script>
@@ -113,6 +175,8 @@ async function handleRegister() {
 .logo-sub { font-size: 14px; color: #888; margin: 6px 0 0; font-weight: 400; }
 .form { width: 100%; }
 .input-field { margin-bottom: 18px; }
+.forgot-row { text-align: right; margin-top: -10px; margin-bottom: 8px; }
+.forgot-desc { font-size: 13px; color: #888; text-align: center; margin-bottom: 20px; line-height: 1.6; }
 .login-btn { width: 100%; height: 48px; font-size: 16px; font-weight: 600; border-radius: 12px; margin-top: 6px; }
 .switch-text { text-align: center; margin-top: 22px; font-size: 13px; color: #888; }
 </style>

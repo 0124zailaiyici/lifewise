@@ -13,16 +13,16 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey key;
-    private final long expiration = 86400000L; // 24小时
+    private final long expiration = 86400000L; // 24灏忔椂
 
     public JwtUtil(@Value("${jwt.secret:LifeWiseDefaultSecretKey2024MustBe256BitsLong!}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateToken(Long userId, String email) {
+    public String generateToken(Long userId, String phone) {
         return Jwts.builder()
             .subject(String.valueOf(userId))
-            .claim("email", email)
+            .claim("phone", phone)
             .issuedAt(new Date())
             .expiration(new Date(System.currentTimeMillis() + expiration))
             .signWith(key)

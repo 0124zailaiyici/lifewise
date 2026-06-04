@@ -10,7 +10,7 @@ export const useUserStore = defineStore('user', () => {
     user.value = {
       id: u.id,
       username: u.username,
-      email: u.email,
+      phone: u.phone,
       avatar: u.avatar
     }
     localStorage.setItem('user', JSON.stringify(user.value))

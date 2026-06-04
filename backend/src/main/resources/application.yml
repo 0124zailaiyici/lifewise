@@ -1,0 +1,33 @@
+﻿spring:
+  application:
+    name: LifeWiseBackend
+
+  datasource:
+    url: jdbc:h2:file:./data/lifewise;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    database-platform: org.hibernate.dialect.H2Dialect
+
+server:
+  port: 8080
+
+ai:
+  api-url: https://api.deepseek.com/v1/chat/completions
+  api-key: sk-e85e1e7be2c14f6eb8555c3eff46e4ce
+  model: deepseek-v4-flash
+
+logging:
+  level:
+    com.lifewise: debug

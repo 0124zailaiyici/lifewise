@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LifeWise 原型</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f0f0f0; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding:20px; }
+.phone { width:390px; height:844px; background:#fff; border-radius:40px; overflow:hidden; box-shadow:0 10px 60px rgba(0,0,0,.15); display:flex; flex-direction:column; position:relative; }
+.notch { height:44px; background:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 24px; font-size:12px; color:#333; flex-shrink:0; }
+.content { flex:1; overflow-y:auto; padding:16px 20px; }
+.content::-webkit-scrollbar { display:none; }
+.tabs { height:64px; background:#fff; border-top:1px solid #eee; display:flex; flex-shrink:0; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:#999; cursor:pointer; transition:.2s; }
+.tab.active { color:#22c55e; }
+.tab .icon { font-size:22px; margin-bottom:2px; }
+.page { display:none; }
+.page.active { display:block; }
+/* 登录页 */
+.login-wrap { display:flex; flex-direction:column; align-items:center; padding-top:80px; }
+.login-wrap .logo { font-size:48px; margin-bottom:8px; }
+.login-wrap .name { font-size:26px; font-weight:700; color:#333; letter-spacing:-.5px; }
+.login-wrap .sub { font-size:14px; color:#999; margin-bottom:40px; }
+.input-group { width:100%; margin-bottom:16px; }
+.input-group input { width:100%; height:48px; border:1.5px solid #e0e0e0; border-radius:12px; padding:0 16px; font-size:15px; outline:none; transition:.2s; }
+.input-group input:focus { border-color:#22c55e; }
+.btn { width:100%; height:48px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:.2s; }
+.btn-primary { background:#22c55e; color:#fff; }
+.btn-primary:hover { background:#16a34a; }
+.btn-text { background:transparent; color:#22c55e; font-size:14px; margin-top:16px; }
+/* 首页 */
+.search-box { display:flex; align-items:center; height:44px; background:#f5f5f5; border-radius:22px; padding:0 16px; margin-bottom:24px; }
+.search-box .icon { font-size:16px; color:#999; margin-right:8px; }
+.search-box input { flex:1; border:none; background:transparent; font-size:14px; outline:none; }
+.section-title { font-size:15px; font-weight:600; color:#333; margin-bottom:12px; }
+.cards { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+.card { height:90px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition:.2s; }
+.card:active { transform:scale(.95); }
+.card .icon { font-size:28px; margin-bottom:4px; }
+.card .label { font-size:13px; font-weight:500; }
+.card-1 { background:#fef2f2; color:#dc2626; }
+.card-2 { background:#f0fdf4; color:#16a34a; }
+.card-3 { background:#eff6ff; color:#2563eb; }
+.card-4 { background:#faf5ff; color:#9333ea; }
+.recent-item { display:flex; align-items:center; padding:12px 0; border-bottom:1px solid #f5f5f5; cursor:pointer; }
+.recent-item:last-child { border:none; }
+.recent-item .icon { font-size:18px; margin-right:12px; }
+.recent-item .text { flex:1; font-size:14px; color:#333; }
+.recent-item .arrow { color:#ccc; font-size:14px; }
+/* 对话页 */
+.chat-wrap { display:flex; flex-direction:column; height:100%; }
+.chat-header { display:flex; align-items:center; padding:0 0 16px 0; font-size:16px; font-weight:600; }
+.chat-header .back { font-size:20px; margin-right:12px; cursor:pointer; color:#333; }
+.chat-msgs { flex:1; overflow-y:auto; padding:0; }
+.msg { margin-bottom:16px; }
+.msg-user { text-align:right; }
+.msg-user .bubble { display:inline-block; background:#22c55e; color:#fff; padding:10px 16px; border-radius:16px 16px 4px 16px; font-size:14px; max-width:85%; text-align:left; }
+.msg-ai .bubble { display:inline-block; background:#f5f5f5; color:#333; padding:12px 16px; border-radius:16px 16px 16px 4px; font-size:14px; max-width:92%; line-height:1.7; text-align:left; }
+.card-recipe { background:#fff; border:1.5px solid #e0e0e0; border-radius:12px; padding:12px; margin:8px 0; }
+.card-recipe h4 { font-size:16px; margin-bottom:4px; }
+.card-recipe .tag { display:inline-block; font-size:11px; color:#666; margin-bottom:8px; }
+.card-recipe .ing { font-size:13px; color:#555; margin:4px 0; padding-left:8px; }
+.card-recipe .step { font-size:13px; color:#333; margin:6px 0; padding-left:8px; }
+.card-recipe .tip { background:#fefce8; border-radius:8px; padding:8px; font-size:12px; color:#a16207; margin-top:8px; }
+.msg-actions { display:flex; gap:12px; margin-top:8px; padding-left:4px; }
+.msg-actions span { font-size:13px; color:#999; cursor:pointer; }
+.chat-input { display:flex; align-items:center; gap:8px; padding:12px 0 0 0; border-top:1px solid #eee; margin-top:12px; }
+.chat-input input { flex:1; height:42px; border:1.5px solid #e0e0e0; border-radius:21px; padding:0 16px; font-size:14px; outline:none; }
+.chat-input input:focus { border-color:#22c55e; }
+.chat-input .send { width:42px; height:42px; background:#22c55e; color:#fff; border:none; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+/* 历史 */
+.history-group { margin-bottom:20px; }
+.history-group .date { font-size:12px; color:#999; margin-bottom:8px; }
+.history-item { display:flex; align-items:center; padding:12px; background:#fafafa; border-radius:12px; margin-bottom:8px; cursor:pointer; }
+.history-item .icon { font-size:24px; margin-right:12px; }
+.history-item .info { flex:1; }
+.history-item .info .title { font-size:14px; font-weight:500; color:#333; }
+.history-item .info .desc { font-size:12px; color:#999; margin-top:2px; }
+.history-item .info .time { font-size:11px; color:#ccc; margin-top:2px; }
+/* 收藏 */
+.fav-search { height:40px; background:#f5f5f5; border-radius:20px; display:flex; align-items:center; padding:0 14px; margin-bottom:16px; }
+.fav-search .icon { font-size:14px; color:#999; margin-right:8px; }
+.fav-search input { flex:1; border:none; background:transparent; font-size:13px; outline:none; }
+.fav-item { display:flex; align-items:center; padding:14px; background:#fafafa; border-radius:12px; margin-bottom:8px; cursor:pointer; }
+.fav-item .icon { font-size:28px; margin-right:14px; }
+.fav-item .info { flex:1; }
+.fav-item .info .title { font-size:14px; font-weight:500; color:#333; }
+.fav-item .info .tag { font-size:12px; color:#999; margin-top:2px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="notch">
+    <span>9:41</span>
+    <span>📶 🔋</span>
+  </div>
+
+  <div class="content" id="content">
+    <!-- 登录页 -->
+    <div class="page active" id="page-login">
+      <div class="login-wrap">
+        <div class="logo">🌿</div>
+        <div class="name">LifeWise</div>
+        <div class="sub">你的 AI 生活助手</div>
+        <div class="input-group"><input type="text" placeholder="手机号 / 邮箱" value="user@example.com"></div>
+        <div class="input-group"><input type="password" placeholder="密码" value="••••••••"></div>
+        <button class="btn btn-primary" onclick="switchPage('page-home')">登 录</button>
+        <button class="btn btn-text">没有账号？去注册</button>
+      </div>
+    </div>
+
+    <!-- 首页 -->
+    <div class="page" id="page-home">
+      <div class="search-box" onclick="switchPage('page-chat')">
+        <span class="icon">🔍</span>
+        <input placeholder="今天想解决什么问题？" readonly>
+      </div>
+
+      <div class="section-title">✨ 选个场景开始</div>
+      <div class="cards">
+        <div class="card card-1" onclick="switchPage('page-chat')"><span class="icon">🍳</span><span class="label">做饭助手</span></div>
+        <div class="card card-2" onclick="switchPage('page-chat')"><span class="icon">🛒</span><span class="label">买菜指南</span></div>
+        <div class="card card-3" onclick="switchPage('page-chat')"><span class="icon">🔧</span><span class="label">修理指南</span></div>
+        <div class="card card-4" onclick="switchPage('page-chat')"><span class="icon">🏠</span><span class="label">家务技巧</span></div>
+      </div>
+
+      <div class="section-title">📝 最近问答</div>
+      <div class="recent-item" onclick="switchPage('page-chat')"><span class="icon">🍉</span><span class="text">怎么挑西瓜？</span><span class="arrow">→</span></div>
+      <div class="recent-item" onclick="switchPage('page-chat')"><span class="icon">🍅</span><span class="text">西红柿炒蛋怎么做？</span><span class="arrow">→</span></div>
+      <div class="recent-item" onclick="switchPage('page-chat')"><span class="icon">🔧</span><span class="text">水龙头滴水怎么修？</span><span class="arrow">→</span></div>
+    </div>
+
+    <!-- 对话页 -->
+    <div class="page" id="page-chat">
+      <div class="chat-wrap">
+        <div class="chat-header">
+          <span class="back" onclick="switchPage('page-home')">←</span>
+          <span>🍳 做饭助手</span>
+        </div>
+        <div class="chat-msgs">
+          <div class="msg msg-user">
+            <div class="bubble">我有鸡蛋和西红柿，怎么做菜？</div>
+          </div>
+          <div class="msg msg-ai">
+            <div class="bubble">
+              <div class="card-recipe">
+                <h4>🍅 西红柿炒鸡蛋</h4>
+                <div class="tag">⭐ 入门级 · ⏱️ 10 分钟 · 👥 1-2 人份</div>
+                <div style="font-weight:600;font-size:13px;margin-top:4px;">🥘 食材</div>
+                <div class="ing">· 西红柿 × 2 个（选熟透的，更好出汁）</div>
+                <div class="ing">· 鸡蛋 × 3 个</div>
+                <div class="ing">· 盐 适量、糖 少许（提鲜的关键）</div>
+                <div style="font-weight:600;font-size:13px;margin-top:8px;">👨‍🍳 步骤</div>
+                <div class="step">1️⃣ 西红柿切块 — 大拇指一半大小，不用太小</div>
+                <div class="step">2️⃣ 鸡蛋打散 — 加一小撮盐，搅匀</div>
+                <div class="step">3️⃣ 热锅倒油 — 油多一点蛋才蓬松，油热倒蛋液，快速划散，刚凝固就盛出来</div>
+                <div class="step">4️⃣ 炒西红柿 — 不用洗锅，中火炒到出汁变软</div>
+                <div class="step">5️⃣ 调味 — 加半勺糖提鲜、适量盐</div>
+                <div class="step">6️⃣ 合炒 — 倒回鸡蛋，翻炒两下出锅！</div>
+                <div class="tip">💡 新手提示：炒鸡蛋不要等到完全凝固才盛，看到还有点流动就关火盛出，余温会让它变熟，这样炒出来才嫩。</div>
+              </div>
+            </div>
+            <div class="msg-actions">
+              <span onclick="alert('已收藏 ✅')">⭐ 收藏</span>
+              <span onclick="alert('已复制 ✅')">📋 复制</span>
+              <span onclick="alert('👍')">👍 有用</span>
+            </div>
+          </div>
+          <div class="msg msg-user">
+            <div class="bubble">没有蚝油可以用什么代替？</div>
+          </div>
+          <div class="msg msg-ai">
+            <div class="bubble">
+              可以换成 <strong>生抽 + 一点点糖</strong>，或者直接用酱油也行。<br>
+              蚝油主要提供鲜味和一点点甜味，所以生抽提鲜 + 糖补甜就能替代。如果是炒青菜，不加蚝油也完全 OK~
+            </div>
+          </div>
+        </div>
+        <div class="chat-input">
+          <input placeholder="继续问...">
+          <button class="send">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史页 -->
+    <div class="page" id="page-history">
+      <div style="font-size:18px;font-weight:700;margin-bottom:16px;">📋 历史记录</div>
+      <div class="history-group">
+        <div class="date">今天</div>
+        <div class="history-item" onclick="switchPage('page-chat')">
+          <span class="icon">🍳</span>
+          <div class="info">
+            <div class="title">红烧肉怎么做？</div>
+            <div class="desc">开始问了个问题，AI 回答了步骤...</div>
+            <div class="time">14:30</div>
+          </div>
+        </div>
+        <div class="history-item" onclick="switchPage('page-chat')">
+          <span class="icon">🍎</span>
+          <div class="info">
+            <div class="title">怎么挑新鲜的鱼？</div>
+            <div class="desc">买鱼的时候怎么判断新不新鲜...</div>
+            <div class="time">10:15</div>
+          </div>
+        </div>
+      </div>
+      <div class="history-group">
+        <div class="date">昨天</div>
+        <div class="history-item" onclick="switchPage('page-chat')">
+          <span class="icon">🔧</span>
+          <div class="info">
+            <div class="title">灯泡怎么换？</div>
+            <div class="desc">家里的吸顶灯不亮了，需要换灯泡...</div>
+            <div class="time">18:20</div>
+          </div>
+        </div>
+        <div class="history-item" onclick="switchPage('page-chat')">
+          <span class="icon">🏠</span>
+          <div class="info">
+            <div class="title">衣服染色了怎么办？</div>
+            <div class="desc">白衣服被染色了，怎么洗掉...</div>
+            <div class="time">15:00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 收藏页 -->
+    <div class="page" id="page-fav">
+      <div style="font-size:18px;font-weight:700;margin-bottom:16px;">⭐ 我的收藏</div>
+      <div class="fav-search"><span class="icon">🔍</span><input placeholder="搜索收藏..."></div>
+      <div class="fav-item" onclick="switchPage('page-chat')">
+        <span class="icon">🍅</span>
+        <div class="info">
+          <div class="title">西红柿炒鸡蛋</div>
+          <div class="tag">🍳 做饭助手 · ⭐ 入门级</div>
+        </div>
+      </div>
+      <div class="fav-item" onclick="switchPage('page-chat')">
+        <span class="icon">🍉</span>
+        <div class="info">
+          <div class="title">怎么挑西瓜（三步法）</div>
+          <div class="tag">🛒 买菜指南 · 收藏 128</div>
+        </div>
+      </div>
+      <div class="fav-item" onclick="switchPage('page-chat')">
+        <span class="icon">🔧</span>
+        <div class="info">
+          <div class="title">水龙头滴水修理</div>
+          <div class="tag">🔧 修理指南 · ⏱️ 10 分钟</div>
+        </div>
+      </div>
+      <div class="fav-item" onclick="switchPage('page-chat')">
+        <span class="icon">👕</span>
+        <div class="info">
+          <div class="title">白色衣服去黄小妙招</div>
+          <div class="tag">🏠 家务技巧</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab" id="tab-home" onclick="switchPage('page-home')"><span class="icon">🏠</span><span>首页</span></div>
+    <div class="tab" id="tab-chat" onclick="switchPage('page-chat')"><span class="icon">💬</span><span>对话</span></div>
+    <div class="tab" id="tab-history" onclick="switchPage('page-history')"><span class="icon">📋</span><span>历史</span></div>
+    <div class="tab" id="tab-fav" onclick="switchPage('page-fav')"><span class="icon">⭐</span><span>收藏</span></div>
+  </div>
+</div>
+
+<script>
+function switchPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const map = { 'page-home':'tab-home','page-chat':'tab-chat','page-history':'tab-history','page-fav':'tab-fav' };
+  document.getElementById(map[id]).classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+}
+</script>
+</body>
+</html>

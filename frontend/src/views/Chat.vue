@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <div class="page-container chat-page">
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
-      <span class="header-title">{{ currentLabel }}</span>
+      <span class="header-title" @click="handleRenameTitle" style="cursor:pointer">{{ currentLabel }}</span>
       <div style="width:50px"></div>
     </div>
 
@@ -12,7 +12,7 @@
         <div class="welcome-text">问我关于{{ currentLabel }}的问题吧</div>
       </div>
 
-      <div v-for="(msg, i) in messages" :key="i" :class="'msg msg-' + msg.role">
+      <div v-for="(msg, i) in messages" :key="i" :class="'msg msg-' + msg.role" :data-msg-id="msg._id || ''" :data-msg-index="i">
         <div class="bubble">
           <div v-if="msg._typing"><span v-html="msg._displayHtml"></span><span class="cursor">|</span></div>
           <div v-else>
@@ -46,6 +46,7 @@
     </div>
 
     <div class="input-area">
+      <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
       <div v-if="pendingImage" class="pending-preview">
@@ -62,9 +63,9 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { sendChat, getConversation, addFavorite, removeFavorite, uploadImage } from '../api'
-import { Promotion, Picture } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { sendChat, getConversation, addFavorite, removeFavorite, uploadImage, renameConversation } from '../api'
+import { Promotion, Picture, Microphone } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -78,11 +79,14 @@ const convId = ref(null)
 const currentScene = ref(localStorage.getItem('currentScene') || '')
 const currentLabel = ref(localStorage.getItem('sceneLabel') || 'AI 助手')
 const currentTyping = ref(false)
+const highlightMsgId = ref(route.query.highlight || null)
 
 // 图片相关
 const pendingFile = ref(null)
 const pendingImage = ref(null)  // base64 preview
 const previewImg = ref(null)
+const isListening = ref(false)
+const recognition = ref(null)
 
 function imgUrl(url) {
   if (!url) return ''
@@ -105,7 +109,17 @@ async function handleFileSelect(e) {
   e.target.value = ''
 }
 
+function handleFollowUpClick(e) {
+  if (!msgBox.value) return
+  const chip = e.target.closest('.rc-followup-chip')
+  if (chip) {
+    inputText.value = chip.textContent
+    send()
+  }
+}
+
 onMounted(async () => {
+  msgBox.value?.addEventListener('click', handleFollowUpClick)
   await nextTick()
   inputRef.value?.focus()
   if (route.params.id) {
@@ -119,11 +133,42 @@ onMounted(async () => {
         currentScene.value = conv.scene || ''
       }
       scrollBottom()
+      // 收藏高亮跳转
+      if (highlightMsgId.value) {
+        await nextTick()
+        setTimeout(() => {
+          const el = msgBox.value?.querySelector('[data-msg-id="' + highlightMsgId.value + '"]')
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            el.classList.add('msg-highlight')
+            setTimeout(() => el.classList.remove('msg-highlight'), 2500)
+          }
+        }, 300)
+      }
     } catch (e) {
       ElMessage.error('加载对话失败')
     }
   }
 })
+
+async function handleRenameTitle() {
+  if (!convId.value) return
+  const { value: newTitle } = await ElMessageBox.prompt('输入新标题', '重命名对话', {
+    inputValue: currentLabel.value,
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputValidator: v => v?.trim() ? true : '标题不能为空'
+  })
+  if (newTitle?.trim()) {
+    try {
+      await renameConversation(convId.value, newTitle.trim())
+      currentLabel.value = newTitle.trim()
+      ElMessage.success('已重命名')
+    } catch (e) {
+      ElMessage.error('重命名失败')
+    }
+  }
+}
 
 async function send() {
   const text = inputText.value.trim()
@@ -329,6 +374,34 @@ async function toggleFavorite(index) {
     else { await addFavorite(msg._id, ''); msg._faved = true; ElMessage.success('已收藏') }
   } catch { ElMessage.error('操作失败') }
 }
+
+
+function startVoice() {
+  try {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { ElMessage.warning('浏览器不支持语音输入'); return }
+    if (isListening.value) {
+      recognition.value?.stop(); isListening.value = false
+      ElMessage.info('已停止聆听')
+      return
+    }
+    const r = new SR()
+    r.lang = 'zh-CN'; r.continuous = false; r.interimResults = true
+    r.onresult = (e) => {
+      const t = e.results[e.results.length-1][0].transcript
+      inputText.value = t
+    }
+    r.onerror = (e) => {
+      isListening.value = false
+      if (e.error === 'not-allowed') ElMessage.warning('请允许麦克风权限')
+      else ElMessage.warning('语音识别失败: ' + e.error)
+    }
+    r.onend = () => { isListening.value = false }
+    r.start(); recognition.value = r; isListening.value = true
+    ElMessage.success('请说话...')
+  } catch (e) { ElMessage.warning('语音输入不可用: ' + e.message) }
+}
+
 
 function renderContent(content) {
   if (!content) return ''
@@ -541,6 +614,17 @@ function renderStructured(data) {
     }
   }
 
+  // 生成推荐问题（AI未返回时的默认兜底）
+  let recQuestions = data.followUps || []
+  if (!recQuestions || !Array.isArray(recQuestions) || recQuestions.length === 0) {
+    const kw = (data.title || data.question || data.problem || '').replace(/[、，。]/g, ' ').trim()
+    if (kw && kw.length > 1) {
+      recQuestions = [kw + '的食材替代', '怎么做' + kw, '怎么挑' + kw]
+    }
+  }
+  if (recQuestions && Array.isArray(recQuestions) && recQuestions.length > 0) {
+    parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQuestions.map((q, i) => `<span class="rc-followup-chip" data-idx="${i}">${escapeHtml(q)}</span>`).join("")}</div>`)
+  }
   if (data.answer) {
     parts.push(`<div class="rc-item" style="margin-top:8px">${escapeHtml(data.answer).replace(/\n/g, '<br>')}</div>`)
   }
@@ -637,6 +721,18 @@ function renderDoItem(parts, d) {
 .rc-meal-name { flex: 1; color: #333; }
 .rc-meal-time { color: #888; font-size: 12px; white-space: nowrap; }
 .rc-meal-diff { color: #999; font-size: 11px; white-space: nowrap; }
+.rc-followups { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e0e0; }
+.rc-followup-title { font-size: 12px; color: #888; margin-bottom: 6px; }
+.rc-followup-chip { display: inline-block; background: #f0fdf4; color: #16a34a; font-size: 12px; padding: 4px 10px; border-radius: 14px; margin: 3px 4px 3px 0; cursor: pointer; border: 1px solid #bbf7d0; transition: .1s; }
+.rc-followup-chip:hover { background: #dcfce7; transform: scale(1.02); }
+
 .rc-shop-cat { margin: 6px 0; }
 .rc-shop-title { font-weight: 600; font-size: 13px; color: #444; margin-bottom: 4px; }
+
+/* 消息高亮 */
+.msg-highlight { animation: hlPulse 2.5s ease; }
+@keyframes hlPulse {
+  0% { background-color: rgba(34,197,94,0.15); border-radius: 12px; }
+  100% { background-color: transparent; }
+}
 </style>

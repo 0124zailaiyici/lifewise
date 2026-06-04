@@ -36,3 +36,19 @@ frontend.log
 backend/target/
 backend/data/
 *.bak
+
+# Logs
+*.log
+backend-err.log
+
+# Generated/script files
+*.py
+*.json
+!package.json
+!pom.xml
+# Uploads
+backend/uploads/
+# Temp.vite/
+
+frontend/vite-out.txt
+frontend/vite-err.txt

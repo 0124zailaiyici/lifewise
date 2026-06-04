@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -77,6 +77,10 @@ export function search(q) {
 
 export function getDashboard() {
   return api.get('/stats/dashboard')
+}
+
+export function renameConversation(id, title) {
+  return api.put('/chat/conversations/' + id + '/rename', { title })
 }
 
 export function deleteConversation(id) {

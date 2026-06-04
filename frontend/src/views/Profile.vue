@@ -31,6 +31,12 @@
             <span>数据统计</span>
             <el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
+            <div class="menu-item" @click="$router.push('/knowledge')">
+              <el-icon><Notebook /></el-icon>
+              <span>常识库</span>
+              <el-icon class="menu-arrow"><ArrowRight /></el-icon>
+            </div>
+
         </div>
       </div>
 

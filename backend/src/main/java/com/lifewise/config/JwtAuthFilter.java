@@ -43,6 +43,9 @@ public class JwtAuthFilter implements Filter {
         String authHeader = req.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             res.setStatus(401);
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "*");
             res.setContentType("application/json;charset=utf-8");
             res.getWriter().write("{\"code\":401,\"message\":\"未登录或登录已过期\"}");
             return;
@@ -51,6 +54,9 @@ public class JwtAuthFilter implements Filter {
         String token = authHeader.substring(7);
         if (!jwtUtil.validateToken(token)) {
             res.setStatus(401);
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            res.setHeader("Access-Control-Allow-Headers", "*");
             res.setContentType("application/json;charset=utf-8");
             res.getWriter().write("{\"code\":401,\"message\":\"Token 无效或已过期\"}");
             return;

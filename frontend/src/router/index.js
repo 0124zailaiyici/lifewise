@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Chat from '../views/Chat.vue'
 import History from '../views/History.vue'
@@ -7,6 +7,7 @@ import Profile from '../views/Profile.vue'
 import Search from '../views/Search.vue'
 import Login from '../views/Login.vue'
 import Dashboard from '../views/Dashboard.vue'
+import KnowledgeBase from '../views/KnowledgeBase.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -18,7 +19,8 @@ const routes = [
   { path: '/favorites', component: Favorites },
   { path: '/profile', component: Profile },
   { path: '/dashboard', component: Dashboard },
-  { path: '/search', component: Search }
+  { path: '/search', component: Search },
+  { path: '/knowledge', component: KnowledgeBase }
 ]
 
 const router = createRouter({
@@ -36,3 +38,4 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+

@@ -27,6 +27,7 @@
             <div class="title" v-html="highlight(conv.title)"></div>
             <div class="meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
           </div>
+          <el-button text size="small" class="rename-btn" @click.stop="handleRename(conv.id, conv.title)"><el-icon><Edit /></el-icon></el-button>
           <el-button text type="danger" size="small" class="del-btn" @click.stop="handleDelete(conv.id)">
             <el-icon><Delete /></el-icon>
           </el-button>
@@ -45,9 +46,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getConversations, deleteConversation } from '../api'
-import { HomeFilled, Timer, Star, User, Delete } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { getConversations, deleteConversation, renameConversation } from '../api'
+import { HomeFilled, Timer, Star, User, Delete, Edit } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(true)
 const groups = ref([])
@@ -87,6 +88,25 @@ function highlight(text) {
   return text.substring(0, idx) + '<mark>' + text.substring(idx, idx + kw.length) + '</mark>' + text.substring(idx + kw.length)
 }
 
+async function handleRename(id, currentTitle) {
+  const { value: newTitle } = await ElMessageBox.prompt('输入新标题', '重命名对话', {
+    inputValue: currentTitle,
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    inputValidator: v => v?.trim() ? true : '标题不能为空'
+  })
+  if (newTitle?.trim()) {
+    try {
+      await renameConversation(id, newTitle.trim())
+      ElMessage.success('已重命名')
+      const conv = groups.value.flatMap(g => g.items).find(c => c.id === id)
+      if (conv) conv.title = newTitle.trim()
+    } catch (e) {
+      ElMessage.error('重命名失败')
+    }
+  }
+}
+
 async function handleDelete(id) {
   try {
     await deleteConversation(id)
@@ -124,7 +144,9 @@ function formatTime(t) {
 .title { font-size: 14px; font-weight: 500; color: #333; }
 .title :deep(mark) { background: #fde68a; color: #333; padding: 0 2px; border-radius: 2px; }
 .meta { font-size: 12px; color: #888; margin-top: 3px; }
-.del-btn { flex-shrink: 0; margin-left: 8px; }
+.del-btn { flex-shrink: 0; margin-left: 4px; }
+.rename-btn { flex-shrink: 0; color: #999; }
+.rename-btn:hover { color: #22c55e; }
 
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
 .loading-text { font-size: 48px; margin-bottom: 12px; }

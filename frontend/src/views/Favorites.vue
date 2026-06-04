@@ -51,7 +51,7 @@ onMounted(async () => {
   finally { loading.value = false }
 })
 
-function goToConversation(fav) { router.push(fav.conversationId ? '/chat/' + fav.conversationId : '/chat') }
+function goToConversation(fav) { router.push(fav.conversationId ? '/chat/' + fav.conversationId + '?highlight=' + fav.messageId : '/chat') }
 async function remove(id, messageId) {
   try { await removeFavorite(messageId); favorites.value = favorites.value.filter(f => f.id !== id); ElMessage.success('已删除') }
   catch { ElMessage.error('删除失败') }

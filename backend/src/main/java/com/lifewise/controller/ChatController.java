@@ -8,6 +8,7 @@ import com.lifewise.service.AiService;
 import com.lifewise.service.ConversationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -59,6 +60,16 @@ public class ChatController {
         return ApiResponse.success(resp);
     }
 
+    @PutMapping("/conversations/{id}/rename")
+    public ApiResponse<?> renameConversation(@RequestAttribute Long userId,
+                                                  @PathVariable Long id,
+                                                  @RequestBody Map<String, String> body) {
+        String newTitle = body.get("title");
+        if (newTitle == null || newTitle.trim().isEmpty()) {
+            return ApiResponse.error("标题不能为空");
+        }
+        return ApiResponse.success(conversationService.renameConversation(id, userId, newTitle.trim()));
+    }
     @DeleteMapping("/conversations/{id}")
     public ApiResponse<?> deleteConversation(@RequestAttribute Long userId,
                                                   @PathVariable Long id) {

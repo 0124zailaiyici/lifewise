@@ -82,6 +82,19 @@ public class ConversationServiceImpl implements ConversationService {
         conversationRepository.delete(conv);
     }
 
+    @Override
+    @Transactional
+    public ConversationResponse renameConversation(Long conversationId, Long userId, String newTitle) {
+        Conversation conv = conversationRepository.findById(conversationId)
+            .orElseThrow(() -> new RuntimeException("对话不存在"));
+        if (!conv.getUserId().equals(userId)) {
+            throw new RuntimeException("无权修改此对话");
+        }
+        conv.setTitle(newTitle);
+        conv = conversationRepository.save(conv);
+        return toResponse(conv);
+    }
+
     private MessageResponse toMessageResponse(Message msg) {
         MessageResponse r = new MessageResponse();
         r.setId(msg.getId());

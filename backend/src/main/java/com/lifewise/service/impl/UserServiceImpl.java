@@ -1,10 +1,12 @@
 package com.lifewise.service.impl;
 
+import com.lifewise.config.JwtUtil;
 import com.lifewise.dto.*;
 import com.lifewise.entity.User;
 import com.lifewise.repository.UserRepository;
 import com.lifewise.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,6 +14,8 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public UserResponse register(RegisterRequest request) {
@@ -25,22 +29,30 @@ public class UserServiceImpl implements UserService {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user = userRepository.save(user);
 
         return toResponse(user);
     }
 
     @Override
-    public UserResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("用户不存在"));
+            .orElseThrow(() -> new RuntimeException("用户不存在或密码错误"));
 
-        if (!user.getPassword().equals(request.getPassword())) {
-            throw new RuntimeException("密码错误");
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("用户不存在或密码错误");
         }
 
-        return toResponse(user);
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
+
+        LoginResponse resp = new LoginResponse();
+        resp.setId(user.getId());
+        resp.setUsername(user.getUsername());
+        resp.setEmail(user.getEmail());
+        resp.setAvatar(user.getAvatar());
+        resp.setToken(token);
+        return resp;
     }
 
     @Override

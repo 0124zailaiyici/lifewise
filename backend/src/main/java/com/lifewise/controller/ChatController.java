@@ -20,9 +20,8 @@ public class ChatController {
     private final MessageRepository messageRepository;
 
     @PostMapping("/send")
-    public ApiResponse<ChatResponse> sendMessage(@RequestHeader Long userId,
+    public ApiResponse<ChatResponse> sendMessage(@RequestAttribute Long userId,
                                                   @Valid @RequestBody ChatRequest request) {
-        // 1. 创建或获取对话
         Long convId = request.getConversationId();
         if (convId == null) {
             String title = request.getMessage().length() > 50
@@ -33,24 +32,20 @@ public class ChatController {
             convId = conv.getId();
         }
 
-        // 2. 保存用户消息
         Message userMsg = new Message();
         userMsg.setConversationId(convId);
         userMsg.setRole("user");
         userMsg.setContent(request.getMessage());
         messageRepository.save(userMsg);
 
-        // 3. 调用 AI
         String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId);
 
-        // 4. 保存 AI 回复
         Message aiMsg = new Message();
         aiMsg.setConversationId(convId);
         aiMsg.setRole("assistant");
         aiMsg.setContent(aiResponse);
         aiMsg = messageRepository.save(aiMsg);
 
-        // 5. 返回
         ChatResponse resp = new ChatResponse();
         resp.setId(aiMsg.getId());
         resp.setConversationId(convId);
@@ -62,7 +57,7 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
-    public ApiResponse<?> getConversations(@RequestHeader Long userId,
+    public ApiResponse<?> getConversations(@RequestAttribute Long userId,
                                             @RequestParam(required = false) String scene) {
         if (scene != null && !scene.isEmpty()) {
             return ApiResponse.success(conversationService.getUserConversationsByScene(userId, scene));

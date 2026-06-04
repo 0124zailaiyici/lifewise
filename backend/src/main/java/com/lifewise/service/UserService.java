@@ -4,6 +4,6 @@ import com.lifewise.dto.*;
 
 public interface UserService {
     UserResponse register(RegisterRequest request);
-    UserResponse login(LoginRequest request);
+    LoginResponse login(LoginRequest request);
     UserResponse getUserById(Long id);
 }

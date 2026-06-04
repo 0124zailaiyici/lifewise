@@ -20,12 +20,12 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<UserResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(userService.login(request));
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<UserResponse> getUser(@PathVariable Long id) {
-        return ApiResponse.success(userService.getUserById(id));
+    @GetMapping("/me")
+    public ApiResponse<UserResponse> getCurrentUser(@RequestAttribute Long userId) {
+        return ApiResponse.success(userService.getUserById(userId));
     }
 }

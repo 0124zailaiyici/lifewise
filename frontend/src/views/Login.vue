@@ -5,7 +5,7 @@
       <h1 class="title">LifeWise</h1>
       <p class="subtitle">你的 AI 生活助手</p>
 
-      <el-form :model="form" class="form">
+      <el-form :model="form" class="form" @keyup.enter="handleLogin">
         <el-input v-model="form.email" placeholder="邮箱" size="large" class="input" />
         <el-input v-model="form.password" type="password" placeholder="密码" size="large" class="input" show-password />
         <el-button type="success" size="large" class="btn" @click="handleLogin" :loading="loading">
@@ -18,9 +18,8 @@
       </el-button>
     </div>
 
-    <!-- 注册弹窗 -->
     <el-dialog v-model="isRegister" title="注册" width="85%">
-      <el-form :model="registerForm">
+      <el-form @keyup.enter="handleRegister">
         <el-input v-model="registerForm.username" placeholder="用户名" class="input" />
         <el-input v-model="registerForm.email" placeholder="邮箱" class="input" />
         <el-input v-model="registerForm.password" type="password" placeholder="密码" class="input" show-password />
@@ -44,7 +43,7 @@ const userStore = useUserStore()
 const loading = ref(false)
 const isRegister = ref(false)
 
-const form = reactive({ email: 'test@test.com', password: '123456' })
+const form = reactive({ email: 'demo@test.com', password: '123456' })
 const registerForm = reactive({ username: '', email: '', password: '' })
 
 async function handleLogin() {
@@ -52,6 +51,7 @@ async function handleLogin() {
   try {
     const res = await login(form.email, form.password)
     userStore.setUser(res.data)
+    localStorage.setItem('token', res.data.token)
     ElMessage.success('登录成功')
     router.push('/home')
   } catch (e) {
@@ -76,8 +76,8 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.login-page { display: flex; align-items: center; justify-content: center; }
-.login-wrap { text-align: center; padding: 40px 32px; width: 100%; }
+.login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login-wrap { text-align: center; padding: 40px 32px; width: 100%; max-width: 400px; }
 .logo { font-size: 60px; margin-bottom: 8px; }
 .title { font-size: 28px; font-weight: bold; color: #333; }
 .subtitle { font-size: 14px; color: #999; margin-bottom: 40px; }

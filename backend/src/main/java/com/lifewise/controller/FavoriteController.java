@@ -8,6 +8,8 @@ import com.lifewise.entity.Conversation;
 import com.lifewise.repository.FavoriteRepository;
 import com.lifewise.repository.MessageRepository;
 import com.lifewise.repository.ConversationRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,9 +24,10 @@ public class FavoriteController {
     private final FavoriteRepository favoriteRepository;
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
+    private final ObjectMapper objectMapper;
 
     @PostMapping
-    public ApiResponse<?> addFavorite(@RequestHeader Long userId,
+    public ApiResponse<?> addFavorite(@RequestAttribute Long userId,
                                        @RequestParam Long messageId,
                                        @RequestParam(required = false) String note) {
         if (favoriteRepository.existsByUserIdAndMessageId(userId, messageId)) {
@@ -39,14 +42,14 @@ public class FavoriteController {
     }
 
     @DeleteMapping
-    public ApiResponse<?> removeFavorite(@RequestHeader Long userId,
+    public ApiResponse<?> removeFavorite(@RequestAttribute Long userId,
                                           @RequestParam Long messageId) {
         favoriteRepository.deleteByUserIdAndMessageId(userId, messageId);
         return ApiResponse.success("取消收藏");
     }
 
     @GetMapping
-    public ApiResponse<List<FavoriteResponse>> getFavorites(@RequestHeader Long userId) {
+    public ApiResponse<List<FavoriteResponse>> getFavorites(@RequestAttribute Long userId) {
         List<Favorite> list = favoriteRepository.findByUserIdOrderByCreatedAtDesc(userId);
         List<FavoriteResponse> result = new ArrayList<>();
 
@@ -57,7 +60,6 @@ public class FavoriteController {
             resp.setNote(fav.getNote());
             resp.setCreatedAt(fav.getCreatedAt());
 
-            // 获取消息内容作为摘要
             Message msg = messageRepository.findById(fav.getMessageId()).orElse(null);
             if (msg != null) {
                 resp.setConversationId(msg.getConversationId());
@@ -65,15 +67,10 @@ public class FavoriteController {
                 if (content != null && !content.isEmpty()) {
                     if (content.startsWith("{")) {
                         try {
-                            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(content);
-                            if (node.has("title")) {
-                                resp.setSummary(node.get("title").asText());
-                            } else if (node.has("品类")) {
-                                resp.setSummary(node.get("品类").asText() + " 挑选指南");
-                            } else {
-                                resp.setSummary(content.substring(0, Math.min(30, content.length())) + "...");
-                            }
+                            JsonNode node = objectMapper.readTree(content);
+                            if (node.has("title")) resp.setSummary(node.get("title").asText());
+                            else if (node.has("品类")) resp.setSummary(node.get("品类").asText() + " 挑选指南");
+                            else resp.setSummary(content.substring(0, Math.min(30, content.length())) + "...");
                         } catch (Exception e) {
                             resp.setSummary(content.substring(0, Math.min(30, content.length())) + "...");
                         }
@@ -81,17 +78,11 @@ public class FavoriteController {
                         resp.setSummary(content.substring(0, Math.min(30, content.length())) + "...");
                     }
                 }
-
-                // 获取场景
                 Conversation conv = conversationRepository.findById(msg.getConversationId()).orElse(null);
-                if (conv != null) {
-                    resp.setScene(conv.getScene());
-                }
+                if (conv != null) resp.setScene(conv.getScene());
             }
-
             result.add(resp);
         }
-
         return ApiResponse.success(result);
     }
 }

@@ -14,9 +14,7 @@
 
       <div v-for="(msg, i) in messages" :key="i" :class="'msg msg-' + msg.role">
         <div class="bubble">
-          <!-- 正在打字的消息：显示逐字内容 -->
           <div v-if="msg._typing"><span v-html="msg._displayHtml"></span><span class="cursor">|</span></div>
-          <!-- 已完成的消息：直接渲染 -->
           <div v-else v-html="renderContent(msg.content)"></div>
         </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
@@ -64,7 +62,6 @@ const currentTyping = ref(false)
 onMounted(async () => {
   await nextTick()
   inputRef.value?.focus()
-
   if (route.params.id) {
     convId.value = route.params.id
     try {
@@ -85,7 +82,7 @@ onMounted(async () => {
 async function send() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
-  if (currentTyping.value) return // 打字中不允许新消息
+  if (currentTyping.value) return
 
   messages.value.push({ role: 'user', content: text })
   inputText.value = ''
@@ -97,7 +94,6 @@ async function send() {
     const reply = res.data
     const fullContent = reply.content
 
-    // 创建一条空消息，开始打字
     const msg = {
       role: 'assistant',
       content: fullContent,
@@ -115,14 +111,11 @@ async function send() {
       convId.value = reply.conversationId
     }
 
-    // 通过数组索引获取响应式引用
     const msgIdx = messages.value.length - 1
-
-    // 打字机效果
     const fullHtml = renderContent(fullContent)
     let charIdx = 0
-    const speed = 50          // 50ms tick
-    const batchSize = 5       // 每 tick 5 个字，减少更新频率
+    const speed = 50
+    const batchSize = 5
 
     const timer = setInterval(() => {
       const m = messages.value[msgIdx]
@@ -137,7 +130,7 @@ async function send() {
         return
       }
       m._displayHtml = fullHtml.substring(0, charIdx)
-      if (charIdx % 15 < batchSize) scrollBottom() // 每 3 tick 滚动一次
+      if (charIdx % 15 < batchSize) scrollBottom()
     }, speed)
 
   } catch (e) {
@@ -162,23 +155,84 @@ function copyMsg(index) {
   if (!msg) return
   let text = msg.content
   try {
-    const obj = JSON.parse(text)
+    const obj = tryParseJson(text)
     if (obj && typeof obj === 'object') text = formatObjForCopy(obj)
   } catch (e) {}
   doCopy(text)
 }
 
+function tryParseJson(text) {
+  // 去掉可能的 markdown 代码块标记
+  let clean = text.trim()
+  if (clean.startsWith('```')) {
+    clean = clean.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '')
+  }
+  return JSON.parse(clean)
+}
+
 function formatObjForCopy(obj) {
   let parts = []
   if (obj.title) parts.push('【' + obj.title + '】')
-  if (obj.品类) parts.push('【' + obj.品类 + '】')
-  if (obj.ingredients) { parts.push(''); parts.push('食材：'); obj.ingredients.forEach(i => parts.push('  ' + i)) }
-  if (obj.steps) { parts.push(''); parts.push('步骤：'); obj.steps.forEach(s => parts.push('  ' + s)) }
-  if (obj.挑选步骤) { obj.挑选步骤.forEach(s => { parts.push(''); parts.push(s.步骤名称 || ''); if (s.具体操作) parts.push('  ' + s.具体操作) }) }
-  if (obj.tips) { parts.push(''); const tips = Array.isArray(obj.tips) ? obj.tips : [obj.tips]; tips.forEach(t => parts.push('提示：' + t)) }
-  if (obj.总结口诀) parts.push(''); parts.push(obj.总结口诀)
-  if (obj.常见误区) { parts.push(''); parts.push('误区：'); obj.常见误区.forEach(m => parts.push('  ' + m)) }
+  // 食材
+  if (obj.ingredients) {
+    parts.push(''); parts.push('食材：')
+    obj.ingredients.forEach(i => {
+      if (typeof i === 'object') parts.push('  ' + formatIngredient(i))
+      else parts.push('  ' + i)
+    })
+  }
+  // 材料
+  if (obj.materials) {
+    parts.push(''); parts.push('材料：')
+    obj.materials.forEach(m => {
+      if (typeof m === 'object') parts.push('  ' + (m.name || '') + (m.alternative ? '（可替代：' + m.alternative + '）' : ''))
+      else parts.push('  ' + m)
+    })
+  }
+  // 步骤
+  if (obj.steps) {
+    parts.push(''); parts.push('步骤：')
+    obj.steps.forEach(s => {
+      if (typeof s === 'object') parts.push('  ' + (s.step ? s.step + '. ' : '') + (s.action || s.tip || ''))
+      else parts.push('  ' + s)
+    })
+  }
+  // 挑选步骤
+  const selSteps = obj.selection_steps || obj.挑选步骤
+  if (selSteps) {
+    selSteps.forEach(s => {
+      if (typeof s === 'object') {
+        parts.push('')
+        if (s.step_name || s.步骤名称) parts.push(s.step_name || s.步骤名称)
+        if (s.action || s.具体操作) parts.push('  ' + (s.action || s.具体操作))
+      }
+    })
+  }
+  if (obj.tips) {
+    parts.push('')
+    const tips = Array.isArray(obj.tips) ? obj.tips : [obj.tips]
+    tips.forEach(t => parts.push('提示：' + t))
+  }
+  if (obj.key_point) { parts.push(''); parts.push('关键：' + obj.key_point) }
+  if (obj.summary_slogan) { parts.push(''); parts.push(obj.summary_slogan) }
+  if (obj.common_mistakes) {
+    parts.push(''); parts.push('误区：')
+    obj.common_mistakes.forEach(m => parts.push('  ' + m))
+  }
+  if (obj.answer) parts.push(obj.answer)
+  if (obj.severity) parts.push('严重程度：' + obj.severity)
+  if (obj.safety_tip) parts.push('安全提示：' + obj.safety_tip)
+  if (obj.when_to_see_doctor) parts.push('就医指征：' + obj.when_to_see_doctor)
+  if (obj.storage_tip) parts.push('保存：' + obj.storage_tip)
+
   return parts.join('\n')
+}
+
+function formatIngredient(i) {
+  let s = i.name || ''
+  if (i.amount) s += ' ' + i.amount
+  if (i.note) s += '（' + i.note + '）'
+  return s
 }
 
 function doCopy(text) {
@@ -209,32 +263,196 @@ async function toggleFavorite(index) {
 
 function renderContent(content) {
   if (!content) return ''
-  try { const data = JSON.parse(content); if (typeof data === 'object') return renderStructured(data) } catch (e) {}
-  return content.replace(/\n/g, '<br>')
+  // 先尝试解析 JSON（可能带 markdown 包裹）
+  const data = tryParseJsonSafe(content)
+  if (data) return renderStructured(data)
+  // 不是 JSON，按纯文本渲染
+  return escapeHtml(content).replace(/\n/g, '<br>')
+}
+
+function tryParseJsonSafe(text) {
+  try {
+    const obj = tryParseJson(text)
+    if (obj && typeof obj === 'object') return obj
+  } catch (e) {}
+  return null
+}
+
+function escapeHtml(s) {
+  if (typeof s !== 'string') return ''
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 
 function renderStructured(data) {
-  if (data.title && data.ingredients) {
-    let html = `<div class="rc-card"><h4>${data.title}</h4>`
-    if (data.difficulty || data.time || data.servings) { html += `<div class="rc-tags">`; if (data.difficulty) html += data.difficulty; if (data.time) html += ` · ⏱️ ${data.time}`; if (data.servings) html += ` · ${data.servings}`; html += `</div>` }
-    html += `<div class="rc-sec">🥘 食材</div>`; if (Array.isArray(data.ingredients)) data.ingredients.forEach(i => { html += `<div class="rc-item">· ${i}</div>` })
-    html += `<div class="rc-sec">👨‍🍳 步骤</div>`; if (Array.isArray(data.steps)) data.steps.forEach(s => { html += `<div class="rc-item">${s}</div>` })
-    if (data.tips) { if (Array.isArray(data.tips)) { html += `<div class="rc-tip">${data.tips.map(t => '💡 ' + t).join('<br>')}</div>` } else { html += `<div class="rc-tip">💡 ${data.tips}</div>` } }
-    html += `</div>`; return html
+  let parts = []
+
+  // ===== 标题行 =====
+  if (data.title) {
+    parts.push(`<h4>${escapeHtml(data.title)}</h4>`)
+    let tags = ''
+    if (data.difficulty) tags += `📊 ${escapeHtml(data.difficulty)}`
+    if (data.time) tags += ` &middot; ⏱️ ${escapeHtml(data.time)}`
+    if (data.servings) tags += ` &middot; ${escapeHtml(data.servings)}`
+    if (tags) parts.push(`<div class="rc-tags">${tags}</div>`)
+  } else if (data.品类) parts.push(`<h4>🛒 ${escapeHtml(data.品类)}</h4>`)
+  else if (data.problem) {
+    parts.push(`<h4>🔧 ${escapeHtml(data.problem)}</h4>`)
+    if (data.severity) parts.push(`<div class="rc-tags">严重程度：${escapeHtml(data.severity)}</div>`)
+  } else if (data.question) parts.push(`<h4>${escapeHtml(data.question)}</h4>`)
+
+  // ===== 食材 / 材料 =====
+  if (Array.isArray(data.ingredients)) {
+    parts.push('<div class="rc-sec">🥘 食材</div>')
+    data.ingredients.forEach(i => renderItem(parts, i))
   }
-  if (data.挑选步骤 || data.品类) {
-    let html = `<div class="rc-card">`; if (data.品类) html += `<h4>🛒 ${data.品类}挑选指南</h4>`
-    if (data.挑选步骤) { data.挑选步骤.forEach(s => { html += `<div class="rc-guide-step"><div class="rc-guide-title">${s.步骤名称 || ''}</div><div class="rc-item">${s.具体操作 || ''}</div></div>` }) }
-    if (data.常见误区) { html += `<div class="rc-sec">⚠️ 常见误区</div>`; data.常见误区.forEach(m => { html += `<div class="rc-item">· ${m}</div>` }) }
-    if (data.总结口诀) html += `<div class="rc-tip">📝 ${data.总结口诀}</div>`; html += `</div>`; return html
+  if (Array.isArray(data.materials)) {
+    parts.push('<div class="rc-sec">🧴 材料</div>')
+    data.materials.forEach(m => renderItem(parts, m))
   }
-  let html = `<div class="rc-card">`
+
+  // ===== 步骤 =====
+  if (Array.isArray(data.steps)) {
+    parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
+    data.steps.forEach(s => {
+      if (typeof s === 'object') {
+        let sp = `<div class="rc-item">`
+        if (s.step) sp += `<strong>步骤 ${s.step}</strong>：`
+        sp += escapeHtml(s.action || s.tip || s.title || '')
+        if (s.warning) sp += `<br><span class="rc-warning">⚠️ ${escapeHtml(s.warning)}</span>`
+        if (s.tip) sp += `<br><span class="rc-note">💡 ${escapeHtml(s.tip)}</span>`
+        sp += '</div>'
+        parts.push(sp)
+      } else {
+        parts.push(`<div class="rc-item">${escapeHtml(s)}</div>`)
+      }
+    })
+  }
+
+  // ===== 挑选步骤 =====
+  const selSteps = data.selection_steps || data.挑选步骤
+  if (Array.isArray(selSteps)) {
+    parts.push('<div class="rc-sec">🔍 挑选步骤</div>')
+    selSteps.forEach(s => {
+      if (typeof s === 'object') {
+        parts.push(`<div class="rc-guide-step"><div class="rc-guide-title">${escapeHtml(s.step_name || s.步骤名称 || '')}</div><div class="rc-item">${escapeHtml(s.action || s.具体操作 || '')}</div></div>`)
+      } else parts.push(`<div class="rc-item">· ${escapeHtml(s)}</div>`)
+    })
+  }
+
+  // ===== 工具 =====
+  if (Array.isArray(data.tools)) {
+    parts.push('<div class="rc-sec">🔧 工具</div>')
+    data.tools.forEach(t => parts.push(`<div class="rc-item">· ${escapeHtml(t)}</div>`))
+  }
+
+  // ===== 建议 =====
+  if (Array.isArray(data.suggestions)) {
+    parts.push('<div class="rc-sec">💡 建议</div>')
+    data.suggestions.forEach(s => {
+      if (typeof s === 'object') parts.push(`<div class="rc-item"><strong>${escapeHtml(s.item || '')}</strong>：${escapeHtml(s.detail || '')}</div>`)
+      else parts.push(`<div class="rc-item">· ${escapeHtml(s)}</div>`)
+    })
+  }
+
+  // ===== 穿搭单品 =====
+  if (Array.isArray(data.outfits)) {
+    parts.push('<div class="rc-sec">👕 推荐穿搭</div>')
+    data.outfits.forEach(o => {
+      if (typeof o === 'object') parts.push(`<div class="rc-item">· ${escapeHtml(o.piece || '')}${o.description ? ' - ' + escapeHtml(o.description) : ''}${o.color ? '（' + escapeHtml(o.color) + '）' : ''}</div>`)
+      else parts.push(`<div class="rc-item">· ${escapeHtml(o)}</div>`)
+    })
+  }
+
+  // ===== 该做/不该做 =====
+  if (Array.isArray(data.do_list)) {
+    parts.push('<div class="rc-sec">✅ 应该做</div>')
+    data.do_list.forEach(d => renderDoItem(parts, d))
+  }
+  if (Array.isArray(data.dont_list)) {
+    parts.push('<div class="rc-sec">❌ 不应该做</div>')
+    data.dont_list.forEach(d => renderDoItem(parts, d))
+  }
+
+  // ===== 常见误区/错误 =====
+  const mistakes = data.common_mistakes || data.误區 || data.常见误区
+  if (Array.isArray(mistakes)) {
+    parts.push('<div class="rc-sec">⚠️ 常见误区</div>')
+    mistakes.forEach(m => parts.push(`<div class="rc-item">· ${escapeHtml(m)}</div>`))
+  }
+
+  // ===== 关键原则 =====
+  if (Array.isArray(data.key_principles)) {
+    parts.push('<div class="rc-sec">📌 关键原则</div>')
+    data.key_principles.forEach(p => parts.push(`<div class="rc-item">· ${escapeHtml(p)}</div>`))
+  }
+
+  // ===== 颜色搭配 =====
+  if (Array.isArray(data.color_palette)) {
+    parts.push('<div class="rc-sec">🎨 推荐配色</div>')
+    data.color_palette.forEach(c => parts.push(`<span class="rc-color-tag">${escapeHtml(c)}</span> `))
+  }
+
+  // ===== 避免 =====
+  if (data.avoid) parts.push(`<div class="rc-sec">🚫 避免</div><div class="rc-item">${escapeHtml(data.avoid)}</div>`)
+
+  // ===== 单行字段 =====
+  if (data.safety_tip) parts.push(`<div class="rc-tip">⚠️ ${escapeHtml(data.safety_tip)}</div>`)
+  if (data.prevention) parts.push(`<div class="rc-item"><strong>预防</strong>：${escapeHtml(data.prevention)}</div>`)
+  if (data.professional_advice) parts.push(`<div class="rc-tip">🔧 ${escapeHtml(data.professional_advice)}</div>`)
+  if (data.when_to_see_vet) parts.push(`<div class="rc-tip">🏥 ${escapeHtml(data.when_to_see_vet)}</div>`)
+  if (data.when_to_see_doctor) parts.push(`<div class="rc-tip">🏥 ${escapeHtml(data.when_to_see_doctor)}</div>`)
+  if (data.storage_tip) parts.push(`<div class="rc-item"><strong>保存</strong>：${escapeHtml(data.storage_tip)}</div>`)
+  if (data.style) parts.push(`<div class="rc-item"><strong>风格</strong>：${escapeHtml(data.style)}</div>`)
+  if (data.occasion) parts.push(`<div class="rc-item"><strong>场合</strong>：${escapeHtml(data.occasion)}</div>`)
+  if (data.cultural_notes) parts.push(`<div class="rc-item"><strong>文化差异</strong>：${escapeHtml(data.cultural_notes)}</div>`)
+  if (data.pet_type) parts.push(`<div class="rc-item"><strong>宠物</strong>：${escapeHtml(data.pet_type)}</div>`)
+  if (data.topic) parts.push(`<div class="rc-item"><strong>主题</strong>：${escapeHtml(data.topic)}</div>`)
+  if (data.category) parts.push(`<div class="rc-item"><strong>类别</strong>：${escapeHtml(data.category)}</div>`)
+
+  // ===== 提示 / tips =====
+  if (data.tips) {
+    if (typeof data.tips === 'string') parts.push(`<div class="rc-tip">💡 ${escapeHtml(data.tips)}</div>`)
+    else if (Array.isArray(data.tips)) data.tips.forEach(t => parts.push(`<div class="rc-tip">💡 ${escapeHtml(t)}</div>`))
+  }
+
+  // ===== 关键点、总结口诀 =====
+  if (data.key_point) parts.push(`<div class="rc-item"><strong>🔥 关键</strong>：${escapeHtml(data.key_point)}</div>`)
+  if (data.summary_slogan) parts.push(`<div class="rc-tip">📝 ${escapeHtml(data.summary_slogan)}</div>`)
+  if (data.disclaimer) parts.push(`<div class="rc-tip">${escapeHtml(data.disclaimer)}</div>`)
+
+  // ===== 其余未处理的字段（兜底） =====
   for (const [key, val] of Object.entries(data)) {
-    if (Array.isArray(val)) { html += `<div class="rc-sec">${key}</div>`; val.forEach(v => { if (typeof v === 'object') Object.entries(v).forEach(([k2, v2]) => { html += `<div class="rc-item"><strong>${k2}</strong>：${v2}</div>` }); else html += `<div class="rc-item">· ${v}</div>` }) }
-    else if (typeof val === 'object') { html += `<div class="rc-sec">${key}</div>`; Object.entries(val).forEach(([k2, v2]) => { html += `<div class="rc-item"><strong>${k2}</strong>：${v2}</div>` }) }
-    else if (key !== 'title' && key !== 'time' && key !== 'difficulty' && key !== 'servings') { html += `<div class="rc-sec">${key}</div><div class="rc-item">${val}</div>` }
+    if (['title','difficulty','time','servings','ingredients','materials','steps','selection_steps','挑选步骤','tools','suggestions','outfits','do_list','dont_list','common_mistakes','误區','常见误区','key_principles','color_palette','avoid','safety_tip','prevention','professional_advice','when_to_see_vet','when_to_see_doctor','storage_tip','style','occasion','cultural_notes','pet_type','topic','category','tips','key_point','summary_slogan','disclaimer','answer','severity','question','problem','品类','need_professional','season'].includes(key)) continue
+    if (typeof val === 'string' && val.length < 200) {
+      parts.push(`<div class="rc-item"><strong>${escapeHtml(key)}</strong>：${escapeHtml(val)}</div>`)
+    }
   }
-  html += `</div>`; return html
+
+  // ===== 回答 =====
+  if (data.answer) {
+    parts.push(`<div class="rc-item" style="margin-top:8px">${escapeHtml(data.answer).replace(/\n/g, '<br>')}</div>`)
+  }
+
+  return '<div class="rc-card">' + parts.join('') + '</div>'
+}
+
+function renderItem(parts, item) {
+  if (typeof item === 'object') {
+    let s = `· ${escapeHtml(item.name || '')}`
+    if (item.amount) s += ` <strong>${escapeHtml(item.amount)}</strong>`
+    if (item.note) s += `<br><span class="rc-note">💡 ${escapeHtml(item.note)}</span>`
+    parts.push(`<div class="rc-item">${s}</div>`)
+  } else {
+    parts.push(`<div class="rc-item">· ${escapeHtml(item)}</div>`)
+  }
+}
+
+function renderDoItem(parts, d) {
+  if (typeof d === 'object') {
+    parts.push(`<div class="rc-item">· ${escapeHtml(d.action || '')}${d.reason ? '<br><span class="rc-note">原因：' + escapeHtml(d.reason) + '</span>' : ''}</div>`)
+  } else {
+    parts.push(`<div class="rc-item">· ${escapeHtml(d)}</div>`)
+  }
 }
 </script>
 
@@ -265,11 +483,14 @@ function renderStructured(data) {
 .input-area { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid #e0e0e0; background: #fff; box-shadow: 0 -2px 12px rgba(0,0,0,.05); }
 
 .rc-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin: 4px 0; }
-.rc-card h4 { font-size: 16px; margin-bottom: 4px; }
-.rc-card .rc-tags { font-size: 12px; color: #666; margin-bottom: 10px; }
+.rc-card h4 { font-size: 16px; margin: 0 0 4px; }
+.rc-tags { font-size: 12px; color: #666; margin-bottom: 10px; }
 .rc-sec { font-weight: 600; font-size: 13px; margin: 10px 0 4px; color: #444; }
 .rc-item { font-size: 13px; color: #333; margin: 5px 0; padding-left: 2px; line-height: 1.6; }
+.rc-note { font-size: 12px; color: #888; display: block; }
+.rc-warning { font-size: 12px; color: #dc2626; display: block; }
 .rc-tip { background: #fefce8; border-radius: 8px; padding: 10px; font-size: 12px; color: #a16207; margin-top: 10px; line-height: 1.6; }
 .rc-guide-step { margin: 8px 0; }
 .rc-guide-title { font-weight: 600; font-size: 13px; color: #444; margin-bottom: 4px; }
+.rc-color-tag { display: inline-block; background: #f0f0f0; border-radius: 12px; padding: 2px 10px; font-size: 12px; margin: 2px; }
 </style>

@@ -394,7 +394,7 @@ function imgUrl(url) {
 }
 function startVoice() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    ElMessage.warning('当前浏览器不支持语音识别，请使用 Chrome 浏览器')
+    ElMessage.warning('当前浏览器不支持语音识别，建议用 Chrome 浏览器打开 http://localhost:5173')
     return
   }
   // Check if permission already denied
@@ -424,6 +424,8 @@ function startVoice() {
       isListening.value = false
       if (e.error === 'not-allowed') ElMessage.error('麦克风权限被拒绝，请在浏览器地址栏左侧点击🔒开启')
       else if (e.error === 'no-speech') ElMessage.warning('未检测到语音，请重试')
+      else if (e.error === 'aborted') ElMessage.warning('语音识别被中断，请重试')
+      else if (e.error === 'audio-capture') ElMessage.error('未检测到麦克风设备，请检查麦克风连接')
       else ElMessage.error('语音识别失败: ' + e.error)
     }
     recognition.onend = () => {

@@ -135,7 +135,7 @@ async function send() {
 
   try {
     const res = await sendChat(msg, scene, convId, imageUrl)
-    const fullContent = typeof res.data === 'string' ? res.data : (res.data?.answer || JSON.stringify(res.data))
+    const fullContent = typeof res.data === 'string' ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
     const m = messages.value[aiIdx]
     if (m) {
       m._typing = false; m.content = fullContent
@@ -266,14 +266,19 @@ function renderStructured(data) {
   }
   if (data.tips) {
     parts.push('<div class="rc-sec">💡 小贴士</div>')
-    data.tips.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
+    const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
+    ta.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
   }
   if (data.key_point) parts.push(`<div class="rc-tip">🔥 ${esc(data.key_point)}</div>`)
   if (data.safety_tip) parts.push(`<div class="rc-tip" style="color:#dc2626">⚠️ ${esc(data.safety_tip)}</div>`)
   if (data.answer) parts.push(`<div class="rc-item" style="margin-top:8px">${esc(data.answer).replace(/\n/g, '<br>')}</div>`)
   if (data.suggestions) {
     parts.push('<div class="rc-sec">💡 建议</div>')
-    data.suggestions.forEach(s => parts.push(`<div class="rc-item"><strong>${esc(s.item)}</strong>：${esc(s.detail)}</div>`))
+    const sa = Array.isArray(data.suggestions) ? data.suggestions : [data.suggestions]
+    sa.forEach(s => {
+      if (typeof s === 'string') parts.push(`<div class="rc-item">· ${esc(s)}</div>`)
+      else parts.push(`<div class="rc-item"><strong>${esc(s.item)}</strong>：${esc(s.detail)}</div>`)
+    })
   }
   let recQ = data.followUps || []
   if (!recQ.length) {
@@ -347,3 +352,5 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-followup-chip { display: inline-block; background: #f0fdf4; color: #16a34a; font-size: 12px; padding: 5px 12px; border-radius: 14px; cursor: pointer; border: 1px solid #bbf7d0; transition: .1s; white-space: nowrap; }
 .rc-followup-chip:hover { background: #dcfce7; transform: scale(1.02); }
 </style>
+
+

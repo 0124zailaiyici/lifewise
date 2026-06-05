@@ -158,6 +158,22 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
+    public void update(Long id, String question, String answer, String scene) {
+        knowledgeBaseRepository.findById(id).ifPresent(kb -> {
+            if (question != null && !question.trim().isEmpty()) {
+                kb.setQuestion(question.length() > 200 ? question.substring(0, 200) : question);
+            }
+            if (answer != null && !answer.trim().isEmpty()) {
+                kb.setAnswer(answer);
+            }
+            if (scene != null && !scene.trim().isEmpty()) {
+                kb.setScene(scene);
+            }
+            knowledgeBaseRepository.save(kb);
+            log.info("?????: id={}", id);
+        });
+    }
+
     public void markHelpful(Long id) {
         knowledgeBaseRepository.findById(id).ifPresent(kb -> {
             kb.setHelpfulCount(kb.getHelpfulCount() + 1);
@@ -245,3 +261,4 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         return intersection.size();
     }
 }
+

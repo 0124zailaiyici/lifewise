@@ -33,11 +33,33 @@
         <div class="kb-footer">
           <span class="kb-helpful">👍 有用 {{ item.helpfulCount || 0 }} 次</span>
           <el-button text size="small" type="primary" @click="markHelpful(item.id)">有用</el-button>
+          <el-button text size="small" type="primary" @click="openEdit(item)">编辑</el-button>
           <el-button text size="small" type="danger" @click="handleDelete(item.id)">删除</el-button>
           <span class="kb-date">{{ formatTime(item.createdAt) }}</span>
         </div>
       </div>
     </div>
+
+    <!-- 编辑对话框 -->
+    <el-dialog v-model="editDialog.visible" title="编辑常识" width="90%" :close-on-click-modal="false">
+      <el-form label-width="60px">
+        <el-form-item label="问题">
+          <el-input v-model="editDialog.question" placeholder="问题" />
+        </el-form-item>
+        <el-form-item label="场景">
+          <el-select v-model="editDialog.scene" placeholder="场景" style="width:100%">
+            <el-option v-for="s in scenes" :key="s.key" :label="s.label" :value="s.key" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="回答">
+          <el-input v-model="editDialog.answer" type="textarea" :rows="6" placeholder="回答内容" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialog.visible = false">取消</el-button>
+        <el-button type="primary" @click="saveEdit">保存</el-button>
+      </template>
+    </el-dialog>
 
     <div class="bottom-tabs">
       <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
@@ -52,13 +74,29 @@
 import { ref, onMounted } from "vue"
 import { HomeFilled, Timer, User, Notebook } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge } from "../api"
+import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, updateKnowledge } from "../api"
 
 const keyword = ref("")
 const sceneFilter = ref("")
 const list = ref([])
 const total = ref(0)
 const loading = ref(true)
+const editDialog = ref({ visible: false, id: null, question: '', answer: '', scene: '' })
+
+function openEdit(item) {
+  editDialog.value = { visible: true, id: item.id, question: item.question, answer: item.answer, scene: item.scene || '' }
+}
+
+async function saveEdit() {
+  const d = editDialog.value
+  if (!d.question.trim() || !d.answer.trim()) { ElMessage.warning('问题和回答不能为空'); return }
+  try {
+    await updateKnowledge(d.id, { question: d.question, answer: d.answer, scene: d.scene })
+    ElMessage.success('保存成功')
+    d.visible = false
+    fetchData()
+  } catch { ElMessage.error('保存失败') }
+}
 
 const scenes = [
   { key: "cooking", label: "做饭助手" }, { key: "shopping", label: "买菜指南" },
@@ -96,7 +134,17 @@ function formatTime(t) {
   return new Date(t).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
 
-async function handleDelete(id) {\n  try {\n    await deleteKnowledge(id)\n    ElMessage.success("已删除")\n    fetchData()\n  } catch (e) {\n    ElMessage.error("删除失败")\n  }\n}\n\nonMounted(fetchData)
+async function handleDelete(id) {
+  try {
+    await deleteKnowledge(id)
+    ElMessage.success("已删除")
+    fetchData()
+  } catch (e) {
+    ElMessage.error("删除失败")
+  }
+}
+
+onMounted(fetchData)
 </script>
 
 <style scoped>
@@ -122,4 +170,6 @@ async function handleDelete(id) {\n  try {\n    await deleteKnowledge(id)\n    E
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
 </style>
+
+
 

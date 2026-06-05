@@ -3,6 +3,7 @@ package com.lifewise.controller;
 import com.lifewise.common.ApiResponse;
 import com.lifewise.service.KnowledgeBaseService;
 import lombok.RequiredArgsConstructor;
+import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,17 @@ public class KnowledgeBaseController {
     public ApiResponse<?> delete(@PathVariable Long id) {
         knowledgeBaseService.delete(id);
         return ApiResponse.success("???");
+    }
+
+    
+    @PutMapping("/{id}")
+    public ApiResponse<?> update(@PathVariable Long id,
+                                  @RequestBody Map<String, String> body) {
+        String question = body.get("question");
+        String answer = body.get("answer");
+        String scene = body.get("scene");
+        knowledgeBaseService.update(id, question, answer, scene);
+        return ApiResponse.success("????");
     }
 
     @PostMapping("/{id}/helpful")

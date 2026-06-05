@@ -22,7 +22,7 @@
           <div class="fav-meta">{{ sceneLabel(fav.scene) }} · {{ formatTime(fav.createdAt) }}</div>
         </div>
         <el-button text type="danger" size="small" @click.stop="remove(fav.id, fav.messageId)">删除</el-button>
-        </div>
+        
       </div>
     </div>
 
@@ -87,5 +87,6 @@ function formatTime(t) {
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
 </style>
+
 
 

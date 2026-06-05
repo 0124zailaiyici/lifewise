@@ -9,4 +9,6 @@ public interface KnowledgeBaseService {
     List<KnowledgeBase> search(String keyword, String scene);
     void markHelpful(Long id);
     void delete(Long id);
+    void update(Long id, String question, String answer, String scene);
 }
+

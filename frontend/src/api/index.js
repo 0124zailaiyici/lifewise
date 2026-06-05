@@ -98,6 +98,10 @@ export function deleteKnowledge(id) {
   return api.delete('/kb/' + id)
 }
 
+export function updateKnowledge(id, data) {
+  return api.put('/kb/' + id, data)
+}
+
 export function markHelpful(id) {
   return api.post('/kb/' + id + '/helpful')
 }
@@ -109,4 +113,5 @@ export function uploadImage(file) {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
+
 

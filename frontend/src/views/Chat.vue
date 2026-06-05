@@ -424,7 +424,20 @@ function startVoice() {
       isListening.value = false
       if (e.error === 'not-allowed') ElMessage.error('麦克风权限被拒绝，请在浏览器地址栏左侧点击🔒开启')
       else if (e.error === 'no-speech') ElMessage.warning('未检测到语音，请重试')
-      else if (e.error === 'aborted') ElMessage.warning('语音识别被中断，请重试')
+      else if (e.error === 'aborted') {
+        isListening.value = false
+        // Retry up to 3 times for transient aborted errors
+        if (!window._voiceRetryCount) window._voiceRetryCount = 0
+        window._voiceRetryCount++
+        if (window._voiceRetryCount <= 3) {
+          ElMessage.info('⏳ 语音被中断(第' + window._voiceRetryCount + '次重试)...')
+          setTimeout(() => { if (!isListening.value) startVoice() }, 800)
+          return
+        }
+        window._voiceRetryCount = 0
+        ElMessage.warning('语音识别失败，请用普通浏览器打开本站')
+        window.open('http://localhost:5173', '_blank')
+      }
       else if (e.error === 'audio-capture') ElMessage.error('未检测到麦克风设备，请检查麦克风连接')
       else ElMessage.error('语音识别失败: ' + e.error)
     }

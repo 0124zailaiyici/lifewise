@@ -12,7 +12,8 @@
         <div class="welcome-text">问我关于{{ currentLabel }}的问题吧</div>
       </div>
 
-      <div v-for="(msg, i) in messages" :key="i" :class="'msg msg-' + msg.role" :data-msg-id="msg._id || ''" :data-msg-index="i">
+      <TransitionGroup name="msg">
+      <div v-for="(msg, i) in messages" :key="msg._id || i" :class="'msg msg-' + msg.role" :data-msg-id="msg._id || ''" :data-msg-index="i">
         <div class="bubble">
           <div v-if="msg._typing"><span v-html="msg._displayHtml"></span><span class="cursor">|</span></div>
           <div v-else>
@@ -32,6 +33,7 @@
         </div>
       </div>
 
+            </TransitionGroup>
       <div v-if="loading && !currentTyping" class="msg msg-assistant">
         <div class="bubble thinking">
           <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
@@ -734,5 +736,23 @@ function renderDoItem(parts, d) {
 @keyframes hlPulse {
   0% { background-color: rgba(34,197,94,0.15); border-radius: 12px; }
   100% { background-color: transparent; }
+}
+
+/* 消息进出动画 */
+.msg-enter-active { animation: msgIn .3s ease; }
+.msg-user .bubble { animation: bubbleInRight .3s ease; }
+.msg-assistant .bubble { animation: bubbleInLeft .3s ease; }
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes bubbleInRight {
+  from { opacity: 0; transform: translateX(20px) scale(.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes bubbleInLeft {
+  from { opacity: 0; transform: translateX(-20px) scale(.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
 }
 </style>

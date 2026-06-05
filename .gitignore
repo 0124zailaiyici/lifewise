@@ -61,3 +61,6 @@ stop.bat
 check.bat
 vite-start.log
 vite.err
+debug_segment.txt
+vite-start*.log
+frontend/public/fav-design.html

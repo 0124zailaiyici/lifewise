@@ -4,20 +4,27 @@
       <h3>⭐ 我的收藏</h3>
     </div>
 
-    <!-- 分类标签：横向滚动 -->
-    <div class="cat-scroll-wrap">
-      <div class="cat-scroll">
-        <span class="cat-tag" :class="{ active: currentCat === '' }" @click="filterBy('')">📋 全部</span>
-        <span v-for="c in categories" :key="c.key" class="cat-tag"
-              :class="{ active: currentCat === c.key }" @click="filterBy(c.key)">
-          {{ c.icon }} {{ c.label }}
-        </span>
-        <span v-if="currentCat" class="cat-clear" @click="filterBy('')">✕ 清除</span>
+    <div class="fab-wrap">
+    <!-- 右上角悬浮分类按钮 -->
+      <div class="fab-filter" @click="showCatPanel = !showCatPanel">
+        <span class="fab-filter-icon">🏷️</span>
+        <span v-if="currentCat" class="fab-filter-active">{{ catIconLabel(currentCat) }}</span>
       </div>
+
+      <!-- 分类选择弹窗 -->
+      <Transition name="fab-drop">
+        <div v-if="showCatPanel" class="fab-dropdown">
+          <div v-for="c in [{key:'',icon:'📋',label:'全部'}, ...categories]" :key="c.key"
+               class="fab-drop-item" :class="{ active: currentCat === c.key }"
+               @click="selectCat(c.key)">
+            <span class="fd-icon">{{ c.icon }}</span>
+            <span class="fd-label">{{ c.label }}</span>
+          </div>
+        </div>
+      </Transition>
     </div>
 
     <div class="content">
-
       <div v-if="loading" class="loading-state">
         <div class="loading-text">加载中...</div>
       </div>
@@ -76,6 +83,7 @@ const router = useRouter()
 const loading = ref(true)
 const favorites = ref([])
 const currentCat = ref('')
+const showCatPanel = ref(false)
 
 const categories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
@@ -110,6 +118,11 @@ async function fetchData() {
 function filterBy(cat) {
   currentCat.value = cat
   fetchData()
+}
+
+function selectCat(key) {
+  showCatPanel.value = false
+  filterBy(key)
 }
 
 function catLabel(key) { return categories.find(c => c.key === key)?.label || '' }
@@ -151,14 +164,29 @@ onMounted(fetchData)
 <style scoped>
 .page-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
-.cat-scroll-wrap { padding: 0 20px 8px; overflow: hidden; }
-.cat-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.cat-scroll::-webkit-scrollbar { display: none; }
-.cat-tag { flex-shrink: 0; background: #f5f5f5; color: #666; font-size: 12px; padding: 6px 14px; border-radius: 16px; cursor: pointer; transition: .15s; white-space: nowrap; border: 1px solid transparent; }
-.cat-tag:hover { background: #e8f5e9; }
-.cat-tag.active { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 600; }
-.cat-clear { flex-shrink: 0; font-size: 11px; color: #999; cursor: pointer; padding: 6px 8px; }
-.cat-clear:hover { color: #ef4444; }
+/* 右上角悬浮分类按钮 */
+.fab-filter { display: flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 6px 12px; cursor: pointer; transition: .15s; }
+.fab-filter:hover { background: #dcfce7; transform: scale(1.05); }
+.fab-filter:active { transform: scale(.95); }
+.fab-filter-icon { font-size: 16px; line-height: 1; }
+.fab-filter-active { font-size: 11px; color: #16a34a; font-weight: 500; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 展开卡片 */
+
+/* 右上角分类展开卡片 */
+.fab-wrap { position: absolute; right: 16px; top: 14px; z-index: 30; }
+
+.fab-dropdown { position: absolute; right: 0; top: calc(100% + 6px); background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border: 1px solid #e5e7eb; padding: 6px; min-width: 110px; }
+.fab-drop-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #444; white-space: nowrap; transition: .1s; }
+.fab-drop-item:hover { background: #f0fdf4; }
+.fab-drop-item.active { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+.fd-icon { font-size: 16px; }
+.fd-label { font-size: 12px; }
+
+/* 展开收起动画 */
+.fab-drop-enter-active, .fab-drop-leave-active { transition: all .15s ease; }
+.fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-4px) scale(.96); }
+/* 分类弹窗网格 */
 
 .content { padding: 0 20px 80px; }
 .fav-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; margin-top: 12px; }

@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>收藏页分类设计</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f7; display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 30px; }
+  .phone-frame { width: 375px; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.1); position: relative; min-height: 460px; }
+  .phone-header { padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); text-align: center; }
+  .phone-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
+  .phone-content { padding: 16px 20px 80px; }
+  h2 { font-size: 16px; color: #333; margin: 10px 0 0; width: 375px; text-align: center; }
+  .tag-badge { display: inline-block; background: #22c55e; color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+
+  .scroll-wrap { padding: 0 0 12px; overflow: hidden; }
+  .scroll-inner { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; }
+  .scroll-inner::-webkit-scrollbar { display: none; }
+  .tag { flex-shrink: 0; background: #f5f5f5; color: #666; font-size: 12px; padding: 6px 14px; border-radius: 16px; cursor: pointer; white-space: nowrap; border: 1px solid transparent; }
+  .tag.active { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 600; }
+
+  .float-right { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); z-index: 10; }
+  .float-inner { display: flex; flex-direction: column; gap: 2px; background: rgba(255,255,255,0.88); backdrop-filter: blur(12px); padding: 6px 3px; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.04); }
+  .f-icon { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 16px; cursor: pointer; }
+  .f-icon.active { background: #f0fdf4; }
+
+  .float-card { position: absolute; right: 8px; top: 80px; z-index: 10; }
+  .float-card-inner { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); padding: 10px 8px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border: 1px solid #e5e7eb; }
+  .fc-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; cursor: pointer; font-size: 12px; color: #444; white-space: nowrap; }
+  .fc-item:hover { background: #f0fdf4; }
+  .fc-item.active { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+  .fc-item .fc-icon { font-size: 16px; }
+
+  .fab-btn { position: absolute; right: 16px; top: 14px; width: 36px; height: 36px; background: #f0fdf4; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid #bbf7d0; cursor: pointer; }
+
+  .demo-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; }
+  .demo-item .di-icon { font-size: 24px; margin-right: 14px; }
+  .demo-item .di-info { flex: 1; }
+  .demo-item .di-title { font-size: 14px; font-weight: 500; color: #333; }
+  .demo-item .di-meta { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  .pick-hint { color: #999; font-size: 13px; margin: 20px 0 40px; text-align: center; }
+</style>
+</head>
+<body>
+
+<h2>A. 顶部横向滚动 <span class="tag-badge">当前版本</span></h2>
+<div class="phone-frame">
+  <div class="phone-header"><h3>⭐ 我的收藏</h3></div>
+  <div style="padding:12px 20px 0">
+    <div class="scroll-wrap">
+      <div class="scroll-inner">
+        <span class="tag active">📋 全部</span>
+        <span class="tag">🍳 做饭</span>
+        <span class="tag">🛒 买菜</span>
+        <span class="tag">🔧 修理</span>
+        <span class="tag">🏠 家务</span>
+        <span class="tag">🌞 健康</span>
+        <span class="tag">👔 穿搭</span>
+        <span class="tag">🎂 礼仪</span>
+        <span class="tag">🐥 宠物</span>
+        <span class="tag">✍️ 写作</span>
+      </div>
+    </div>
+  </div>
+  <div class="phone-content">
+    <div class="demo-item"><div class="di-icon">🍳</div><div class="di-info"><div class="di-title">辣椒炒肉的做法</div><div class="di-meta">做饭助手 · 06/05</div></div></div>
+    <div class="demo-item"><div class="di-icon">🛒</div><div class="di-info"><div class="di-title">怎么挑西瓜</div><div class="di-meta">买菜指南 · 06/04</div></div></div>
+  </div>
+</div>
+
+<h2>B. 右侧精简图标条</h2>
+<div class="phone-frame">
+  <div class="phone-header"><h3>⭐ 我的收藏</h3></div>
+  <div class="float-right">
+    <div class="float-inner">
+      <div class="f-icon active">📋</div>
+      <div class="f-icon">🍳</div>
+      <div class="f-icon">🛒</div>
+      <div class="f-icon">🔧</div>
+      <div class="f-icon">🏠</div>
+      <div class="f-icon">🌞</div>
+      <div class="f-icon">👔</div>
+      <div class="f-icon">🎂</div>
+      <div class="f-icon">🐥</div>
+      <div class="f-icon">✍️</div>
+    </div>
+  </div>
+  <div class="phone-content">
+    <div class="demo-item"><div class="di-icon">🍳</div><div class="di-info"><div class="di-title">辣椒炒肉的做法</div><div class="di-meta">做饭助手 · 06/05</div></div></div>
+    <div class="demo-item"><div class="di-icon">🛒</div><div class="di-info"><div class="di-title">怎么挑西瓜</div><div class="di-meta">买菜指南 · 06/04</div></div></div>
+  </div>
+</div>
+
+<h2>C. 右侧悬浮卡片（带文字）</h2>
+<div class="phone-frame">
+  <div class="phone-header"><h3>⭐ 我的收藏</h3></div>
+  <div class="float-card">
+    <div class="float-card-inner">
+      <div class="fc-item active"><span class="fc-icon">📋</span> 全部</div>
+      <div class="fc-item"><span class="fc-icon">🍳</span> 做饭</div>
+      <div class="fc-item"><span class="fc-icon">🛒</span> 买菜</div>
+      <div class="fc-item"><span class="fc-icon">🔧</span> 修理</div>
+      <div class="fc-item"><span class="fc-icon">🏠</span> 家务</div>
+      <div class="fc-item"><span class="fc-icon">🌞</span> 健康</div>
+      <div class="fc-item"><span class="fc-icon">👔</span> 穿搭</div>
+      <div class="fc-item"><span class="fc-icon">🎂</span> 礼仪</div>
+      <div class="fc-item"><span class="fc-icon">🐥</span> 宠物</div>
+      <div class="fc-item"><span class="fc-icon">✍️</span> 写作</div>
+    </div>
+  </div>
+  <div class="phone-content">
+    <div class="demo-item"><div class="di-icon">🍳</div><div class="di-info"><div class="di-title">辣椒炒肉的做法</div><div class="di-meta">做饭助手 · 06/05</div></div></div>
+    <div class="demo-item"><div class="di-icon">🛒</div><div class="di-info"><div class="di-title">怎么挑西瓜</div><div class="di-meta">买菜指南 · 06/04</div></div></div>
+  </div>
+</div>
+
+<h2>D. 右上角按钮（点击弹窗选分类）</h2>
+<div class="phone-frame">
+  <div class="phone-header"><h3>⭐ 我的收藏</h3></div>
+  <div class="fab-btn">🏷️</div>
+  <div class="phone-content">
+    <div class="demo-item"><div class="di-icon">🍳</div><div class="di-info"><div class="di-title">辣椒炒肉的做法</div><div class="di-meta">做饭助手 · 06/05</div></div></div>
+    <div class="demo-item"><div class="di-icon">🛒</div><div class="di-info"><div class="di-title">怎么挑西瓜</div><div class="di-meta">买菜指南 · 06/04</div></div></div>
+  </div>
+</div>
+
+<p class="pick-hint">↓ 你觉得哪个方向好？选一个字母告诉我 ↓</p>
+</body>
+</html>

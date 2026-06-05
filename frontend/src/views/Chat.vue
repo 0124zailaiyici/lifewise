@@ -393,14 +393,54 @@ function imgUrl(url) {
   return 'http://localhost:8080' + url
 }
 function startVoice() {
-  if (!('webkitSpeechRecognition' in window)) { ElMessage.warning('当前浏览器不支持语音识别'); return }
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
-  recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = false
-  isListening.value = true
-  recognition.onresult = (e) => { inputText.value = e.results[0][0].transcript; isListening.value = false }
-  recognition.onerror = () => isListening.value = false
-  recognition.onend = () => isListening.value = false
-  recognition.start()
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    ElMessage.warning('当前浏览器不支持语音识别，请使用 Chrome 浏览器')
+    return
+  }
+  // Check if permission already denied
+  if (navigator.permissions) {
+    navigator.permissions.query({ name: 'microphone' }).then(result => {
+      if (result.state === 'denied') {
+        ElMessage.error('麦克风权限已被禁用，请在浏览器地址栏左侧点击🔒开启麦克风权限')
+        return
+      }
+    }).catch(() => {})
+  }
+  // Request mic permission then start recognition
+  navigator.mediaDevices?.getUserMedia({ audio: true }).then(stream => {
+    stream.getTracks().forEach(t => t.stop())
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
+    recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = true
+    isListening.value = true
+    ElMessage.info('🎤 请说话...')
+    recognition.onresult = (e) => {
+      let transcript = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript
+      }
+      inputText.value = transcript
+    }
+    recognition.onerror = (e) => {
+      isListening.value = false
+      if (e.error === 'not-allowed') ElMessage.error('麦克风权限被拒绝，请在浏览器地址栏左侧点击🔒开启')
+      else if (e.error === 'no-speech') ElMessage.warning('未检测到语音，请重试')
+      else ElMessage.error('语音识别失败: ' + e.error)
+    }
+    recognition.onend = () => {
+      isListening.value = false
+      if (inputText.value.trim()) {
+        setTimeout(() => send(), 300)
+      }
+    }
+    recognition.start()
+  }).catch(err => {
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      ElMessage.error('麦克风权限被拒绝，请在浏览器中允许麦克风访问')
+    } else {
+      ElMessage.error('无法访问麦克风: ' + err.message)
+    }
+    isListening.value = false
+  })
 }
 async function handleRenameTitle() {
   const { value } = await ElMessageBox.prompt('输入新标题', '重命名对话', { inputValue: currentLabel.value, inputValidator: v => v?.trim() ? true : '标题不能为空' })

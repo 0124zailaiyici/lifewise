@@ -65,10 +65,10 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; }
+.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
 .content { padding: 16px 20px 80px; }
-.fav-item { display: flex; align-items: center; padding: 14px; background: #f5f5f5; border-radius: 14px; border: 1px solid #eee; margin-bottom: 10px; cursor: pointer; transition: .15s; }
+.fav-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; }
 .fav-item:active { transform: scale(.98); }
 .fav-icon { font-size: 28px; margin-right: 14px; }
 .fav-info { flex: 1; }
@@ -80,7 +80,7 @@ function formatTime(t) {
 .empty-hint { font-size: 13px; color: #999; margin-top: 6px; }
 .loading-state { text-align: center; padding: 80px 20px; }
 .loading-text { font-size: 48px; color: #777; }
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 60px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding-bottom: 4px; }
+.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: 8px; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

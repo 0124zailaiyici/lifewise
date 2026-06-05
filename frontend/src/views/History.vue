@@ -127,7 +127,7 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; }
+.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
 
 .search-bar { padding: 12px 20px; }
@@ -137,7 +137,7 @@ function formatTime(t) {
 
 .group { margin-bottom: 24px; }
 .date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
-.history-item { display: flex; align-items: center; padding: 14px; background: #f5f5f5; border-radius: 14px; border: 1px solid #eee; margin-bottom: 10px; cursor: pointer; transition: .15s; }
+.history-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; }
 .history-item:active { transform: scale(.98); }
 .icon { font-size: 26px; margin-right: 14px; }
 .info { flex: 1; }
@@ -152,7 +152,7 @@ function formatTime(t) {
 .loading-text { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: #777; }
 
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 60px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding-bottom: 4px; }
+.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: 8px; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

@@ -95,7 +95,7 @@ const scenes = [
   { key: 'cooking', icon: 'cooking', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop&auto=format)' },
   { key: 'shopping', icon: 'shopping', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=300&fit=crop&auto=format)' },
   { key: 'repair', icon: 'repair', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'housework', icon: 'housework', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1556912167-f556f1e39f2e?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'housework', icon: 'housework', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=300&fit=crop&auto=format)' },
   { key: 'health', icon: 'health', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop&auto=format)' },
   { key: 'fashion', icon: 'fashion', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop&auto=format)' },
   { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=300&fit=crop&auto=format)' },

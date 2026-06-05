@@ -406,56 +406,45 @@ function startVoice() {
       }
     }).catch(() => {})
   }
-  // Request mic permission then start recognition
-  navigator.mediaDevices?.getUserMedia({ audio: true }).then(stream => {
-    stream.getTracks().forEach(t => t.stop())
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
-    recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = true
-    isListening.value = true
-    ElMessage.info('🎤 请说话...')
-    recognition.onresult = (e) => {
-      let transcript = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript
-      }
-      inputText.value = transcript
+  // Let SpeechRecognition handle mic permission internally (getUserMedia + stop() causes 'aborted')
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
+  recognition.lang = 'zh-CN'; recognition.continuous = false; recognition.interimResults = true
+  isListening.value = true
+  ElMessage.info('🎤 请说话...')
+  recognition.onresult = (e) => {
+    let transcript = ''
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript
     }
-    recognition.onerror = (e) => {
-      isListening.value = false
-      if (e.error === 'not-allowed') ElMessage.error('麦克风权限被拒绝，请在浏览器地址栏左侧点击🔒开启')
-      else if (e.error === 'no-speech') ElMessage.warning('未检测到语音，请重试')
-      else if (e.error === 'aborted') {
-        isListening.value = false
-        // Retry up to 3 times for transient aborted errors
-        if (!window._voiceRetryCount) window._voiceRetryCount = 0
-        window._voiceRetryCount++
-        if (window._voiceRetryCount <= 3) {
-          ElMessage.info('⏳ 语音被中断(第' + window._voiceRetryCount + '次重试)...')
-          setTimeout(() => { if (!isListening.value) startVoice() }, 800)
-          return
-        }
-        window._voiceRetryCount = 0
-        ElMessage.warning('语音识别失败，请用普通浏览器打开本站')
-        window.open('http://localhost:5173', '_blank')
-      }
-      else if (e.error === 'audio-capture') ElMessage.error('未检测到麦克风设备，请检查麦克风连接')
-      else ElMessage.error('语音识别失败: ' + e.error)
-    }
-    recognition.onend = () => {
-      isListening.value = false
-      if (inputText.value.trim()) {
-        setTimeout(() => send(), 300)
-      }
-    }
-    recognition.start()
-  }).catch(err => {
-    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      ElMessage.error('麦克风权限被拒绝，请在浏览器中允许麦克风访问')
-    } else {
-      ElMessage.error('无法访问麦克风: ' + err.message)
-    }
+    inputText.value = transcript
+  }
+  recognition.onerror = (e) => {
     isListening.value = false
-  })
+    if (e.error === 'not-allowed') ElMessage.error('麦克风权限被拒绝，请在网址栏左侧允许访问麦克风')
+    else if (e.error === 'no-speech') ElMessage.warning('未检测到语音，请重试')
+    else if (e.error === 'aborted') {
+      isListening.value = false
+      // Retry up to 3 times
+      if (!window._voiceRetryCount) window._voiceRetryCount = 0
+      window._voiceRetryCount++
+      if (window._voiceRetryCount <= 3) {
+        ElMessage.info('⏳ 语音被中断(第' + window._voiceRetryCount + '次重试)...')
+        setTimeout(() => { if (!isListening.value) startVoice() }, 800)
+        return
+      }
+      window._voiceRetryCount = 0
+      ElMessage.warning('语音识别失败，请确保麦克风工作正常后重试')
+    }
+    else if (e.error === 'audio-capture') ElMessage.error('未检测到麦克风设备')
+    else ElMessage.error('语音识别失败: ' + e.error)
+  }
+  recognition.onend = () => {
+    isListening.value = false
+    if (inputText.value.trim()) {
+      setTimeout(() => send(), 300)
+    }
+  }
+  recognition.start()
 }
 async function handleRenameTitle() {
   const { value } = await ElMessageBox.prompt('输入新标题', '重命名对话', { inputValue: currentLabel.value, inputValidator: v => v?.trim() ? true : '标题不能为空' })

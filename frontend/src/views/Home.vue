@@ -202,7 +202,7 @@ function formatTime(t) {
   margin-bottom: 28px;
 }
 .scene-card {
-  height: 90px;
+  height: 100px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -210,6 +210,10 @@ function formatTime(t) {
   justify-content: center;
   cursor: pointer;
   transition: .15s;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
 }
 .scene-card::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.72); border-radius: 16px; transition: background .2s; } .scene-card:active { transform: scale(.95); } .scene-card:active::before { background: rgba(255,255,255,0.6); }
 .scene-icon { font-size: 30px; margin-bottom: 4px; position: relative; z-index: 1; }

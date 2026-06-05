@@ -60,10 +60,15 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public String chat(String message, String scene, Long userId, Long conversationId, String imageUrl) {
-        String cached = knowledgeBaseService.findAnswer(message, scene);
-        if (cached != null) {
-            log.info("cache hit: {}", message);
-            return cached;
+        // Skip cache when image is present (image analysis should always use AI)
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            String cached = knowledgeBaseService.findAnswer(message, scene);
+            if (cached != null) {
+                log.info("cache hit: {}", message);
+                return cached;
+            }
+        } else {
+            log.debug("skip cache for image request: {}", message);
         }
         String answer = callAI(message, scene, conversationId, imageUrl);
         // Only cache if it looks like a real response (not mock, not error)
@@ -100,10 +105,11 @@ public class AiServiceImpl implements AiService {
     @SuppressWarnings("unchecked")
     private String callLLMApi(String message, String scene, Long conversationId, String imageUrl) throws Exception {
         List<Map<String, Object>> messages = new ArrayList<>();
+        boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
 
         Map<String, Object> systemMsg = new LinkedHashMap<>();
         systemMsg.put("role", "system");
-        systemMsg.put("content", buildSystemPrompt(scene));
+        systemMsg.put("content", buildSystemPrompt(scene, hasImage));
         messages.add(systemMsg);
 
         if (conversationId != null) {
@@ -138,7 +144,6 @@ public class AiServiceImpl implements AiService {
 
         Map<String, Object> userMsg = new LinkedHashMap<>();
         userMsg.put("role", "user");
-        boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
         if (imageUrl != null && !imageUrl.isEmpty() && visionEnabled && visionApiUrl != null && !visionApiUrl.isEmpty()) {
             List<Map<String, Object>> contentList = new ArrayList<>();
             Map<String, Object> textPart = new LinkedHashMap<>();
@@ -166,7 +171,7 @@ public class AiServiceImpl implements AiService {
         requestBody.put("model", targetModel);
         requestBody.put("messages", messages);
         requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 2000);
+        requestBody.put("max_tokens", 4096);
 
         String body = objectMapper.writeValueAsString(requestBody);
         log.debug("AI request: {}", body);
@@ -186,7 +191,7 @@ public class AiServiceImpl implements AiService {
         }
 
         JsonNode root = objectMapper.readTree(response.body());
-        String result = root.path("choices").path(0).path("message").path("content").asText();
+        String result = root.path("choices").path(0).path("message").path("content").asText(); String finishReason = root.path("choices").path(0).path("finish_reason").asText(""); log.debug("AI finish_reason: {}, content_len: {}", finishReason, result.length());
         log.debug("AI response: {}", result);
         return result;
     }
@@ -218,7 +223,7 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    private String buildSystemPrompt(String scene) {
+    private String buildSystemPrompt(String scene, boolean hasImage) {
         String baseRule = """
 你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。涉及危险必须提醒。只输出纯 JSON，不要 markdown 标记。如果用户上传了图片，优先分析图片内容。
 """;
@@ -375,3 +380,4 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";
     }
 }
+

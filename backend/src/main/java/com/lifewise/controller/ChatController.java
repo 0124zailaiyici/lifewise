@@ -90,4 +90,5 @@ public class ChatController {
     public ApiResponse<?> getConversation(@PathVariable Long id) {
         return ApiResponse.success(conversationService.getConversation(id));
     }
+
 }

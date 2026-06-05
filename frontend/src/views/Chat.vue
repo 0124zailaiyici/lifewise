@@ -30,7 +30,7 @@
             <div v-if="msg.imageUrl" class="msg-image" @click="previewImage(msg.imageUrl)">
               <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" />
             </div>
-            <div v-html="renderContent(msg.content)"></div>
+            <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
           </div>
         </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
@@ -99,14 +99,22 @@
       </template>
     </el-dialog>
 
+        <!-- 图片快捷操作栏 -->
+    <div v-if="pendingImage" class="image-preview-bar">
+      <div class="ipb-preview">
+        <img :src="pendingImage" />
+        <span class="ipb-remove" @click="pendingImage = null; pendingFile = null">✕</span>
+      </div>
+      <div class="ipb-actions">
+        <span class="ipb-chip" @click="inputText = '请分析这张图片'; send()">🔍 分析图片</span>
+        <span class="ipb-chip" @click="inputText = '这张图片里有什么'; send()">👀 识别内容</span>
+        <span class="ipb-chip" @click="inputText = '请描述这张图片'; send()">📝 描述图片</span>
+      </div>
+    </div>
     <div class="input-area">
       <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
-      <div v-if="pendingImage" class="pending-preview">
-        <img :src="pendingImage" />
-        <span class="pending-remove" @click="pendingImage = null; pendingFile = null">✕</span>
-      </div>
       <el-input v-model="inputText" ref="inputRef" placeholder="输入你的问题..." size="large"
                 @keyup.enter="send" :disabled="loading" clearable />
       <el-button type="success" :icon="Promotion" circle @click="send" :disabled="loading || !inputText.trim() && !pendingFile" />
@@ -168,6 +176,7 @@ const isWritingScene = computed(() => {
 const currentLabel = computed(() => localStorage.getItem('sceneLabel') || '生活常识')
 
 onMounted(async () => {
+
   msgBox.value?.addEventListener('click', handleFollowUpClick)
   await nextTick()
   inputRef.value?.focus()
@@ -189,11 +198,11 @@ async function loadConversation(id) {
       _typing: false, _displayHtml: '', _faved: m.faved || false
     }))
     await nextTick(); scrollBottom()
-  } catch { ElMessage.error('加载对话失败') }
+  } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('加载对话失败') }
   finally { loading.value = false }
 }
 
-async function send() {
+async function send() { console.log("[IMG] called, file=", !!pendingFile.value, "txt=", inputText.value)
   const msg = inputText.value.trim()
   if (!msg && !pendingFile.value) return
 
@@ -204,9 +213,9 @@ async function send() {
   if (pendingFile.value) {
     try {
       const uploadRes = await uploadImage(pendingFile.value)
-      imageUrl = uploadRes.data?.url || ''
+      imageUrl = uploadRes.data?.url || ""; console.log("[IMG] upload url:", imageUrl); ''
       pendingFile.value = null; pendingImage.value = null
-    } catch { ElMessage.error('图片上传失败'); return }
+    } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('图片上传失败'); return }
   }
 
   messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
@@ -221,7 +230,7 @@ async function send() {
     const res = await sendChat(msg, scene, convId, imageUrl)
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
-    const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
+    const _ct = res.data?.content||""; const _ctStr = typeof _ct === "string" ? _ct : JSON.stringify(_ct); console.log("[IMG] chat res keys:", Object.keys(res||{}), "data_keys:", Object.keys(res.data||{}), "content_len:", _ctStr.length, "typeof:", typeof _ct, "first:", _ctStr.charCodeAt(0), _ctStr.charCodeAt(1), "json_parse_ok:", (()=>{try{JSON.parse(_ctStr);return true}catch(e){console.warn("[JSON] parse error:",e.message);return false}})()); const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
     if (m) {
       m._typing = false; m.content = fullContent
       m._displayHtml = renderContent(fullContent)
@@ -356,7 +365,7 @@ async function confirmFavorite() {
     await addFavorite(msg._id, '', favDialog.value.selected)
     msg._faved = true
     ElMessage.success('已收藏')
-  } catch { ElMessage.error('收藏失败') }
+  } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('收藏失败') }
 }
 
 function startWriting(wm) {
@@ -415,7 +424,7 @@ function renderMarkdown(text) {
     .replace(/^# (.+)$/gm, "<h2>$1</h2>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/\`([^\\`]+)\\`/g, "<code>$1</code>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
     .replace(/^- (.+)$/gm, "<li>$1</li>")
     .replace(/^\* (.+)$/gm, "<li>$1</li>")
@@ -433,11 +442,28 @@ function renderMarkdown(text) {
 }
 
 function tryParseJsonSafe(text) {
-  try { const obj = JSON.parse(text); if (obj && typeof obj === 'object') return obj } catch {}
-  const m = text.match(/\{[\s\S]*\}/)
-  if (m) { try { const obj = JSON.parse(m[0]); if (obj && typeof obj === 'object') return obj } catch {} }
+  if (!text) return null
+  // Helper: try parse with trailing comma fix
+  function tryParse(s) {
+    try { const obj = JSON.parse(s); if (obj && typeof obj === 'object') return obj } catch {}
+    try { const fixed = s.replace(/,([\s\n\r]*[}\]])/g, '$1'); const obj = JSON.parse(fixed); if (obj && typeof obj === 'object') return obj } catch {}
+    return null
+  }
+  // Step 1: direct parse (trim first)
+  let r = tryParse(text.trim()); if (r) return r
+  // Step 2: remove code fences
+  let clean = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
+  r = tryParse(clean); if (r) return r
+  // Step 3: regex extract JSON
+  const m = clean.match(/\{[\s\S]*\}/)
+  if (m) {
+    r = tryParse(m[0]); if (r) return r
+    r = tryParse(m[0].replace(/[\x00-\x1f\x7f-\x9f]/g, '')); if (r) return r
+  }
   return null
 }
+
+
 function renderStructured(data) {
   const parts = []
   if (data.title) {
@@ -527,15 +553,16 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 @keyframes cursorBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
 .input-area { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
 .upload-btn { flex-shrink: 0; }
-.pending-preview { position: relative; flex-shrink: 0; }
-.pending-preview img { height: 40px; border-radius: 6px; border: 1px solid #e0e0e0; }
-.pending-remove { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: #fff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.image-preview-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+.ipb-preview { position: relative; flex-shrink: 0; }
+.ipb-preview img { height: 40px; width: 40px; border-radius: 6px; border: 1px solid #e0e0e0; object-fit: cover; }
+.ipb-remove { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: #fff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .msg-image { margin-bottom: 8px; cursor: pointer; }
 .msg-image img { max-width: 240px; max-height: 200px; border-radius: 10px; border: 1px solid #e0e0e0; display: block; }
 .image-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.85); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
 .preview-full { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
 .preview-close { position: fixed; top: 20px; right: 24px; color: #fff; font-size: 28px; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,.15); }
-.md-content { line-height: 1.8; font-size: 14px; }
+.md-content { line-height: 1.8; font-size: 14px; color: #333; }
 .md-content h3 { font-size: 16px; margin: 16px 0 8px; color: #1a1a1a; }
 .md-content h4 { font-size: 14px; margin: 12px 0 6px; color: #333; }
 .md-content strong { color: #1a1a1a; }
@@ -600,7 +627,35 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .sc-answer .rc-sec { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #16a34a; }
 .sc-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #aaa; }
 .sc-watermark { color: #22c55e; font-weight: 500; }
+
+.ipb-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+.ipb-chip { display: inline-flex; align-items: center; gap: 3px; background: #fff; color: #374151; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: 1px solid #d1d5db; transition: .15s; white-space: nowrap; font-weight: 400; }
+.ipb-chip:hover { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
 </style>
+<style>
+
+/* Unscoped styles for v-html content (scoped CSS does not apply to v-html) */
+.rc-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin: 4px 0; }
+.rc-card-title { font-size: 16px; margin: 0 0 4px; color: #1a1a1a; }
+.rc-tags { font-size: 12px; color: #666; margin-bottom: 10px; }
+.rc-sec { font-weight: 600; font-size: 13px; margin: 10px 0 4px; color: #444; }
+.rc-item { font-size: 13px; color: #333; margin: 5px 0; padding-left: 2px; line-height: 1.6; }
+.rc-note { font-size: 12px; color: #888; display: block; }
+.rc-tip { background: #fefce8; border-radius: 8px; padding: 10px; font-size: 12px; color: #a16207; margin-top: 10px; line-height: 1.6; }
+.rc-followups { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-followup-title { font-size: 12px; color: #888; margin-bottom: 6px; width: 100%; }
+.rc-followup-chip { display: inline-block; background: #f0fdf4; color: #16a34a; font-size: 12px; padding: 5px 12px; border-radius: 14px; cursor: pointer; border: 1px solid #bbf7d0; transition: .1s; white-space: nowrap; }
+.rc-followup-chip:hover { background: #dcfce7; transform: scale(1.02); }
+.md-content { line-height: 1.8; font-size: 14px; color: #333; }
+.md-content h3 { font-size: 16px; margin: 16px 0 8px; color: #1a1a1a; }
+.md-content h4 { font-size: 14px; margin: 12px 0 6px; color: #333; }
+.md-content strong { color: #1a1a1a; }
+.md-content code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 13px; color: #e11d48; }
+.md-content ul { margin: 4px 0; padding-left: 20px; }
+.md-content li { margin: 2px 0; }
+.md-content em { color: #666; }
+</style>
+
 
 
 

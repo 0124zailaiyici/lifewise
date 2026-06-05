@@ -14,7 +14,7 @@ public class KnowledgeBaseController {
     private final KnowledgeBaseService knowledgeBaseService;
 
     @GetMapping("/search")
-    public ApiResponse<?> search(@RequestParam String keyword,
+    public ApiResponse<?> search(@RequestParam(required = false) String keyword,
                                   @RequestParam(required = false) String scene) {
         return ApiResponse.success(knowledgeBaseService.search(keyword, scene));
     }

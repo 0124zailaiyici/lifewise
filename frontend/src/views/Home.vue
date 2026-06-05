@@ -31,7 +31,7 @@
       <!-- 场景 -->
       <h3 class="section-title">✨ 场景</h3>
       <div class="scene-grid">
-        <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ background: s.bg }"
+        <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ backgroundImage: s.bg }"
              @click="startChat(s.key, s.label)">
           <span class="scene-icon" v-html="svgIcon(s.icon)"></span>
           <span class="scene-label">{{ s.label }}</span>
@@ -92,16 +92,16 @@ const greeting = computed(() => {
 })
 
 const scenes = [
-  { key: 'cooking', icon: 'cooking', label: '做饭助手', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'shopping', icon: 'shopping', label: '买菜指南', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'repair', icon: 'repair', label: '修理指南', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'housework', icon: 'housework', label: '家务技巧', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1556912167-f556f1e39f2e?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'health', icon: 'health', label: '健康常识', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'fashion', icon: 'fashion', label: '穿搭指南', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'pet', icon: 'pet', label: '宠物照顾', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'writing', icon: 'writing', label: '写作助手', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', bg: 'linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&auto=format)' }
+  { key: 'cooking', icon: 'cooking', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'shopping', icon: 'shopping', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'repair', icon: 'repair', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'housework', icon: 'housework', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1556912167-f556f1e39f2e?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'health', icon: 'health', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'fashion', icon: 'fashion', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'pet', icon: 'pet', label: '宠物照顾', bg: 'url(https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'writing', icon: 'writing', label: '写作助手', bg: 'url(https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', bg: 'url(https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&auto=format)' }
 ]
 
 onMounted(async () => {

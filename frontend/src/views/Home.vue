@@ -92,16 +92,16 @@ const greeting = computed(() => {
 })
 
 const scenes = [
-  { key: 'cooking', icon: '🍳', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'repair', icon: '🔧', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'health', icon: '🌞', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'url(https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'url(https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'url(https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=300&fit=crop&auto=format)' }
+  { key: 'cooking', icon: '🍳', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'repair', icon: '🔧', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1556912167-f556f1e39f2e?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'health', icon: '🌞', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'url(https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'url(https://images.unsplash.com/photo-1517842645767-c639042777db?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'url(https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&auto=format)' }
 ]
 
 onMounted(async () => {
@@ -215,9 +215,9 @@ function formatTime(t) {
   position: relative;
   overflow: hidden;
 }
-.scene-card::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.72); border-radius: 16px; transition: background .2s; } .scene-card:active { transform: scale(.95); } .scene-card:active::before { background: rgba(255,255,255,0.6); }
-.scene-icon { font-size: 30px; margin-bottom: 4px; position: relative; z-index: 1; }
-.scene-label { font-size: 14px; font-weight: 700; color: #111; position: relative; z-index: 1; text-shadow: 0 1px 4px rgba(255,255,255,0.9); }
+.scene-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.75) 100%); border-radius: 16px; transition: all .2s; } .scene-card:active { transform: scale(.95); } .scene-card:active::before { background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.6) 100%); }
+.scene-icon { font-size: 34px; margin-bottom: 6px; position: relative; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+.scene-label { font-size: 15px; font-weight: 700; color: #1a1a1a; position: relative; z-index: 1; text-shadow: 0 1px 8px rgba(255,255,255,0.95); letter-spacing: 0.5px; }
 
 /* 最近问答 */
 .recent-header {

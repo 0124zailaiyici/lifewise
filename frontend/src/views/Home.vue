@@ -145,8 +145,8 @@ function formatTime(t) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 20px 20px 8px;
-  background: #fff;
+  padding: 24px 20px 12px;
+  background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
 }
 .header-left h2 {
   font-size: 24px;
@@ -173,6 +173,7 @@ function formatTime(t) {
 
 .content {
   padding: 0 20px 80px;
+  background: #fff;
 }
 
 /* 快捷入口 */
@@ -180,15 +181,15 @@ function formatTime(t) {
   display: flex;
   align-items: center;
   gap: 14px;
-  background: #fff;
-  border: 1px solid #e8e8e8;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #bbf7d0;
   border-radius: 16px;
   padding: 18px;
   margin: 16px 0 24px;
   cursor: pointer;
   transition: .15s;
 }
-.quick-chat:active { transform: scale(.98); border-color: #22c55e; }
+.quick-chat:active { transform: scale(.98); }
 .quick-icon {
   width: 48px;
   height: 48px;
@@ -210,13 +211,14 @@ function formatTime(t) {
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 14px;
-  color: #222;
+  color: #333;
+  padding-left: 4px;
 }
 .scene-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 .scene-card {
   height: 100px;
@@ -248,7 +250,8 @@ function formatTime(t) {
   display: flex;
   align-items: center;
   padding: 16px 14px;
-  background: #fff;
+  background: #fafcfa;
+  border: 1px solid #f0f0f0;
   border-radius: 12px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -281,12 +284,13 @@ function formatTime(t) {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: 60px;
+  height: 64px;
   background: #fff;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #e5e7eb;
   display: flex;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
   z-index: 100;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
 }
 .tab {
   flex: 1;

@@ -33,7 +33,7 @@
       <div class="scene-grid">
         <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ background: s.bg }"
              @click="startChat(s.key, s.label)">
-          <span class="scene-icon">{{ s.icon }}</span>
+          <span class="scene-icon" v-html="svgIcon(s.icon)"></span>
           <span class="scene-label">{{ s.label }}</span>
         </div>
       </div>
@@ -92,16 +92,16 @@ const greeting = computed(() => {
 })
 
 const scenes = [
-  { key: 'cooking', icon: '🍳', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'repair', icon: '🔧', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'health', icon: '🌞', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'url(https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'url(https://images.unsplash.com/photo-1517842645767-c639042777db?w=400&h=300&fit=crop&auto=format)' },
-  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'url(https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop&auto=format)' }
+  { key: 'cooking', icon: 'cooking', label: '做饭助手', bg: 'linear-gradient(135deg, #fef2f2, #fecaca)' },
+  { key: 'shopping', icon: 'shopping', label: '买菜指南', bg: 'linear-gradient(135deg, #f0fdf4, #bbf7d0)' },
+  { key: 'repair', icon: 'repair', label: '修理指南', bg: 'linear-gradient(135deg, #eff6ff, #bfdbfe)' },
+  { key: 'housework', icon: 'housework', label: '家务技巧', bg: 'linear-gradient(135deg, #faf5ff, #e9d5ff)' },
+  { key: 'health', icon: 'health', label: '健康常识', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' },
+  { key: 'fashion', icon: 'fashion', label: '穿搭指南', bg: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' },
+  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', bg: 'linear-gradient(135deg, #ecfdf5, #a7f3d0)' },
+  { key: 'pet', icon: 'pet', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' },
+  { key: 'writing', icon: 'writing', label: '写作助手', bg: 'linear-gradient(135deg, #f0f9ff, #bae6fd)' },
+  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' }
 ]
 
 onMounted(async () => {
@@ -115,6 +115,23 @@ function startChat(scene, label) {
   localStorage.setItem('currentScene', scene)
   localStorage.setItem('sceneLabel', label)
   router.push('/chat')
+}
+
+const svgMap = {
+  cooking: '<svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 9.5 10a4.5 4.5 0 0 1 4.5 4.5c0 1.5-.5 3-1.5 4.2A6 6 0 0 1 6 13.87Z"/><path d="M18 12a3 3 0 0 1-3-3"/><path d="M18 6v6"/><path d="M21 12h-3"/></svg>',
+  shopping: '<svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  repair: '<svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  housework: '<svg viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  health: '<svg viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>',
+  fashion: '<svg viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M6 5l2-2h8l2 2M6 5H2v4a3 3 0 0 0 3 3h1M18 5h4v4a3 3 0 0 1-3 3h-1M6 19l2 2h8l2-2M12 7v6M9 10h6"/></svg>',
+  etiquette: '<svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2"/><path d="M17 8l4 4-4 4"/><path d="M7 8l-4 4 4 4"/><path d="M10 4l4 16"/></svg>',
+  pet: '<svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="10" rx="6" ry="4"/><path d="M12 14v4"/><path d="M8 18v2M16 18v2"/><path d="M6.5 7a2.5 2.5 0 0 1 0-5 4.5 4.5 0 0 1 3 4.5"/><path d="M17.5 7a2.5 2.5 0 0 0 0-5 4.5 4.5 0 0 0-3 4.5"/></svg>',
+  writing: '<svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+  mealplan: '<svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+}
+
+function svgIcon(key) {
+  return svgMap[key] || ''
 }
 
 function formatTime(t) {
@@ -202,7 +219,7 @@ function formatTime(t) {
   margin-bottom: 28px;
 }
 .scene-card {
-  height: 100px;
+  height: 90px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -210,14 +227,11 @@ function formatTime(t) {
   justify-content: center;
   cursor: pointer;
   transition: .15s;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-  overflow: hidden;
+  
 }
-.scene-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.75) 100%); border-radius: 16px; transition: all .2s; } .scene-card:active { transform: scale(.95); } .scene-card:active::before { background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.6) 100%); }
-.scene-icon { font-size: 34px; margin-bottom: 6px; position: relative; z-index: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
-.scene-label { font-size: 15px; font-weight: 700; color: #1a1a1a; position: relative; z-index: 1; text-shadow: 0 1px 8px rgba(255,255,255,0.95); letter-spacing: 0.5px; }
+.scene-card:active { transform: scale(.95); }
+.scene-icon { width: 36px; height: 36px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; }
+.scene-label { font-size: 13px; font-weight: 600; color: #333; }
 
 /* 最近问答 */
 .recent-header {

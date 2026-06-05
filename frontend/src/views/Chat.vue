@@ -625,7 +625,7 @@ function renderStructured(data) {
     }
   }
   if (recQuestions && Array.isArray(recQuestions) && recQuestions.length > 0) {
-    parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQuestions.map((q, i) => `<span class="rc-followup-chip" data-idx="${i}">${escapeHtml(q)}</span>`).join("")}</div>`)
+    parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQuestions.map((q, i) => `<span class="rc-followup-chip" data-idx="${i}">${escapeHtml(q)}</span>`).join(" ")}</div>`)
   }
   if (data.answer) {
     parts.push(`<div class="rc-item" style="margin-top:8px">${escapeHtml(data.answer).replace(/\n/g, '<br>')}</div>`)
@@ -723,9 +723,9 @@ function renderDoItem(parts, d) {
 .rc-meal-name { flex: 1; color: #333; }
 .rc-meal-time { color: #888; font-size: 12px; white-space: nowrap; }
 .rc-meal-diff { color: #999; font-size: 11px; white-space: nowrap; }
-.rc-followups { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e0e0; }
-.rc-followup-title { font-size: 12px; color: #888; margin-bottom: 6px; }
-.rc-followup-chip { display: inline-block; background: #f0fdf4; color: #16a34a; font-size: 12px; padding: 4px 10px; border-radius: 14px; margin: 3px 4px 3px 0; cursor: pointer; border: 1px solid #bbf7d0; transition: .1s; }
+.rc-followups { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e0e0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-followup-title { font-size: 12px; color: #888; margin-bottom: 6px; width: 100%; flex: 0 0 100%; }
+.rc-followup-chip { display: inline-block; background: #f0fdf4; color: #16a34a; font-size: 12px; padding: 5px 12px; border-radius: 14px; cursor: pointer; border: 1px solid #bbf7d0; transition: .1s; white-space: nowrap; }
 .rc-followup-chip:hover { background: #dcfce7; transform: scale(1.02); }
 
 .rc-shop-cat { margin: 6px 0; }

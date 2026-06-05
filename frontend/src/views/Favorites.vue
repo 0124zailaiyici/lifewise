@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <h3>⭐ 我的收藏</h3>
@@ -18,10 +18,11 @@
            @click="goToConversation(fav)">
         <div class="fav-icon">{{ sceneIcon(fav.scene) }}</div>
         <div class="fav-info">
-          <div class="fav-title">{{ fav.summary || '收藏内容' }}</div>
+          <div class="fav-title">{{ fav.summary || '暂无标题' }}</div>
           <div class="fav-meta">{{ sceneLabel(fav.scene) }} · {{ formatTime(fav.createdAt) }}</div>
         </div>
         <el-button text type="danger" size="small" @click.stop="remove(fav.id, fav.messageId)">删除</el-button>
+        </div>
       </div>
     </div>
 
@@ -74,6 +75,7 @@ function formatTime(t) {
 .fav-info { flex: 1; }
 .fav-title { font-size: 14px; font-weight: 500; color: #333; }
 .fav-meta { font-size: 12px; color: #888; margin-top: 3px; }
+.fav-actions { flex-shrink: 0; }
 .empty-state { text-align: center; padding: 80px 20px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: #777; }
@@ -85,3 +87,5 @@ function formatTime(t) {
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
 </style>
+
+

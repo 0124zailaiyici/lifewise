@@ -8,4 +8,5 @@ public interface KnowledgeBaseService {
     void saveAnswer(String question, String answer, String scene);
     List<KnowledgeBase> search(String keyword, String scene);
     void markHelpful(Long id);
+    void delete(Long id);
 }

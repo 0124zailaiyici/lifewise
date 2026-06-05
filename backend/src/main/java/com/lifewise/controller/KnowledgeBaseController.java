@@ -18,6 +18,12 @@ public class KnowledgeBaseController {
         return ApiResponse.success(knowledgeBaseService.search(keyword, scene));
     }
 
+    @DeleteMapping("/{id}")
+    public ApiResponse<?> delete(@PathVariable Long id) {
+        knowledgeBaseService.delete(id);
+        return ApiResponse.success("???");
+    }
+
     @PostMapping("/{id}/helpful")
     public ApiResponse<?> markHelpful(@PathVariable Long id) {
         knowledgeBaseService.markHelpful(id);

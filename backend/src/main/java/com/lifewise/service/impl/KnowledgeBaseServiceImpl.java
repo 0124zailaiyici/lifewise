@@ -152,6 +152,12 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
+    public void delete(Long id) {
+        knowledgeBaseRepository.deleteById(id);
+        log.info("????? id={}", id);
+    }
+
+    @Override
     public void markHelpful(Long id) {
         knowledgeBaseRepository.findById(id).ifPresent(kb -> {
             kb.setHelpfulCount(kb.getHelpfulCount() + 1);

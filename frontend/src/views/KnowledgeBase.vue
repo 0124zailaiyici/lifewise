@@ -33,6 +33,7 @@
         <div class="kb-footer">
           <span class="kb-helpful">👍 有用 {{ item.helpfulCount || 0 }} 次</span>
           <el-button text size="small" type="primary" @click="markHelpful(item.id)">有用</el-button>
+          <el-button text size="small" type="danger" @click="handleDelete(item.id)">删除</el-button>
           <span class="kb-date">{{ formatTime(item.createdAt) }}</span>
         </div>
       </div>
@@ -51,7 +52,7 @@
 import { ref, onMounted } from "vue"
 import { HomeFilled, Timer, User, Notebook } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import { searchKnowledge, markHelpful as markHelpfulApi } from "../api"
+import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge } from "../api"
 
 const keyword = ref("")
 const sceneFilter = ref("")
@@ -95,7 +96,7 @@ function formatTime(t) {
   return new Date(t).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
 
-onMounted(fetchData)
+async function handleDelete(id) {\n  try {\n    await deleteKnowledge(id)\n    ElMessage.success("已删除")\n    fetchData()\n  } catch (e) {\n    ElMessage.error("删除失败")\n  }\n}\n\nonMounted(fetchData)
 </script>
 
 <style scoped>
@@ -121,3 +122,4 @@ onMounted(fetchData)
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
 </style>
+

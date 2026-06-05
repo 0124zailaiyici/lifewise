@@ -22,7 +22,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    const msg = error.response?.data?.message || '缃戠粶閿欒'
+    const msg = error.response?.data?.message || '网络错误'
     console.error(msg)
     return Promise.reject(error)
   }
@@ -59,16 +59,23 @@ export function getConversation(id) {
   return api.get('/chat/conversations/' + id)
 }
 
-export function getFavorites() {
-  return api.get('/favorites')
+export function getFavorites(category) {
+  const params = category ? { category } : {}
+  return api.get('/favorites', { params })
 }
 
-export function addFavorite(messageId, note) {
-  return api.post('/favorites', null, { params: { messageId, note } })
+export function addFavorite(messageId, note, category) {
+  const params = { messageId, note }
+  if (category) params.category = category
+  return api.post('/favorites', null, { params })
 }
 
 export function removeFavorite(messageId) {
   return api.delete('/favorites', { params: { messageId } })
+}
+
+export function updateFavoriteCategory(id, category) {
+  return api.put('/favorites/' + id + '/category', { category })
 }
 
 export function search(q) {
@@ -113,5 +120,3 @@ export function uploadImage(file) {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
-
-

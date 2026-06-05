@@ -4,13 +4,26 @@
       <h3>⭐ 我的收藏</h3>
     </div>
 
+    <!-- 分类标签：横向滚动 -->
+    <div class="cat-scroll-wrap">
+      <div class="cat-scroll">
+        <span class="cat-tag" :class="{ active: currentCat === '' }" @click="filterBy('')">📋 全部</span>
+        <span v-for="c in categories" :key="c.key" class="cat-tag"
+              :class="{ active: currentCat === c.key }" @click="filterBy(c.key)">
+          {{ c.icon }} {{ c.label }}
+        </span>
+        <span v-if="currentCat" class="cat-clear" @click="filterBy('')">✕ 清除</span>
+      </div>
+    </div>
+
     <div class="content">
+
       <div v-if="loading" class="loading-state">
         <div class="loading-text">加载中...</div>
       </div>
       <div v-else-if="favorites.length === 0" class="empty-state">
         <div class="empty-icon">📌</div>
-        <div class="empty-text">还没有收藏</div>
+        <div class="empty-text">{{ currentCat ? '该分类还没有收藏' : '还没有收藏' }}</div>
         <div class="empty-hint">在对话中点「收藏」保存有用的回答</div>
       </div>
 
@@ -19,10 +32,27 @@
         <div class="fav-icon">{{ sceneIcon(fav.scene) }}</div>
         <div class="fav-info">
           <div class="fav-title">{{ fav.summary || '暂无标题' }}</div>
-          <div class="fav-meta">{{ sceneLabel(fav.scene) }} · {{ formatTime(fav.createdAt) }}</div>
+          <div class="fav-meta">
+            <span class="fav-cat-tag">{{ sceneIcon(fav.category) }} {{ catLabel(fav.category) || sceneLabel(fav.scene) }}</span>
+            <span class="fav-date">{{ formatTime(fav.createdAt) }}</span>
+          </div>
         </div>
-        <el-button text type="danger" size="small" @click.stop="remove(fav.id, fav.messageId)">删除</el-button>
-        
+        <div class="fav-actions" @click.stop>
+          <el-dropdown trigger="click" @command="(val) => changeCategory(fav, val)">
+            <el-button text size="small" class="cat-btn">
+              <el-icon><Collection /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-for="c in categories" :key="c.key" :command="c.key"
+                                  :class="{ selected: fav.category === c.key }">
+                  {{ c.icon }} {{ c.label }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button text type="danger" size="small" @click="remove(fav.id, fav.messageId)">删除</el-button>
+        </div>
       </div>
     </div>
 
@@ -38,24 +68,55 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getFavorites, removeFavorite } from '../api'
-import { HomeFilled, Timer, Star, User } from '@element-plus/icons-vue'
+import { getFavorites, removeFavorite, updateFavoriteCategory } from '../api'
+import { HomeFilled, Timer, Star, User, Collection, Filter } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const loading = ref(true)
 const favorites = ref([])
-const scenes = { cooking: { icon: '🍳', label: '做饭助手' }, shopping: { icon: '🛒', label: '买菜指南' }, repair: { icon: '🔧', label: '修理指南' }, housework: { icon: '🏠', label: '家务技巧' }, health: { icon: '🌞', label: '健康常识' }, fashion: { icon: '👔', label: '穿搭指南' }, etiquette: { icon: '🎂', label: '社交礼仪' }, pet: { icon: '🐥', label: '宠物照顾' }, mealplan: { icon: '📮', label: '食谱推荐' }, writing: { icon: '✍️', label: '写作助手' } }
+const currentCat = ref('')
 
-onMounted(async () => {
-  try { const res = await getFavorites(); favorites.value = res.data || [] } catch (e) { console.error(e) }
+const categories = [
+  { key: 'cooking', icon: '🍳', label: '做饭' },
+  { key: 'shopping', icon: '🛒', label: '买菜' },
+  { key: 'repair', icon: '🔧', label: '修理' },
+  { key: 'housework', icon: '🏠', label: '家务' },
+  { key: 'health', icon: '🌞', label: '健康' },
+  { key: 'fashion', icon: '👔', label: '穿搭' },
+  { key: 'etiquette', icon: '🎂', label: '礼仪' },
+  { key: 'pet', icon: '🐥', label: '宠物' },
+  { key: 'mealplan', icon: '📮', label: '食谱' },
+  { key: 'writing', icon: '✍️', label: '写作' }
+]
+
+const scenes = {
+  cooking: { icon: '🍳', label: '做饭助手' }, shopping: { icon: '🛒', label: '买菜指南' },
+  repair: { icon: '🔧', label: '修理指南' }, housework: { icon: '🏠', label: '家务技巧' },
+  health: { icon: '🌞', label: '健康常识' }, fashion: { icon: '👔', label: '穿搭指南' },
+  etiquette: { icon: '🎂', label: '社交礼仪' }, pet: { icon: '🐥', label: '宠物照顾' },
+  mealplan: { icon: '📮', label: '食谱推荐' }, writing: { icon: '✍️', label: '写作助手' }
+}
+
+async function fetchData() {
+  loading.value = true
+  try {
+    const res = await getFavorites(currentCat.value || undefined)
+    favorites.value = res.data || []
+  } catch (e) { console.error(e) }
   finally { loading.value = false }
-})
+}
 
-function goToConversation(fav) { router.push(fav.conversationId ? '/chat/' + fav.conversationId + '?highlight=' + fav.messageId : '/chat') }
-async function remove(id, messageId) {
-  try { await removeFavorite(messageId); favorites.value = favorites.value.filter(f => f.id !== id); ElMessage.success('已删除') }
-  catch { ElMessage.error('删除失败') }
+function filterBy(cat) {
+  currentCat.value = cat
+  fetchData()
+}
+
+function catLabel(key) { return categories.find(c => c.key === key)?.label || '' }
+function catIconLabel(key) {
+  if (!key) return ''
+  const c = categories.find(x => x.key === key)
+  return c ? `${c.icon} ${c.label}` : ''
 }
 function sceneIcon(s) { return scenes[s]?.icon || '💬' }
 function sceneLabel(s) { return scenes[s]?.label || '其他' }
@@ -63,30 +124,65 @@ function formatTime(t) {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
+
+function goToConversation(fav) {
+  router.push(fav.conversationId ? '/chat/' + fav.conversationId + '?highlight=' + fav.messageId : '/chat')
+}
+
+async function remove(id, messageId) {
+  try {
+    await removeFavorite(messageId)
+    favorites.value = favorites.value.filter(f => f.id !== id)
+    ElMessage.success('已删除')
+  } catch { ElMessage.error('删除失败') }
+}
+
+async function changeCategory(fav, newCat) {
+  try {
+    await updateFavoriteCategory(fav.id, newCat)
+    fav.category = newCat
+    ElMessage.success('分类已更新')
+  } catch { ElMessage.error('更新失败') }
+}
+
+onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
-.page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
-.content { padding: 16px 20px 80px; }
-.fav-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; }
+.page-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
+.page-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
+.cat-scroll-wrap { padding: 0 20px 8px; overflow: hidden; }
+.cat-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-tag { flex-shrink: 0; background: #f5f5f5; color: #666; font-size: 12px; padding: 6px 14px; border-radius: 16px; cursor: pointer; transition: .15s; white-space: nowrap; border: 1px solid transparent; }
+.cat-tag:hover { background: #e8f5e9; }
+.cat-tag.active { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; font-weight: 600; }
+.cat-clear { flex-shrink: 0; font-size: 11px; color: #999; cursor: pointer; padding: 6px 8px; }
+.cat-clear:hover { color: #ef4444; }
+
+.content { padding: 0 20px 80px; }
+.fav-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; margin-top: 12px; }
 .fav-item:active { transform: scale(.98); }
 .fav-icon { font-size: 28px; margin-right: 14px; }
-.fav-info { flex: 1; }
-.fav-title { font-size: 14px; font-weight: 500; color: #333; }
-.fav-meta { font-size: 12px; color: #888; margin-top: 3px; }
-.fav-actions { flex-shrink: 0; }
+.fav-info { flex: 1; min-width: 0; }
+.fav-title { font-size: 14px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fav-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.fav-cat-tag { background: #f0fdf4; color: #16a34a; font-size: 11px; padding: 1px 8px; border-radius: 8px; }
+.fav-date { font-size: 11px; color: #aaa; }
+.fav-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.cat-btn { font-size: 14px; color: #888; }
+
 .empty-state { text-align: center; padding: 80px 20px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: #777; }
 .empty-hint { font-size: 13px; color: #999; margin-top: 6px; }
 .loading-state { text-align: center; padding: 80px 20px; }
 .loading-text { font-size: 48px; color: #777; }
+
 .bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: 8px; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
+
+:deep(.el-dropdown-menu__item.active) { color: #22c55e; font-weight: 600; background: #f0fdf4; }
 </style>
-
-
-

@@ -11,6 +11,7 @@ import com.lifewise.repository.ConversationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
+import java.util.Map;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -29,7 +30,8 @@ public class FavoriteController {
     @PostMapping
     public ApiResponse<?> addFavorite(@RequestAttribute Long userId,
                                        @RequestParam Long messageId,
-                                       @RequestParam(required = false) String note) {
+                                       @RequestParam(required = false) String note,
+                                       @RequestParam(required = false, defaultValue = "other") String category) {
         if (favoriteRepository.existsByUserIdAndMessageId(userId, messageId)) {
             return ApiResponse.error("已收藏过该内容");
         }
@@ -37,6 +39,7 @@ public class FavoriteController {
         fav.setUserId(userId);
         fav.setMessageId(messageId);
         fav.setNote(note);
+        fav.setCategory(category);
         favoriteRepository.save(fav);
         return ApiResponse.success("收藏成功");
     }
@@ -49,15 +52,20 @@ public class FavoriteController {
     }
 
     @GetMapping
-    public ApiResponse<List<FavoriteResponse>> getFavorites(@RequestAttribute Long userId) {
+    public ApiResponse<List<FavoriteResponse>> getFavorites(@RequestAttribute Long userId,
+                                                                 @RequestParam(required = false) String category) {
         List<Favorite> list = favoriteRepository.findByUserIdOrderByCreatedAtDesc(userId);
         List<FavoriteResponse> result = new ArrayList<>();
 
+                if (category != null && !category.isEmpty()) {
+            list = list.stream().filter(f -> category.equals(f.getCategory())).collect(java.util.stream.Collectors.toList());
+        }
         for (Favorite fav : list) {
             FavoriteResponse resp = new FavoriteResponse();
             resp.setId(fav.getId());
             resp.setMessageId(fav.getMessageId());
             resp.setNote(fav.getNote());
+            resp.setCategory(fav.getCategory());
             resp.setCreatedAt(fav.getCreatedAt());
 
             Message msg = messageRepository.findById(fav.getMessageId()).orElse(null);
@@ -85,4 +93,16 @@ public class FavoriteController {
         }
         return ApiResponse.success(result);
     }
+
+    @PutMapping("/{id}/category")
+    public ApiResponse<?> updateCategory(@PathVariable Long id,
+                                          @RequestBody java.util.Map<String, String> body) {
+        String category = body.get("category");
+        favoriteRepository.findById(id).ifPresent(fav -> {
+            fav.setCategory(category);
+            favoriteRepository.save(fav);
+        });
+        return ApiResponse.success("\u5206\u7c7b\u5df2\u66f4\u65b0");
+    }
+
 }

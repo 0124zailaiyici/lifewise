@@ -11,5 +11,6 @@ public class FavoriteResponse {
     private String summary;
     private String scene;
     private String note;
+    private String category;
     private LocalDateTime createdAt;
 }

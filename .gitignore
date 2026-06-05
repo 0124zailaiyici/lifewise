@@ -52,3 +52,12 @@ backend/uploads/
 
 frontend/vite-out.txt
 frontend/vite-err.txt
+
+# Dev workflow.codex/
+.codex/
+fix_*.py
+start*.bat
+stop.bat
+check.bat
+vite-start.log
+vite.err

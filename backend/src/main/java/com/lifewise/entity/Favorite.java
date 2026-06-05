@@ -23,6 +23,9 @@ public class Favorite {
     @Column(length = 200)
     private String note;
 
+    @Column(length = 30)
+    private String category;
+
     private LocalDateTime createdAt;
 
     @PrePersist

@@ -44,7 +44,7 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const loading = ref(true)
 const favorites = ref([])
-const scenes = { cooking: { icon: '🍳', label: '做饭助手' }, shopping: { icon: '🛒', label: '买菜指南' }, repair: { icon: '🔧', label: '修理指南' }, housework: { icon: '🏠', label: '家务技巧' }, health: { icon: '🏥', label: '健康常识' }, fashion: { icon: '👔', label: '穿搭指南' }, etiquette: { icon: '🤝', label: '社交礼仪' }, pet: { icon: '🐾', label: '宠物照顾' } }
+const scenes = { cooking: { icon: '🍳', label: '做饭助手' }, shopping: { icon: '🛒', label: '买菜指南' }, repair: { icon: '🔧', label: '修理指南' }, housework: { icon: '🏠', label: '家务技巧' }, health: { icon: '🌞', label: '健康常识' }, fashion: { icon: '👔', label: '穿搭指南' }, etiquette: { icon: '🎂', label: '社交礼仪' }, pet: { icon: '🐥', label: '宠物照顾' }, mealplan: { icon: '📮', label: '食谱推荐' }, writing: { icon: '✍️', label: '写作助手' } }
 
 onMounted(async () => {
   try { const res = await getFavorites(); favorites.value = res.data || [] } catch (e) { console.error(e) }

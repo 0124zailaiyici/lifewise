@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <h3>👤 我的</h3>
@@ -17,26 +17,17 @@
         <div class="menu-label">功能</div>
         <div class="menu-list">
           <div class="menu-item" @click="$router.push('/history')">
-            <el-icon><Timer /></el-icon>
-            <span>历史记录</span>
-            <el-icon class="menu-arrow"><ArrowRight /></el-icon>
+            <el-icon><Timer /></el-icon><span>历史记录</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
           <div class="menu-item" @click="$router.push('/favorites')">
-            <el-icon><Star /></el-icon>
-            <span>我的收藏</span>
-            <el-icon class="menu-arrow"><ArrowRight /></el-icon>
+            <el-icon><Star /></el-icon><span>我的收藏</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
           <div class="menu-item" @click="$router.push('/dashboard')">
-            <el-icon><DataAnalysis /></el-icon>
-            <span>数据统计</span>
-            <el-icon class="menu-arrow"><ArrowRight /></el-icon>
+            <el-icon><DataAnalysis /></el-icon><span>数据统计</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>
-            <div class="menu-item" @click="$router.push('/knowledge')">
-              <el-icon><Notebook /></el-icon>
-              <span>常识库</span>
-              <el-icon class="menu-arrow"><ArrowRight /></el-icon>
-            </div>
-
+          <div class="menu-item" @click="$router.push('/knowledge')">
+            <el-icon><Notebook /></el-icon><span>常识库</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
+          </div>
         </div>
       </div>
 
@@ -44,8 +35,7 @@
         <div class="menu-label">账号</div>
         <div class="menu-list">
           <div class="menu-item logout" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
-            <span>退出登录</span>
+            <el-icon><SwitchButton /></el-icon><span>退出登录</span>
           </div>
         </div>
       </div>
@@ -69,7 +59,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, SwitchButton } from '@element-plus/icons-vue'
+import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 
 const router = useRouter()
@@ -78,43 +68,42 @@ const user = computed(() => userStore.user)
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
-    confirmButtonText: '退出',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    userStore.logout()
-    router.push('/login')
-  }).catch(() => {})
+    confirmButtonText: '退出', cancelButtonText: '取消', type: 'warning'
+  }).then(() => { userStore.logout(); router.push('/login') }).catch(() => {})
 }
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; }
-.page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
 .content { padding: 20px 20px 80px; }
-
-.user-card { display: flex; align-items: center; gap: 16px; padding: 20px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 18px; margin-bottom: 28px; }
-.avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; box-shadow: 0 3px 12px rgba(34,197,94,.25); }
+.user-card {
+  display: flex; align-items: center; gap: 16px; padding: 20px;
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: 18px; margin-bottom: 28px;
+}
+.avatar {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 700; flex-shrink: 0;
+}
 .username { font-size: 18px; font-weight: 600; color: #111; }
 .phone { font-size: 13px; color: #666; margin-top: 4px; }
 
 .menu-section { margin-bottom: 24px; }
 .menu-label { font-size: 12px; color: #999; margin-bottom: 8px; padding-left: 4px; font-weight: 500; }
 .menu-list { background: #fff; border-radius: 14px; border: 1px solid #f0f0f0; overflow: hidden; }
-.menu-item { display: flex; align-items: center; padding: 16px; border-bottom: 1px solid #f5f5f5; cursor: pointer; gap: 12px; color: #333; font-size: 14px; transition: .1s; }
+.menu-item {
+  display: flex; align-items: center; padding: 16px;
+  border-bottom: 1px solid #f5f5f5; cursor: pointer; gap: 12px;
+  color: #333; font-size: 14px;
+}
 .menu-item:last-child { border: none; }
 .menu-item:active { background: #fafafa; }
 .menu-item .el-icon:first-child { font-size: 18px; color: #666; }
 .menu-arrow { margin-left: auto; color: #ccc; font-size: 14px; }
 .menu-item.logout { color: #ef4444; }
 .menu-item.logout .el-icon:first-child { color: #ef4444; }
-
 .footer-info { text-align: center; margin-top: 48px; }
 .app-name { font-size: 13px; color: #ccc; font-weight: 500; }
 .app-desc { font-size: 11px; color: #bbb; margin-top: 4px; }
-
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 60px; background: #fff; border-top: 1px solid #f0f0f0; display: flex; padding-bottom: 4px; }
-.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
-.tab.active { color: #22c55e; }
-.tab .el-icon { font-size: 20px; }
 </style>

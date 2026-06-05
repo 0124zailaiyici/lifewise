@@ -92,16 +92,16 @@ const greeting = computed(() => {
 })
 
 const scenes = [
-  { key: 'cooking', icon: '🍳', label: '做饭助手', bg: 'linear-gradient(135deg, #fef2f2, #fecaca)' },
-  { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'linear-gradient(135deg, #f0fdf4, #bbf7d0)' },
-  { key: 'repair', icon: '🔧', label: '修理指南', bg: 'linear-gradient(135deg, #eff6ff, #bfdbfe)' },
-  { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'linear-gradient(135deg, #faf5ff, #e9d5ff)' },
-  { key: 'health', icon: '🌞', label: '健康常识', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' },
-  { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' },
-  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'linear-gradient(135deg, #ecfdf5, #a7f3d0)' },
-  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'linear-gradient(135deg, #fff7ed, #fed7aa)' },
-  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'linear-gradient(135deg, #f0f9ff, #bae6fd)' },
-  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'linear-gradient(135deg, #fefce8, #fde68a)' }
+  { key: 'cooking', icon: '🍳', label: '做饭助手', bg: 'url(https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'shopping', icon: '🛒', label: '买菜指南', bg: 'url(https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'repair', icon: '🔧', label: '修理指南', bg: 'url(https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'housework', icon: '🏠', label: '家务技巧', bg: 'url(https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'health', icon: '🌞', label: '健康常识', bg: 'url(https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'fashion', icon: '👔', label: '穿搭指南', bg: 'url(https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'etiquette', icon: '🎂', label: '社交礼仪', bg: 'url(https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'pet', icon: '🐥', label: '宠物照顾', bg: 'url(https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'writing', icon: '✍️', label: '写作助手', bg: 'url(https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=300&fit=crop&auto=format)' },
+  { key: 'mealplan', icon: '📮', label: '食谱推荐', bg: 'url(https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&h=300&fit=crop&auto=format)' }
 ]
 
 onMounted(async () => {
@@ -211,9 +211,9 @@ function formatTime(t) {
   cursor: pointer;
   transition: .15s;
 }
-.scene-card:active { transform: scale(.95); }
-.scene-icon { font-size: 28px; margin-bottom: 4px; }
-.scene-label { font-size: 13px; font-weight: 600; color: #333; }
+.scene-card::before { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0.72); border-radius: 16px; transition: background .2s; } .scene-card:active { transform: scale(.95); } .scene-card:active::before { background: rgba(255,255,255,0.6); }
+.scene-icon { font-size: 30px; margin-bottom: 4px; position: relative; z-index: 1; }
+.scene-label { font-size: 14px; font-weight: 700; color: #111; position: relative; z-index: 1; text-shadow: 0 1px 4px rgba(255,255,255,0.9); }
 
 /* 最近问答 */
 .recent-header {

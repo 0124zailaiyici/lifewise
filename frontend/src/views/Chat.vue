@@ -35,6 +35,7 @@
         </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
           <el-button text size="small" @click="copyMsg(i)">📋 复制</el-button>
+          <el-button text size="small" @click="shareMsg(i)">📤 分享</el-button>
           <el-button text size="small" @click="toggleFavorite(i)" :type="msg._faved ? 'warning' : 'default'">
             {{ msg._faved ? '⭐ 已收藏' : '☆ 收藏' }}
           </el-button>
@@ -70,6 +71,34 @@
       <div class="preview-close" @click="previewImg = null">✕</div>
     </div>
 
+    <!-- 分享卡片弹窗 -->
+    <el-dialog v-model="shareDialog.show" title="分享卡片" width="360px" :close-on-click-modal="true" top="5vh">
+      <div class="share-card-preview" ref="shareCardRef">
+        <div class="sc-header">
+          <span class="sc-logo">🌿</span>
+          <span class="sc-brand">LifeWise · AI 生活助手</span>
+        </div>
+        <div class="sc-body">
+          <div class="sc-question" v-if="shareDialog.question">💬 {{ shareDialog.question }}</div>
+          <div class="sc-divider"></div>
+          <div class="sc-answer" v-html="shareDialog.html"></div>
+        </div>
+        <div class="sc-footer">
+          <span class="sc-date">{{ shareDialog.date }}</span>
+          <span class="sc-watermark">via LifeWise</span>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="shareDialog.show = false">取消</el-button>
+        <el-button type="success" @click="downloadShareCard" :loading="shareDialog.downloading">
+          📋 复制图片
+        </el-button>
+        <el-button type="primary" @click="copyShareText">
+          📋 复制文本
+        </el-button>
+      </template>
+    </el-dialog>
+
     <div class="input-area">
       <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
@@ -89,7 +118,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory } from '../api'
-import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection } from '@element-plus/icons-vue'
+import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
@@ -104,8 +133,10 @@ const loading = ref(false)
 const messages = ref([])
 const currentTyping = ref(false)
 const previewImg = ref(null)
+const shareCardRef = ref(null)
 const isListening = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
+const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false })
 const favCategories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
   { key: 'shopping', icon: '🛒', label: '买菜' },
@@ -211,6 +242,100 @@ function copyMsg(i) {
   })
 }
 
+async function shareMsg(i) {
+  const msg = messages.value[i]; if (!msg) return
+  const prevMsg = i > 0 ? messages.value[i-1] : null
+  const question = prevMsg?.role === 'user' ? prevMsg.content : ''
+  
+  // Get scene label for context
+  const sceneLabel = localStorage.getItem('sceneLabel') || '生活常识'
+  
+  // Prepare HTML for card (strip tags for plain text view)
+  let html = msg._displayHtml || renderContent(msg.content)
+  
+  // Clean up the HTML - remove action buttons, follow-ups etc
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = html
+  // Remove follow-up sections
+  tempDiv.querySelectorAll('.rc-followups')?.forEach(el => el.remove())
+  html = tempDiv.innerHTML
+  
+  shareDialog.value = {
+    show: true,
+    question: question,
+    html: html,
+    date: new Date().toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    downloading: false
+  }
+}
+
+async function downloadShareCard() {
+  const html2canvas = (await import('html2canvas')).default
+  shareDialog.value.downloading = true
+  await nextTick()
+  try {
+    const el = shareCardRef.value
+    if (!el) return
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      width: el.scrollWidth,
+      height: el.scrollHeight
+    })
+    // 尝试复制图片到剪贴板
+    if (typeof ClipboardItem !== 'undefined') {
+      try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+        ElMessage.success('图片已复制到剪贴板')
+        shareDialog.value.downloading = false
+        return
+      } catch {}
+    }
+    // 降级1：下载图片
+    try {
+      const link = document.createElement('a')
+      link.download = 'lifewise-card-' + Date.now() + '.png'
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+      ElMessage.success('图片已下载')
+      shareDialog.value.downloading = false
+      return
+    } catch {}
+    // 降级2：新标签打开（内置浏览器最稳妥）
+    const dataUrl = canvas.toDataURL('image/png')
+    window.open(dataUrl, '_blank')
+    ElMessage.success('图片已在新标签打开，可右键保存')
+  } catch (e) {
+    ElMessage.error('生成分享图片失败')
+    console.error(e)
+  } finally {
+    shareDialog.value.downloading = false
+  }
+}
+
+function copyShareText() {
+  const d = shareDialog.value
+  let text = '🌿 LifeWise · AI 生活助手\n'
+  if (d.question) text += '💬 ' + d.question + '\n'
+  text += '━━━━━━━━━━━━━━\n'
+  // Strip HTML tags for plain text
+  const temp = document.createElement('div')
+  temp.innerHTML = d.html
+  text += temp.textContent || temp.innerText || ''
+  text += '\n━━━━━━━━━━━━━━\n'
+  text += 'via LifeWise - ' + d.date
+  
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('文本已复制，可以粘贴分享')
+  }).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = text
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
+    ElMessage.success('文本已复制')
+  })
+}
 async function toggleFavorite(i) {
   const msg = messages.value[i]; if (!msg) return
   if (msg._faved) {
@@ -459,6 +584,22 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .writing-content blockquote { border-left: 3px solid #22c55e; padding: 6px 14px; margin: 8px 0; color: #555; background: #fafcfa; border-radius: 0 6px 6px 0; font-style: italic; }
 .writing-content .md-list { padding-left: 20px; margin: 4px 0; }
 .writing-content .md-list li { margin: 3px 0; }
+/* 分享卡片 */
+.share-card-preview { background: #fff; border-radius: 16px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-height: 70vh; overflow-y: auto; }
+.sc-header { display: flex; align-items: center; gap: 8px; padding: 16px 20px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-bottom: 1px solid #bbf7d0; }
+.sc-logo { font-size: 24px; }
+.sc-brand { font-size: 14px; font-weight: 600; color: #16a34a; }
+.sc-body { padding: 16px 20px; }
+.sc-question { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; padding: 10px 14px; background: #f0fdf4; border-radius: 10px; border-left: 3px solid #22c55e; }
+.sc-divider { height: 1px; background: #e5e7eb; margin: 12px 0; }
+.sc-answer { font-size: 14px; color: #333; line-height: 1.7; }
+.sc-answer .rc-card { border: none; padding: 0; margin: 0; box-shadow: none; }
+.sc-answer .rc-card-title { font-size: 18px; margin-bottom: 8px; }
+.sc-answer .rc-followups { display: none; }
+.sc-answer .rc-tip { background: #fefce8; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+.sc-answer .rc-sec { font-size: 14px; font-weight: 600; margin: 12px 0 6px; color: #16a34a; }
+.sc-footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #aaa; }
+.sc-watermark { color: #22c55e; font-weight: 500; }
 </style>
 
 

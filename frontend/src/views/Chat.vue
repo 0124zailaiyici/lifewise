@@ -106,9 +106,9 @@
         <span class="ipb-remove" @click="pendingImage = null; pendingFile = null">✕</span>
       </div>
       <div class="ipb-actions">
-        <span class="ipb-chip" @click="inputText = '请分析这张图片'; send()">🔍 分析图片</span>
-        <span class="ipb-chip" @click="inputText = '这张图片里有什么'; send()">👀 识别内容</span>
-        <span class="ipb-chip" @click="inputText = '请描述这张图片'; send()">📝 描述图片</span>
+        <span class="ipb-chip" @click="inputText = '请分析这张图片'; tempScene = 'cooking'; send()">🔍 分析图片</span>
+        <span class="ipb-chip" @click="inputText = '请识别这张图片的内容'; tempScene = 'other'; send()">👀 识别内容</span>
+        <span class="ipb-chip" @click="inputText = '请描述这张图片'; tempScene = 'writing'; send()">📝 描述图片</span>
       </div>
     </div>
     <div class="input-area">
@@ -141,6 +141,7 @@ const loading = ref(false)
 const messages = ref([])
 const currentTyping = ref(false)
 const previewImg = ref(null)
+const tempScene = ref('')
 const shareCardRef = ref(null)
 const isListening = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
@@ -206,7 +207,7 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
   const msg = inputText.value.trim()
   if (!msg && !pendingFile.value) return
 
-  const scene = localStorage.getItem('currentScene') || 'other'
+  const scene = tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
   const convId = route.params.id ? Number(route.params.id) : null
   let imageUrl = ''
 

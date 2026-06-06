@@ -93,7 +93,10 @@
         <el-button type="success" @click="downloadShareCard" :loading="shareDialog.downloading">
           📋 复制图片
         </el-button>
-        <el-button type="primary" @click="copyShareText">
+        <el-button type="primary" @click="shareToSocial" :loading="shareDialog.sharing">
+          📱 分享到社交
+        </el-button>
+        <el-button @click="copyShareText">
           📋 复制文本
         </el-button>
       </template>
@@ -145,7 +148,7 @@ const tempScene = ref('')
 const shareCardRef = ref(null)
 const isListening = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
-const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false })
+const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false, sharing: false })
 const favCategories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
   { key: 'shopping', icon: '🛒', label: '买菜' },
@@ -368,6 +371,71 @@ async function confirmFavorite() {
     ElMessage.success('已收藏')
   } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('收藏失败') }
 }
+
+async function shareToSocial() {
+  const d = shareDialog.value
+  if (!d) return
+  shareDialog.value.sharing = true
+  
+  try {
+    // Build formatted share text
+    let text = '?? LifeWise \u00b7 AI \u751f\u6d3b\u52a9\u624b\n'
+    if (d.question) text += '\ud83d\udcac ' + d.question + '\n'
+    text += '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    const temp = document.createElement('div')
+    temp.innerHTML = d.html
+    text += (temp.textContent || temp.innerText || '').trim()
+    text += '\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n'
+    text += 'via LifeWise'
+    
+    // Try Web Share API first (mobile native share - supports WeChat, WhatsApp, etc.)
+    if (navigator.share) {
+      const shareData = { title: 'LifeWise', text }
+      if (route.params.id) {
+        shareData.url = window.location.origin + '/chat/' + route.params.id
+      }
+      
+      // Try to include image
+      try {
+        const el = shareCardRef.value
+        if (el) {
+          const html2canvas = (await import('html2canvas')).default
+          const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+          if (blob && navigator.canShare && navigator.canShare({ files: [new File([blob], 'lifewise.png', { type: 'image/png' })] })) {
+            shareData.files = [new File([blob], 'lifewise.png', { type: 'image/png' })]
+          }
+        }
+      } catch {}
+      
+      try {
+        await navigator.share(shareData)
+        ElMessage.success('\u5df2\u6253\u5f00\u5206\u4eab\u9762\u677f')
+        shareDialog.value.show = false
+        return
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          // Web Share failed, fall through to fallback
+        } else {
+          shareDialog.value.sharing = false
+          return // User cancelled
+        }
+      }
+    }
+    
+    // Fallback: copy text and notify
+    navigator.clipboard.writeText(text).then(() => {
+      ElMessage.success('\u6587\u672c\u5df2\u590d\u5236\uff0c\u53ef\u4ee5\u7c98\u8d34\u5230\u5fae\u4fe1\u3001\u5fae\u535a\u7b49\u793e\u4ea4\u5e73\u53f0')
+    }).catch(() => {
+      const ta = document.createElement('textarea'); ta.value = text
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
+      ElMessage.success('\u6587\u672c\u5df2\u590d\u5236')
+    })
+  } finally {
+    shareDialog.value.sharing = false
+  }
+}
+
 
 function startWriting(wm) {
   inputText.value = wm.prompt

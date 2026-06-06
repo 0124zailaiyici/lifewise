@@ -64,15 +64,15 @@
     <div class="bottom-tabs">
       <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
       <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab active"><el-icon><Notebook /></el-icon><span>常识库</span></div>
-      <div class="tab" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
+      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
+      <div class="tab active" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue"
-import { HomeFilled, Timer, User, Notebook } from "@element-plus/icons-vue"
+import { HomeFilled, Timer, User, Star } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
 import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, updateKnowledge } from "../api"
 

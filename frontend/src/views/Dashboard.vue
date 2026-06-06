@@ -1,10 +1,11 @@
 <template>
-  <div class="dash-page">
+  <div class="page-container">
     <div class="dash-header">
-      <div class="header-top" style="justify-content:center">
+      <div class="header-top">
+        <el-button text @click="$router.push('/profile')" style="color:#fff;font-size:14px">← 返回</el-button>
         <h2 style="margin:0;font-size:20px;font-weight:700">📊 数据统计</h2>
+        <div style="width:50px"></div>
       </div>
-      
     </div>
 
     <div class="content">
@@ -94,11 +95,18 @@
         </div>
       </div>
     </div>
+    <div class="bottom-tabs">
+      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
+      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
+      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
+      <div class="tab active"><el-icon><Collection /></el-icon><span>统计</span></div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { HomeFilled, Timer, Star, Collection } from '@element-plus/icons-vue'
 import { getDashboard } from '../api'
 
 const stats = ref({ total: {}, today: {}, thisWeek: {} })
@@ -136,18 +144,15 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 </script>
 
 <style scoped>
-.dash-page { max-width: 480px; margin: 0 auto; background: #f5f5f7; min-height: 100vh; position: relative; }
 .dash-header {
   background: linear-gradient(135deg, #22c55e, #059669);
-  color: #fff; padding: 20px 20px 24px;
+  color: #fff; padding: 14px 16px 24px;
   border-radius: 0 0 24px 24px;
 }
-.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.header-top h2 { font-size: 20px; margin: 0; font-weight: 700; }
 
 .header-subtitle { font-size: 13px; opacity: .75; margin-left: 4px; }
 
-.content { padding: 16px; margin-top: -12px; }
+.content { padding: 16px 16px 80px; margin-top: -12px; }
 
 .hero-card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
 .hero-row { display: flex; align-items: center; justify-content: space-around; }
@@ -190,4 +195,34 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .chart-bar { width: 100%; max-width: 10px; background: linear-gradient(180deg, #22c55e, #16a34a); border-radius: 3px 3px 0 0; transition: height .3s; min-height: 3px; }
 .chart-foot { display: flex; justify-content: space-between; font-size: 10px; color: #999; margin-top: 6px; }
 .chart-foot-high { color: #22c55e; font-weight: 600; }
+
+/* 底部导航 */
+.bottom-tabs {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 64px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  padding-bottom: 8px;
+  z-index: 100;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  gap: 2px;
+}
+.tab.active { color: #22c55e; }
+.tab .el-icon { font-size: 20px; }
 </style>

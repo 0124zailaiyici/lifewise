@@ -1,7 +1,12 @@
 ﻿<template>
   <div class="page-container">
     <div class="page-header">
+      <div style="display:flex;align-items:center;gap:8px">
       <h3>📚 常识库</h3>
+      <el-button text size="small" @click="handleExport" style="color:#22c55e">⬇ 导出</el-button>
+      <el-button text size="small" @click="triggerImport" style="color:#22c55e">⬆ 导入</el-button>
+      <input ref="importInput" type="file" accept=".json" style="display:none" @change="handleImport" />
+    </div>
     </div>
 
     <div class="search-bar">
@@ -74,7 +79,7 @@
 import { ref, onMounted } from "vue"
 import { HomeFilled, Timer, User, Star } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, updateKnowledge } from "../api"
+import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, updateKnowledge, exportKnowledge, importKnowledge } from "../api"
 
 const keyword = ref("")
 const sceneFilter = ref("")
@@ -134,7 +139,37 @@ function formatTime(t) {
   return new Date(t).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
 }
 
-async function handleDelete(id) {
+async function handleExport() {
+    try {
+      const res = await exportKnowledge()
+      const blob = new Blob([res.data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'lifewise-knowledge-' + new Date().toISOString().slice(0,10) + '.json'
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      ElMessage.success('导出成功')
+    } catch(e) { ElMessage.error('导出失败') }
+  }
+
+  function triggerImport() { importInput.value?.click() }
+
+  async function handleImport(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      if (!Array.isArray(data)) { ElMessage.error('文件格式不对'); return }
+      const res = await importKnowledge(data)
+      ElMessage.success(res.data?.message || '导入成功')
+      fetchData()
+    } catch { ElMessage.error('导入失败，请检查文件格式') }
+    e.target.value = ''
+  }
+
+  async function handleDelete(id) {
   try {
     await deleteKnowledge(id)
     ElMessage.success("已删除")

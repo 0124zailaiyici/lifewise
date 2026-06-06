@@ -10,5 +10,7 @@ public interface KnowledgeBaseService {
     void markHelpful(Long id);
     void delete(Long id);
     void update(Long id, String question, String answer, String scene);
+    List<KnowledgeBase> exportAll();
+    int importAll(List<KnowledgeBase> items);
 }
 

@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
@@ -22,7 +22,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    const msg = error.response?.data?.message || '网络错误'
+    const msg = error.response?.data?.message || '缃戠粶閿欒'
     console.error(msg)
     return Promise.reject(error)
   }
@@ -130,4 +130,12 @@ export function generateFoodImage(dishName) {
 export function getFoodImageStatus(taskId) {
   return api.get('/food-image/status', { params: { taskId } })
 }
+}
 
+export function exportKnowledge() {
+  return api.get("/kb/export", { responseType: "blob" })
+}
+
+export function importKnowledge(items) {
+  return api.post("/kb/import", items)
+}

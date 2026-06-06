@@ -260,5 +260,23 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
         return intersection.size();
     }
-}
+    @Override
+    public List<KnowledgeBase> exportAll() {
+        return knowledgeBaseRepository.findAll();
+    }
 
+    @Override
+    public int importAll(List<KnowledgeBase> items) {
+        int count = 0;
+        for (KnowledgeBase kb : items) {
+            if (kb.getQuestion() == null || kb.getQuestion().trim().isEmpty()) continue;
+            if (kb.getAnswer() == null || kb.getAnswer().trim().isEmpty()) continue;
+            kb.setId(null);
+            kb.setHelpfulCount(0);
+            knowledgeBaseRepository.save(kb);
+            count++;
+        }
+        return count;
+    }
+
+}

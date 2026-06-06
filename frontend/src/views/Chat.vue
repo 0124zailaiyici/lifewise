@@ -408,7 +408,7 @@ function copyShareText() {
     ElMessage.success('文本已复制')
   })
 }
-async async function toggleFavorite(i) {
+async function toggleFavorite(i) {
   const msg = messages.value[i]; if (!msg) return
   if (msg._faved) {
     msg._favProcessing = true

@@ -45,7 +45,7 @@
           <el-button text size="small" @click="copyMsg(i)">📋 复制</el-button>
           <el-button text size="small" @click="shareMsg(i)">📤 分享</el-button>
           <el-button text size="small" @click="toggleFavorite(i)" :type="msg._faved ? 'warning' : 'default'">
-            {{ msg._faved ? '⭐ 已收藏' : '☆ 收藏' }}
+            {{ msg._favProcessing ? '⏳ 处理中...' : msg._faved ? '⭐ 已收藏' : '☆ 收藏' }}
           </el-button>
         </div>
       </div>
@@ -408,11 +408,12 @@ function copyShareText() {
     ElMessage.success('文本已复制')
   })
 }
-async function toggleFavorite(i) {
+async async function toggleFavorite(i) {
   const msg = messages.value[i]; if (!msg) return
   if (msg._faved) {
-    try { await removeFavorite(msg._id); msg._faved = false; ElMessage.success('已取消收藏') }
-    catch(e) { ElMessage.error(e?.response?.data?.message || '操作失败，请重试') }
+    msg._favProcessing = true
+    try { await removeFavorite(msg._id); msg._faved = false; msg._favProcessing = false; ElMessage.success('已取消收藏') }
+    catch(e) { msg._favProcessing = false; ElMessage.error(e?.response?.data?.message || '操作失败，请重试') }
   } else {
     favDialog.value.selected = 'other'
     favDialog.value.msgIndex = i
@@ -629,29 +630,43 @@ function renderContent(content) {
 function renderMarkdown(text) {
   let html = (text || "");
   html = html.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/^#### (.+)$/gm, "<h5>$1</h5>")
+  // Code blocks (must be before inline code)
+  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre class="md-code-block"><code class="lang-$1">$2</code></pre>')
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>")
+  // Headings
+  html = html.replace(/^#### (.+)$/gm, "<h5>$1</h5>")
     .replace(/^### (.+)$/gm, "<h4>$1</h4>")
     .replace(/^## (.+)$/gm, "<h3>$1</h3>")
     .replace(/^# (.+)$/gm, "<h2>$1</h2>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+  // Tables: | col1 | col2 | ... | (need to handle before line breaks)
+  html = html.replace(/^\|(.+)\|$/gm, function(m){ return '<tr>' + m.slice(1,-1).split('|').map(function(c){ return '<td>' + c.trim() + '</td>' }).join('') + '</tr>' })
+  html = html.replace(/<tr>\s*<td>[-:\s]+<\/td>(?:\s*<td>[-:\s]+<\/td>)+\s*<\/tr>/g, '')
+  html = html.replace(/(<tr>.*?<\/tr>\n?)+/g, '<table class="md-table">$1</table>')
+  // Links: [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+  // Bold & italic
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/^\* (.+)$/gm, "<li>$1</li>")
-    .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
-    .replace(/\n/g, "<br>")
-    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul class="md-list">$1</ul>')
+  // Blockquote
+  html = html.replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
+  // Horizontal rule
+  html = html.replace(/^(?:---|\*\*\*|___)\s*$/gm, "<hr>")
+  // Unordered list
+  html = html.replace(/^[\s]*[-*+]\s+(.+)$/gm, "<li>$1</li>")
+  // Ordered list
+  html = html.replace(/^[\s]*\d+\.\s+(.+)$/gm, "<li>$1</li>")
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/((?:<li>.*?<\/li>\n?)+)/g, '<ul class="md-list">$1</ul>')
+  // Convert line breaks (but not inside pre/code/table)
+  html = html.replace(/\n/g, "<br>")
+  // Cleanup: remove <br> before/after block elements
+  html = html.replace(/<br><\/(h[2345]|ul|ol|blockquote|table|pre)>/g, "</$1>")
+    .replace(/<(h[2345]|ul|ol|blockquote|table|pre)><br>/g, "<$1>")
     .replace(/<\/li><br>/g, "</li>")
-    .replace(/<h([2345])><br>/g, "<h$1>")
-    .replace(/<br><\/h([2345])>/g, "</h$1>")
-    .replace(/<br><blockquote>/g, "<blockquote>")
-    .replace(/<\/blockquote><br>/g, "</blockquote>")
-    .replace(/<br><ul class="md-list">/g, '<ul class="md-list">')
-    .replace(/<\/ul><br>/g, "</ul>")
+    .replace(/<br><li>/g, "<li>")
   return '<div class="md-content writing-content">' + html + "</div>"
 }
-
 function tryParseJsonSafe(text) {
   if (!text) return null
   // Helper: try parse with trailing comma fix
@@ -912,6 +927,37 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
   50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
+/* 代码块 */
+.md-code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+.md-code-block code { background: none; color: inherit; padding: 0; font-size: inherit; }
+/* 表格 */
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.md-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  text-align: left;
+}
+.md-table tr:nth-child(even) { background: #f9fafb; }
+/* 链接 */
+.md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
+.md-content a:hover { color: #16a34a; }
 </style>
 <style>
 
@@ -1025,6 +1071,37 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
   50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
+/* 代码块 */
+.md-code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+.md-code-block code { background: none; color: inherit; padding: 0; font-size: inherit; }
+/* 表格 */
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.md-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  text-align: left;
+}
+.md-table tr:nth-child(even) { background: #f9fafb; }
+/* 链接 */
+.md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
+.md-content a:hover { color: #16a34a; }
 </style>
 
 

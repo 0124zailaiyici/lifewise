@@ -1,4 +1,4 @@
-﻿<template>
+﻿<!-- VERSION: 20260606-2 --> <template>
   <div class="page-container chat-page">
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
@@ -734,11 +734,6 @@ function renderStructured(data) {
     parts.push('<div class="rc-sec">🔧 所需工具</div>')
     data.tools.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
   }
-  if (data.tips) {
-    parts.push('<div class="rc-sec">💡 小贴士</div>')
-    const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
-    ta.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
-  }
   if (data.key_point) parts.push(`<div class="rc-tip">🔥 ${esc(data.key_point)}</div>`)
   if (data.safety_tip) parts.push(`<div class="rc-tip" style="color:#dc2626">⚠️ ${esc(data.safety_tip)}</div>`)
   if (data.answer) parts.push(`<div class="rc-item" style="margin-top:8px">${esc(data.answer).replace(/\n/g, '<br>')}</div>`)
@@ -750,6 +745,100 @@ function renderStructured(data) {
       else parts.push(`<div class="rc-item"><strong>${esc(s.item)}</strong>：${esc(s.detail)}</div>`)
     })
   }
+  // === extra field handlers ===
+  if (data.style) {
+    parts.push('<div class="rc-sec">🎨 风格定位</div>')
+    parts.push('<div class="rc-item" style="font-size:15px;font-weight:500;color:#111">' + esc(data.style) + '</div>')
+  }
+  if (data.items && Array.isArray(data.items)) {
+    parts.push('<div class="rc-sec">🧥 单品推荐</div>')
+    data.items.forEach(function(it) {
+      var name = it.name || it.item || ""
+      var desc = it.description || it.recommendation || it.detail || it.note || ""
+      parts.push('<div class="rc-item">\u00b7 <strong>' + esc(name) + '</strong>' + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
+    })
+  }
+  if (data.outfits && Array.isArray(data.outfits)) {
+    parts.push('<div class="rc-sec">👔 搭配方案</div>')
+    data.outfits.forEach(function(o) {
+      var name = o.piece || o.name || o.occasion || ""
+      var desc = o.description || o.items || o.detail || ""
+      parts.push('<div class="rc-item"><strong>' + esc(name) + '</strong>' + (desc ? "\uff1a" + esc(desc) : "") + (o.color ? '  ·  <span style="color:#666">' + esc(o.color) + '</span>' : "") + '</div>')
+    })
+  }
+  if (data.color_palette && Array.isArray(data.color_palette)) {
+    parts.push('<div class="rc-sec">🎨 配色方案</div>')
+    data.color_palette.forEach(function(c) {
+      var name = c.name || c.color || (typeof c === "string" ? c : "")
+      var desc = c.description || c.detail || (typeof c === "string" ? "" : c.note || "")
+      parts.push('<div class="rc-item">🎨 ' + esc(name) + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
+    })
+  }
+  if (data.accessories && Array.isArray(data.accessories)) {
+    parts.push('<div class="rc-sec">💍 配饰推荐</div>')
+    data.accessories.forEach(function(a) {
+      var name = a.name || a.item || ""
+      var desc = a.description || a.recommendation || a.note || ""
+      parts.push('<div class="rc-item">\u00b7 <strong>' + esc(name) + '</strong>' + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
+    })
+  }
+  if (data.materials && Array.isArray(data.materials)) {
+    parts.push('<div class="rc-sec">📦 所需材料</div>')
+    data.materials.forEach(function(m) {
+      if (typeof m === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(m) + '</div>')
+      else {
+        var mn = esc(m.name || "")
+        var ma = m.amount ? " " + esc(m.amount) : ""
+        var mn1 = m.note ? ' <span class="rc-note">' + esc(m.note) + '</span>' : ""
+        parts.push('<div class="rc-item">\u00b7 <strong>' + mn + '</strong>' + ma + mn1 + '</div>')
+      }
+    })
+  }
+  if (data.recommendations && Array.isArray(data.recommendations)) {
+    parts.push('<div class="rc-sec">💡 推荐</div>')
+    data.recommendations.forEach(function(r) {
+      if (typeof r === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(r) + '</div>')
+      else {
+        var rn = esc(r.name || r.item || "")
+        var rd = r.reason || r.description || r.detail
+        parts.push('<div class="rc-item">\u00b7 <strong>' + rn + '</strong>' + (rd ? " \u2014 " + esc(rd) : "") + '</div>')
+      }
+    })
+  }
+  if (data.tips) {
+    parts.push('<div class="rc-sec">💡 小贴士</div>')
+    const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
+    ta.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
+  }
+  // === fallback for unknown fields ===
+  var allKeys = Object.keys(data)
+  var knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags"]
+  for (var ki = 0; ki < allKeys.length; ki++) {
+    var k = allKeys[ki]
+    if (knownKeys.indexOf(k) >= 0) continue
+    var v = data[k]
+    if (v === null || v === undefined) continue
+    if (typeof v === "string" && v.trim()) {
+      parts.push('<div class="rc-sec">📌 ' + k + '</div>')
+      parts.push('<div class="rc-item">' + esc(v).replace(/\n/g, "<br>") + '</div>')
+    } else if (Array.isArray(v) && v.length) {
+      parts.push('<div class="rc-sec">📌 ' + k + '</div>')
+      for (var vi = 0; vi < v.length; vi++) {
+        var item = v[vi]
+        if (typeof item === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(item) + '</div>')
+        else if (typeof item === "object" && item) {
+          var ikeys = Object.keys(item)
+          var texts = []
+          for (var ti = 0; ti < ikeys.length; ti++) {
+            var iv = item[ikeys[ti]]
+            if (iv) texts.push(esc(iv))
+          }
+          parts.push('<div class="rc-item">\u00b7 ' + texts.join(" \u2014 ") + '</div>')
+        }
+      }
+    }
+  }
+
   let recQ = data.followUps || []
   if (!recQ.length) {
     const kw = (data.title || data.question || data.problem || '').replace(/[、，。]/g, ' ').trim()
@@ -1103,6 +1192,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
+
 
 
 

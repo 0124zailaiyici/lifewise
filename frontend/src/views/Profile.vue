@@ -74,7 +74,7 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.content { padding: 20px 20px 80px; }
+.content { padding: 20px 20px calc(80px + env(safe-area-inset-bottom, 0px))px; }
 .user-card {
   display: flex; align-items: center; gap: 16px; padding: 20px;
   background: linear-gradient(135deg, #f0fdf4, #dcfce7);

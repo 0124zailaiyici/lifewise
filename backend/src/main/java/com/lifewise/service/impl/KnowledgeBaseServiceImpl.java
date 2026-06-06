@@ -18,10 +18,10 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
 
     /** Jaccard 相似度阈值：≥ 0.55 认为相似 */
-    private static final double SIMILARITY_THRESHOLD = 0.55;
+    private static final double SIMILARITY_THRESHOLD = 0.85;
 
     /** 最小绝对重叠字符数 */
-    private static final int MIN_OVERLAP_CHARS = 3;
+    private static final int MIN_OVERLAP_CHARS = 8;
 
     /** 常见疑问前缀——提问时的开头虚词 */
     private static final String[] QUESTION_PREFIXES = {
@@ -75,6 +75,12 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             }
 
             // 3) 核心内容 Jaccard 相似度
+            // Length difference guard: skip if questions differ too much in length
+            int maxLen = Math.max(kbCore.length(), core.length());
+            int minLen = Math.min(kbCore.length(), core.length());
+            if (minLen > 0 && maxLen > minLen * 1.4) {
+                continue;
+            }
             double sim = jaccardSimilarity(kbCore, core);
             if (sim >= SIMILARITY_THRESHOLD) {
                 // 同时要求绝对重叠字符数

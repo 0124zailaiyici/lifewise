@@ -64,3 +64,6 @@ vite.err
 debug_segment.txt
 vite-start*.log
 frontend/public/fav-design.html
+
+# Scratch files
+_check_script.js

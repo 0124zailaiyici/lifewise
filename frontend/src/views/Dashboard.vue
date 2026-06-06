@@ -152,7 +152,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
 .header-subtitle { font-size: 13px; opacity: .75; margin-left: 4px; }
 
-.content { padding: 16px 16px 80px; margin-top: -12px; }
+.content { padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px))px; margin-top: -12px; }
 
 .hero-card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
 .hero-row { display: flex; align-items: center; justify-content: space-around; }
@@ -204,11 +204,11 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  height: 64px;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: #fff;
   border-top: 1px solid #e5e7eb;
   display: flex;
-  padding-bottom: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   z-index: 100;
   box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
 }

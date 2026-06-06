@@ -1,12 +1,10 @@
-﻿// LifeWise Service Worker - v2 (fixed caching)
-const CACHE = 'lifewise-v2'
-const STATIC_URLS = ['/', '/home', '/login', '/manifest.json', '/icon.svg']
+﻿// LifeWise Service Worker - v3 (development-friendly caching)
+const CACHE = 'lifewise-v3'
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()
-  e.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(STATIC_URLS))
-  )
+  // Don't cache pages on install - let the fetch handler manage them
+  e.waitUntil(Promise.resolve())
 })
 
 self.addEventListener('activate', (e) => {
@@ -27,13 +25,13 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // All source files: network first (never cache)
+  // Dev source files: always go to network (never cache)
   if (url.pathname.startsWith('/src/') || url.pathname.startsWith('/node_modules/') || url.pathname.startsWith('/@')) {
     e.respondWith(fetch(e.request))
     return
   }
 
-  // Static built assets: cache first
+  // Static built assets (only in production): cache first, network fallback
   if (url.pathname.match(/\.(js|css|svg|png|jpg|woff2?)$/)) {
     e.respondWith(
       caches.match(e.request).then((r) => r || fetch(e.request).then((r) => {
@@ -45,12 +43,6 @@ self.addEventListener('fetch', (e) => {
     return
   }
 
-  // Pages: network first, cache fallback
-  e.respondWith(
-    fetch(e.request).then((r) => {
-      const clone = r.clone()
-      caches.open(CACHE).then((c) => c.put(e.request, clone))
-      return r
-    }).catch(() => caches.match(e.request).then((r) => r || caches.match('/')))
-  )
+  // All other requests (pages, etc.): always go to network, no caching
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request).then((r) => r || caches.match('/'))))
 })

@@ -133,7 +133,7 @@ function formatTime(t) {
 .search-bar { padding: 12px 20px; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 20px; }
 
-.content { padding: 0 20px 80px; }
+.content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
 
 .group { margin-bottom: 24px; }
 .date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
@@ -152,7 +152,7 @@ function formatTime(t) {
 .loading-text { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; color: #777; }
 
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: 8px; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
+.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

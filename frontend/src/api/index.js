@@ -130,7 +130,6 @@ export function generateFoodImage(dishName) {
 export function getFoodImageStatus(taskId) {
   return api.get('/food-image/status', { params: { taskId } })
 }
-}
 
 export function exportKnowledge() {
   return api.get("/kb/export", { responseType: "blob" })

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <router-view v-slot="{ Component, route }">
     <transition name="page" mode="out-in">
       <component :is="Component" :key="route.path" />
@@ -10,6 +10,19 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; -webkit-font-smoothing: antialiased; }
 .page-container { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; position: relative; }
+/* 移动端安全区域 */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .page-container { padding-top: env(safe-area-inset-top); }
+  .bottom-tabs { padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important; }
+  .input-area { padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+}
+/* 移动端点击高亮去除 */
+* { -webkit-tap-highlight-color: transparent; }
+/* 禁用文本选择（UI元素） */
+.no-select { user-select: none; -webkit-user-select: none; }
+/* 触摸目标最小尺寸 */
+.el-button--small { min-height: 36px; }
+.el-button--default { min-height: 40px; }
 
 /* 页面切换动画 */
 .page-enter-active, .page-leave-active { transition: opacity .2s ease, transform .2s ease; }

@@ -112,7 +112,7 @@ async function doSearch() {
 .search-header { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid #eee; background: #fff; }
 .back-btn { padding: 6px; font-size: 18px; color: #555; }
 .search-input-wrap { flex: 1; }
-.content { padding: 16px 16px 80px; }
+.content { padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px))px; }
 .result-group { margin-bottom: 24px; }
 .group-title { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 10px; }
 .result-item { display: flex; align-items: center; padding: 12px 14px; background: #f7f7f8; border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: .1s; }

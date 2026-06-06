@@ -138,3 +138,4 @@ export function exportKnowledge() {
 export function importKnowledge(items) {
   return api.post("/kb/import", items)
 }
+

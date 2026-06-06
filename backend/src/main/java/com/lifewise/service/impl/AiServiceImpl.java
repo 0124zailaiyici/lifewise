@@ -60,19 +60,19 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public String chat(String message, String scene, Long userId, Long conversationId, String imageUrl) {
-        // Skip cache when image is present (image analysis should always use AI)
-        if (imageUrl == null || imageUrl.isEmpty()) {
+        // Skip cache when there is conversation history (follow-up) or image present
+        if (conversationId == null && (imageUrl == null || imageUrl.isEmpty())) {
             String cached = knowledgeBaseService.findAnswer(message, scene);
             if (cached != null) {
                 log.info("cache hit: {}", message);
                 return cached;
             }
         } else {
-            log.debug("skip cache for image request: {}", message);
+            log.debug("skip cache (follow-up or image): {}", message);
         }
         String answer = callAI(message, scene, conversationId, imageUrl);
-        // Only cache if it looks like a real response (not mock, not error)
-        if (answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
+        // Only cache first questions (no history), skip caching follow-ups
+        if (conversationId == null && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
             knowledgeBaseService.saveAnswer(message, answer, scene);
         } else {
             log.debug("Skipping cache for mock/error response");

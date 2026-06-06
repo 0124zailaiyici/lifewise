@@ -1,4 +1,4 @@
-﻿<!-- VERSION: 20260606-2 --> <template>
+<!-- VERSION: 20260606-2 --> <template>
   <div class="page-container chat-page">
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
@@ -157,6 +157,7 @@ const messages = ref([])
 const currentTyping = ref(false)
 const previewImg = ref(null)
 const uploadProgress = ref(0)
+const currentConvId = ref(null)
 function previewImage(url) { previewImg.value = url }
 function cancelFoodImage(m) {
   if (m._foodImagePoll) { clearInterval(m._foodImagePoll); m._foodImagePoll = null }
@@ -203,7 +204,7 @@ onMounted(async () => {
   msgBox.value?.addEventListener('click', handleFollowUpClick)
   await nextTick()
   inputRef.value?.focus()
-  if (route.params.id) await loadConversation(route.params.id)
+  if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
 })
 onUnmounted(() => msgBox.value?.removeEventListener('click', handleFollowUpClick))
 
@@ -230,7 +231,7 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
   if (!msg && !pendingFile.value) return
 
   const scene = tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
-  const convId = route.params.id ? Number(route.params.id) : null
+  let convId = currentConvId.value
   let imageUrl = ''
 
   if (pendingFile.value) {
@@ -253,6 +254,7 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
     const res = await sendChat(msg, scene, convId, imageUrl)
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
+    if (res.data?.conversationId) currentConvId.value = res.data.conversationId
     const _ct = res.data?.content||""; const _ctStr = typeof _ct === "string" ? _ct : JSON.stringify(_ct); console.log("[IMG] chat res keys:", Object.keys(res||{}), "data_keys:", Object.keys(res.data||{}), "content_len:", _ctStr.length, "typeof:", typeof _ct, "first:", _ctStr.charCodeAt(0), _ctStr.charCodeAt(1), "json_parse_ok:", (()=>{try{JSON.parse(_ctStr);return true}catch(e){console.warn("[JSON] parse error:",e.message);return false}})()); const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
     if (m) {
       m._typing = false; m.content = fullContent

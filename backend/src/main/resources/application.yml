@@ -46,3 +46,9 @@ app:
 logging:
   level:
     com.lifewise: debug
+
+# 归流云驿 AI 图片生成
+gl-image:
+  api-key: sk-1f35246b68842e6be212fc73b96a876f7f8035b40c6e4aa4
+  api-url: https://api.lk888.ai/api
+

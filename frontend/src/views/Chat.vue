@@ -31,6 +31,14 @@
               <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" />
             </div>
             <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
+            <div v-if="msg._foodImageLoading" class="food-image-loading">
+              <span class="fil-spinner"></span>
+              <span class="fil-text">🖼️ 正在生成成品图…</span>
+              <el-button text size="small" type="info" @click="cancelFoodImage(msg)" style="margin-left:auto;flex-shrink:0">取消</el-button>
+            </div>
+            <div v-if="msg._foodImageUrl" class="food-image" @click="previewImage(msg._foodImageUrl)">
+              <img :src="msg._foodImageUrl" alt="成品图" loading="lazy" />
+            </div>
           </div>
         </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
@@ -103,7 +111,11 @@
     </el-dialog>
 
         <!-- 图片快捷操作栏 -->
-    <div v-if="pendingImage" class="image-preview-bar">
+    <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress-bar">
+        <div class="upb-fill" :style="{ width: uploadProgress + '%' }"></div>
+        <span class="upb-text">{{ uploadProgress }}%</span>
+      </div>
+      <div v-if="pendingImage" class="image-preview-bar">
       <div class="ipb-preview">
         <img :src="pendingImage" />
         <span class="ipb-remove" @click="pendingImage = null; pendingFile = null">✕</span>
@@ -115,7 +127,7 @@
       </div>
     </div>
     <div class="input-area">
-      <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :disabled="loading" />
+      <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :class="{ 'mic-listening': isListening }" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
       <el-input v-model="inputText" ref="inputRef" placeholder="输入你的问题..." size="large"
@@ -128,7 +140,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -144,6 +156,13 @@ const loading = ref(false)
 const messages = ref([])
 const currentTyping = ref(false)
 const previewImg = ref(null)
+const uploadProgress = ref(0)
+function previewImage(url) { previewImg.value = url }
+function cancelFoodImage(m) {
+  if (m._foodImagePoll) { clearInterval(m._foodImagePoll); m._foodImagePoll = null }
+  m._foodImageLoading = false
+  ElMessage.info("已取消生成成品图")
+}
 const tempScene = ref('')
 const shareCardRef = ref(null)
 const isListening = ref(false)
@@ -202,7 +221,7 @@ async function loadConversation(id) {
       _typing: false, _displayHtml: '', _faved: m.faved || false
     }))
     await nextTick(); scrollBottom()
-  } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('加载对话失败') }
+  } catch(e) { console.error('[IMG] load err:',e); ElMessage.error('加载消息失败') }
   finally { loading.value = false }
 }
 
@@ -216,10 +235,10 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
 
   if (pendingFile.value) {
     try {
-      const uploadRes = await uploadImage(pendingFile.value)
+      const uploadRes = await uploadImage(pendingFile.value, (e) => { uploadProgress.value = Math.round((e.loaded / e.total) * 100) })
       imageUrl = uploadRes.data?.url || ""; console.log("[IMG] upload url:", imageUrl); ''
       pendingFile.value = null; pendingImage.value = null
-    } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('图片上传失败'); return }
+    } catch(e) { console.error('[IMG] upload err:',e); uploadProgress.value = 0; ElMessage.error('图片上传失败'); return }
   }
 
   messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
@@ -239,10 +258,50 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
       m._typing = false; m.content = fullContent
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
+      // Auto-generate food image for recipe responses (async polling + localStorage cache)
+      try {
+        const parsed = tryParseJsonSafe(fullContent)
+        if (parsed && parsed.title && parsed.steps) {
+          const dishKey = 'food_img_' + parsed.title.trim()
+          const cached = localStorage.getItem(dishKey)
+          if (cached) {
+            m._foodImageUrl = cached
+          } else {
+            m._foodImageLoading = true
+            generateFoodImage(parsed.title).then(submitRes => {
+              const taskId = submitRes.data?.taskId
+              if (!taskId) { m._foodImageLoading = false; return }
+              m._foodImagePoll = setInterval(async () => {
+                try {
+                  const statusRes = await getFoodImageStatus(taskId)
+                  const st = statusRes.data
+                  if (st?.isFinal) {
+                    clearInterval(m._foodImagePoll); m._foodImagePoll = null
+                    const url = st?.resultUrl || ''
+                    if (url) {
+                      m._foodImageUrl = url
+                      localStorage.setItem(dishKey, url)
+                    }
+                    m._foodImageLoading = false
+                  } else if (st?.state === 'failed') {
+                    clearInterval(m._foodImagePoll); m._foodImagePoll = null; m._foodImageLoading = false
+                  }
+                } catch { clearInterval(m._foodImagePoll); m._foodImagePoll = null; m._foodImageLoading = false }
+              }, 3000)
+            }).catch(() => { m._foodImageLoading = false })
+          }
+        }
+      } catch {}
     }
-  } catch {
+  } catch(e) {
     const m = messages.value[aiIdx]
-    if (m) { m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px">请求出错了，请稍后再试</div>'; currentTyping.value = false }
+    if (m) {
+      let errMsg = "请求出错了，请稍后再试"
+      if (e?.response?.status === 502) errMsg = "AI 服务暂时不可用，请稍后再试"
+      else if (e?.response?.status === 401) errMsg = "登录已过期，请重新登录"
+      else if (e?.message?.includes("Network")) errMsg = "无法连接服务器，请检查后端是否启动"
+      m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px">' + errMsg + '</div>'; currentTyping.value = false
+    }
   } finally { loading.value = false }
 }
 
@@ -353,7 +412,7 @@ async function toggleFavorite(i) {
   const msg = messages.value[i]; if (!msg) return
   if (msg._faved) {
     try { await removeFavorite(msg._id); msg._faved = false; ElMessage.success('已取消收藏') }
-    catch { ElMessage.error('操作失败') }
+    catch(e) { ElMessage.error(e?.response?.data?.message || '操作失败，请重试') }
   } else {
     favDialog.value.selected = 'other'
     favDialog.value.msgIndex = i
@@ -369,7 +428,7 @@ async function confirmFavorite() {
     await addFavorite(msg._id, '', favDialog.value.selected)
     msg._faved = true
     ElMessage.success('已收藏')
-  } catch(e) { console.error('[IMG] upload err:',e); ElMessage.error('收藏失败') }
+  } catch(e) { console.error('[favorite] err:',e); ElMessage.error('收藏失败，请重试') }
 }
 
 async function shareToSocial() {
@@ -497,7 +556,7 @@ function startVoice() {
   const r = new (window.webkitSpeechRecognition || window.SpeechRecognition)()
   window._voiceRecognition = r
   r.lang = 'zh-CN'
-  r.continuous = false  // non-continuous — 说完自动结束更自然
+  r.continuous = true  // continuous mode — 说完自动结束更自然
   r.interimResults = true
 
   isListening.value = true
@@ -640,13 +699,13 @@ function renderStructured(data) {
   if (data.steps) {
     parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
     data.steps.forEach(s => {
-      const stepImg = s.step_image
-        ? (() => {
-            const emoji = stepEmoji(s.step_image)
-            const cls = stepGradient(s.step_image)
-            return `<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=${encodeURIComponent(s.step_image)}" alt="${esc(s.step_image)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="rc-step-illustration ${cls}" style="display:none"><span>${emoji}</span></div></div>`
-          })()
-        : ''
+      const stepKw = s.step_image || (s.action || "").substring(0, 30)
+      const stepImg = (() => {
+        const kw = stepKw
+        const emoji = stepEmoji(kw)
+        const cls = stepGradient(kw)
+        return `<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=${encodeURIComponent(kw)}" alt="${esc(kw)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="rc-step-illustration ${cls}" style="display:none"><span>${emoji}</span></div></div>`
+      })()
       const tip = s.tip ? `<span class="rc-note">💡 ${esc(s.tip)}</span>` : ''
       const warning = s.warning ? `<span class="rc-warning">⚠️ ${esc(s.warning)}</span>` : ''
       parts.push(`<div class="rc-step"><div class="rc-step-badge">${s.step || ''}</div><div class="rc-step-body">${stepImg}<div class="rc-step-text">${esc(s.action || s)}${tip}${warning}</div></div></div>`)
@@ -791,7 +850,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .fav-cat-opt .fco-icon { font-size: 24px; }
 .fav-cat-opt .fco-label { font-size: 12px; color: #555; }
 
-/* ??????? */
+/* 写作模式 */
 .writing-modes { margin-top: 20px; text-align: left; padding: 0 20px; }
 .wm-title { font-size: 13px; color: #888; margin-bottom: 10px; }
 .wm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -801,7 +860,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .wm-icon { font-size: 24px; }
 .wm-label { font-size: 12px; color: #555; font-weight: 500; }
 
-/* ?????? */
+/* 写作内容 */
 .writing-content { line-height: 1.9; font-size: 14.5px; color: #2d2d2d; }
 .writing-content h2 { font-size: 18px; margin: 20px 0 10px; color: #111; padding-bottom: 6px; border-bottom: 2px solid #22c55e; }
 .writing-content h3 { font-size: 16px; margin: 16px 0 8px; color: #1a1a1a; }
@@ -832,6 +891,27 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .ipb-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
 .ipb-chip { display: inline-flex; align-items: center; gap: 3px; background: #fff; color: #374151; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: 1px solid #d1d5db; transition: .15s; white-space: nowrap; font-weight: 400; }
 .ipb-chip:hover { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
+/* 上传进度条 */
+.upload-progress-bar {
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  position: relative;
+  margin: 0 16px;
+  overflow: hidden;
+}
+.upload-progress-bar .upb-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 2px; transition: width .3s ease; }
+.upload-progress-bar .upb-text { position: absolute; right: 0; top: -18px; font-size: 11px; color: #22c55e; font-weight: 600; }
+
+/* 麦克风接听动画 */
+.mic-listening.el-button {
+  animation: mic-pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
 </style>
 <style>
 
@@ -883,6 +963,68 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-step-illustration.grad-cook { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); }
 .rc-step .rc-note { font-size: 12px; color: #888; margin-top: 3px; }
 .rc-step .rc-warning { font-size: 12px; color: #dc2626; display: block; margin-top: 2px; }
+
+/* 成品菜图片 */
+.food-image {
+  margin-top: 6px;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.food-image img {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  transition: transform .2s;
+}
+.food-image img:hover { transform: scale(1.01); }
+
+/* 成品图加载中 */
+.food-image-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px dashed #bbf7d0;
+  border-radius: 12px;
+  margin-top: 8px;
+}
+.fil-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #bbf7d0;
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: fil-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes fil-spin {
+  to { transform: rotate(360deg); }
+}
+.fil-text { font-size: 13px; color: #16a34a; font-weight: 500; }
+
+/* 上传进度条 */
+.upload-progress-bar {
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  position: relative;
+  margin: 0 16px;
+  overflow: hidden;
+}
+.upload-progress-bar .upb-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 2px; transition: width .3s ease; }
+.upload-progress-bar .upb-text { position: absolute; right: 0; top: -18px; font-size: 11px; color: #22c55e; font-weight: 600; }
+
+/* 麦克风接听动画 */
+.mic-listening.el-button {
+  animation: mic-pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
 </style>
 
 

@@ -113,10 +113,21 @@ export function markHelpful(id) {
   return api.post('/kb/' + id + '/helpful')
 }
 
-export function uploadImage(file) {
+export function uploadImage(file, onProgress) {
   const formData = new FormData()
   formData.append('file', file)
   return api.post('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress
   })
 }
+
+export function generateFoodImage(dishName) {
+  return api.post('/food-image/generate', { dishName })
+}
+
+
+export function getFoodImageStatus(taskId) {
+  return api.get('/food-image/status', { params: { taskId } })
+}
+

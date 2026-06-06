@@ -34,7 +34,7 @@ public class JwtAuthFilter implements Filter {
         // 放行登录、注册、密码重置、H2 控制台
         if (path.equals("/api/users/login") || path.equals("/api/users/register") ||
             path.equals("/api/users/forgot-password") || path.equals("/api/users/reset-password") ||
-            path.startsWith("/h2-console") || path.startsWith("/uploads") || path.startsWith("/api/images") || path.startsWith("/favicon") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
+            path.startsWith("/h2-console") || path.startsWith("/uploads") || path.startsWith("/api/images") || path.startsWith("/favicon") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/api/food-image")) {
             chain.doFilter(request, response);
             return;
         }

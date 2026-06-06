@@ -106,10 +106,12 @@ public class AiServiceImpl implements AiService {
     private String callLLMApi(String message, String scene, Long conversationId, String imageUrl) throws Exception {
         List<Map<String, Object>> messages = new ArrayList<>();
         boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
+        boolean hasHistory = conversationId != null &&
+            !messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId).isEmpty();
 
         Map<String, Object> systemMsg = new LinkedHashMap<>();
         systemMsg.put("role", "system");
-        systemMsg.put("content", buildSystemPrompt(scene, hasImage));
+        systemMsg.put("content", buildSystemPrompt(scene, hasImage, hasHistory));
         messages.add(systemMsg);
 
         if (conversationId != null) {
@@ -223,7 +225,16 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    private String buildSystemPrompt(String scene, boolean hasImage) {
+    private String buildSystemPrompt(String scene, boolean hasImage, boolean hasHistory) {
+        // Follow-up mode: use natural language when there is conversation history
+        if (hasHistory) {
+            return """
+你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。
+
+用户正在当前对话基础上追问（如替代食材、调整口味、补充细节等），请用自然语言回答。
+保持口语化、亲切感，像朋友聊天一样。不要输出 JSON 格式，不要结构化卡片。
+""";
+        }
         String baseRule = """
 你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。涉及危险必须提醒。只输出纯 JSON，不要 markdown 标记。如果用户上传了图片，优先分析图片内容。
 """;

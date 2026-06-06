@@ -393,25 +393,51 @@ function imgUrl(url) {
   return 'http://localhost:8080' + url
 }
 function startVoice() {
+  // If already listening, stop manually
+  if (isListening.value) {
+    if (window._voiceRecognition) {
+      try { window._voiceRecognition.stop() } catch {}
+      window._voiceRecognition = null
+    }
+    isListening.value = false
+    ElMessage.info('⏹️ 已停止语音输入')
+    return
+  }
+
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     ElMessage.warning('当前浏览器不支持语音识别，建议用 Chrome 浏览器打开 http://localhost:5173')
     return
   }
-  // Check if permission already denied
+
+  // Check permission first
   if (navigator.permissions) {
     navigator.permissions.query({ name: 'microphone' }).then(result => {
       if (result.state === 'denied') {
-        ElMessage.error('麦克风权限已被禁用，请在浏览器地址栏左侧点击🔒开启麦克风权限')
+        ElMessage.error('❌ 麦克风权限已被禁用，请在浏览器地址栏左侧点击 🔒 或 ⓘ 图标，开启"麦克风"权限后刷新页面重试')
         return
       }
     }).catch(() => {})
   }
-  // Use webkitSpeechRecognition explicitly and keep a global reference to prevent GC
-  window._voiceRecognition = new (window.webkitSpeechRecognition || window.SpeechRecognition)()
-  const r = window._voiceRecognition
-  r.lang = 'zh-CN'; r.continuous = true; r.interimResults = true
+
+  // Stop any previous instance first
+  if (window._voiceRecognition) {
+    try { window._voiceRecognition.abort() } catch {}
+    window._voiceRecognition = null
+  }
+
+  // Create new instance
+  const r = new (window.webkitSpeechRecognition || window.SpeechRecognition)()
+  window._voiceRecognition = r
+  r.lang = 'zh-CN'
+  r.continuous = false  // non-continuous — 说完自动结束更自然
+  r.interimResults = true
+
   isListening.value = true
-  ElMessage.info('🎤 说话吧，说完停顿几秒即自动发送...')
+  let retryCount = 0
+  const maxRetries = 2
+
+  ElMessage.info('🎤 请说话... (点击麦克风可手动停止)')
+
   r.onresult = (e) => {
     let t = ''
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -419,23 +445,50 @@ function startVoice() {
     }
     inputText.value = t
   }
+
   r.onerror = (e) => {
-    isListening.value = false; window._voiceRecognition = null
-    if (e.error === 'not-allowed') ElMessage.error('麦克风被拒绝，网址栏左侧允许后重试')
-    else if (e.error === 'no-speech') ElMessage.warning('没听到说话，重试吧')
-    else if (e.error === 'aborted') ElMessage.warning('麦克风被中断，点击微音符重试')
-    else ElMessage.error('识别失败: ' + e.error)
+    if (e.error === 'not-allowed') {
+      isListening.value = false; window._voiceRecognition = null
+      ElMessage.error('❌ 麦克风被拒绝，请在浏览器地址栏左侧点击 🔒 开启麦克风权限后刷新页面')
+    } else if (e.error === 'no-speech') {
+      if (retryCount < maxRetries) {
+        retryCount++
+        ElMessage.info(`🔁 没听到，第${retryCount}次重试...`)
+        setTimeout(() => { try { r.start() } catch {} }, 500)
+      } else {
+        isListening.value = false; window._voiceRecognition = null
+        ElMessage.warning('没听到说话，请检查麦克风是否正常后点击麦克风重试')
+      }
+    } else if (e.error === 'aborted') {
+      // Only show error if we didn't intentionally abort
+      if (window._voiceRecognition) {
+        isListening.value = false; window._voiceRecognition = null
+        ElMessage.warning('⚠️ 语音被中断，点击麦克风重试')
+      }
+    } else {
+      isListening.value = false; window._voiceRecognition = null
+      ElMessage.error('语音识别失败: ' + e.error)
+    }
   }
+
   r.onend = () => {
-    isListening.value = false; window._voiceRecognition = null
-    if (inputText.value.trim()) setTimeout(() => send(), 300)
+    isListening.value = false
+    if (window._voiceRecognition) {
+      window._voiceRecognition = null
+      if (inputText.value.trim()) {
+        setTimeout(() => send(), 300)
+      }
+    }
   }
-  r.start()
+
+  try {
+    r.start()
+  } catch (e) {
+    isListening.value = false; window._voiceRecognition = null
+    ElMessage.error('启动语音识别失败: ' + e.message)
+  }
 }
-async function handleRenameTitle() {
-  const { value } = await ElMessageBox.prompt('输入新标题', '重命名对话', { inputValue: currentLabel.value, inputValidator: v => v?.trim() ? true : '标题不能为空' })
-  if (value?.trim()) localStorage.setItem('sceneLabel', value.trim())
-}
+
 function goBack() { router.back() }
 function scrollBottom() { nextTick(() => { if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight }) }
 
@@ -763,5 +816,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-step .rc-note { font-size: 12px; color: #888; margin-top: 3px; }
 .rc-step .rc-warning { font-size: 12px; color: #dc2626; display: block; margin-top: 2px; }
 </style>
+
+
+
 
 

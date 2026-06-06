@@ -1,7 +1,7 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: '/api',
   timeout: 30000
 })
 
@@ -22,7 +22,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    const msg = error.response?.data?.message || '缃戠粶閿欒'
+    const msg = error.response?.data?.message || '缂冩垹绮堕柨娆掝嚖'
     console.error(msg)
     return Promise.reject(error)
   }

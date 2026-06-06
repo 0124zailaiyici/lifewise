@@ -1,0 +1,12 @@
+﻿# LifeWise cloud deployment config (Render)
+# All secrets come from environment variables set in Render dashboard
+spring:
+  datasource:
+    url: jdbc:h2:mem:lifewise;DB_CLOSE_DELAY=-1;MODE=MySQL
+
+app:
+  upload-dir: /tmp/uploads
+
+server:
+  port: ${PORT:8080}
+

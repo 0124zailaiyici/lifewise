@@ -67,3 +67,11 @@ frontend/public/fav-design.html
 
 # Scratch files
 _check_script.js
+
+# Local config with secrets
+application-local.yml
+backend/src/main/resources/application-local.yml
+
+# Environment files
+.env
+*.env.local

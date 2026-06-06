@@ -30,25 +30,23 @@ server:
   port: 8080
 
 ai:
-  api-url: https://api.deepseek.com/v1/chat/completions
-  api-key: sk-e85e1e7be2c14f6eb8555c3eff46e4ce
-  model: deepseek-v4-flash
-  # 图片识别（多模态）配置 - 使用小米 MiMo Omni
-  vision-api-url: https://token-plan-cn.xiaomimimo.com/v1/chat/completions
-  vision-api-key: tp-c71j70frfnzpxd1kzwkmi7c7mux4gter70i1zydnmeb5bl23
-  vision-model: mimo-v2-omni
+  api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:deepseek-v4-flash}
+  vision-api-url: ${AI_VISION_API_URL:}
+  vision-api-key: ${AI_VISION_API_KEY:}
+  vision-model: ${AI_VISION_MODEL:mimo-v2-omni}
 
 app:
-  vision-enabled: true
+  vision-enabled: ${APP_VISION_ENABLED:true}
   upload-dir: ./uploads
-  image-api-key: '' # Pixabay API key for step images (free, get at https://pixabay.com/api/docs/)
+  image-api-key: ${IMAGE_API_KEY:}
 
 logging:
   level:
     com.lifewise: debug
 
-# 归流云驿 AI 图片生成
 gl-image:
-  api-key: sk-1f35246b68842e6be212fc73b96a876f7f8035b40c6e4aa4
-  api-url: https://api.lk888.ai/api
+  api-key: ${GL_IMAGE_API_KEY:}
+  api-url: ${GL_IMAGE_API_URL:https://api.lk888.ai/api}
 

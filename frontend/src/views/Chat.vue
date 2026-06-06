@@ -519,9 +519,16 @@ function renderStructured(data) {
   if (data.steps) {
     parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
     data.steps.forEach(s => {
+      const stepImg = s.step_image
+        ? (() => {
+            const emoji = stepEmoji(s.step_image)
+            const cls = stepGradient(s.step_image)
+            return `<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=${encodeURIComponent(s.step_image)}" alt="${esc(s.step_image)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="rc-step-illustration ${cls}" style="display:none"><span>${emoji}</span></div></div>`
+          })()
+        : ''
       const tip = s.tip ? `<span class="rc-note">💡 ${esc(s.tip)}</span>` : ''
       const warning = s.warning ? `<span class="rc-warning">⚠️ ${esc(s.warning)}</span>` : ''
-      parts.push(`<div class="rc-item">${s.step ? `<strong>步骤 ${s.step}：</strong>` : ''}${esc(s.action || s)}${tip}${warning}</div>`)
+      parts.push(`<div class="rc-step"><div class="rc-step-badge">${s.step || ''}</div><div class="rc-step-body">${stepImg}<div class="rc-step-text">${esc(s.action || s)}${tip}${warning}</div></div></div>`)
     })
   }
   if (data.selection_steps) {
@@ -557,6 +564,48 @@ function renderStructured(data) {
     parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQ.map(q => `<span class="rc-followup-chip">${esc(q)}</span>`).join(' ')}</div>`)
   }
   return '<div class="rc-card">' + parts.join('') + '</div>'
+}
+
+function stepEmoji(keyword) {
+  if (!keyword) return '🍳'
+  const kw = keyword.toLowerCase()
+  if (/cut|chop|dice|slice|mince/.test(kw)) return '🔪'
+  if (/wash|rinse|clean|peel/.test(kw)) return '🚿'
+  if (/fry|stir.?fry|saute|pan/.test(kw)) return '🍳'
+  if (/boil|cook|simmer|stew|braise|blanch/.test(kw)) return '🥘'
+  if (/steam/.test(kw)) return '♨️'
+  if (/bake|roast|oven/.test(kw)) return '🔥'
+  if (/season|marinate|salt|sugar|sauce|soy/.test(kw)) return '🧂'
+  if (/mix|stir|whisk|beat|blend/.test(kw)) return '🥄'
+  if (/egg/.test(kw)) return '🥚'
+  if (/meat|ribs|chicken|pork|beef|fish/.test(kw)) return '🥩'
+  if (/vegetable|tomato|onion|garlic|ginger/.test(kw)) return '🥬'
+  if (/oil|heat/.test(kw)) return '🔥'
+  if (/serve|plate|dish|bowl/.test(kw)) return '🍽️'
+  if (/garnish|green.?onion|herb/.test(kw)) return '🌿'
+  if (/pour|add|drizzle/.test(kw)) return '🫗'
+  return '🍳'
+}
+
+function stepGradient(keyword) {
+  if (!keyword) return 'grad-cook'
+  const kw = keyword.toLowerCase()
+  if (/cut|chop|dice|slice|mince/.test(kw)) return 'grad-cut'
+  if (/wash|rinse|clean|peel/.test(kw)) return 'grad-wash'
+  if (/fry|stir.?fry|saute|pan/.test(kw)) return 'grad-fry'
+  if (/boil|cook|simmer|stew|braise|blanch/.test(kw)) return 'grad-boil'
+  if (/steam/.test(kw)) return 'grad-steam'
+  if (/bake|roast|oven/.test(kw)) return 'grad-bake'
+  if (/season|marinate|salt|sugar|sauce|soy/.test(kw)) return 'grad-season'
+  if (/mix|stir|whisk|beat|blend/.test(kw)) return 'grad-mix'
+  if (/egg/.test(kw)) return 'grad-egg'
+  if (/meat|ribs|chicken|pork|beef|fish/.test(kw)) return 'grad-meat'
+  if (/vegetable|tomato|onion|garlic|ginger/.test(kw)) return 'grad-veg'
+  if (/oil|heat/.test(kw)) return 'grad-oil'
+  if (/serve|plate|dish|bowl/.test(kw)) return 'grad-serve'
+  if (/garnish|green.?onion|herb/.test(kw)) return 'grad-garnish'
+  if (/pour|add|drizzle/.test(kw)) return 'grad-pour'
+  return 'grad-cook'
 }
 function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 </script>
@@ -685,9 +734,34 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content ul { margin: 4px 0; padding-left: 20px; }
 .md-content li { margin: 2px 0; }
 .md-content em { color: #666; }
+/* 步骤配图样式 */
+.rc-step { display: flex; gap: 10px; margin: 10px 0; padding: 0; align-items: flex-start; }
+.rc-step-badge { flex-shrink: 0; width: 28px; height: 28px; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 2px; box-shadow: 0 2px 6px rgba(34,197,94,.25); }
+.rc-step-body { flex: 1; min-width: 0; }
+.rc-step-text { font-size: 13px; color: #333; line-height: 1.6; padding: 2px 0; }
+.rc-step-img { margin: 6px 0 2px; border-radius: 12px; overflow: hidden; position: relative; }
+.rc-step-photo { width: 100%; height: 180px; object-fit: cover; display: block; border-radius: 12px; }
+.rc-step-illustration { width: 100%; height: 160px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 72px; position: relative; }
+.rc-step-illustration span { filter: drop-shadow(0 2px 4px rgba(0,0,0,.1)); z-index: 1; }
+/* 步骤插画渐变色背景 */
+.rc-step-illustration.grad-cut { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.rc-step-illustration.grad-wash { background: linear-gradient(135deg, #e0f2fe, #bae6fd); }
+.rc-step-illustration.grad-fry { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
+.rc-step-illustration.grad-boil { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
+.rc-step-illustration.grad-steam { background: linear-gradient(135deg, #f3e8ff, #e9d5ff); }
+.rc-step-illustration.grad-bake { background: linear-gradient(135deg, #fef3c7, #fdba74); }
+.rc-step-illustration.grad-season { background: linear-gradient(135deg, #f0fdf4, #bbf7d0); }
+.rc-step-illustration.grad-mix { background: linear-gradient(135deg, #fdf2f8, #fbcfe8); }
+.rc-step-illustration.grad-egg { background: linear-gradient(135deg, #fef9c3, #fde047); }
+.rc-step-illustration.grad-meat { background: linear-gradient(135deg, #fee2e2, #fecaca); }
+.rc-step-illustration.grad-veg { background: linear-gradient(135deg, #dcfce7, #86efac); }
+.rc-step-illustration.grad-oil { background: linear-gradient(135deg, #fff7ed, #fed7aa); }
+.rc-step-illustration.grad-serve { background: linear-gradient(135deg, #f0fdf4, #a7f3d0); }
+.rc-step-illustration.grad-garnish { background: linear-gradient(135deg, #ecfdf5, #6ee7b7); }
+.rc-step-illustration.grad-pour { background: linear-gradient(135deg, #eff6ff, #93c5fd); }
+.rc-step-illustration.grad-cook { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); }
+.rc-step .rc-note { font-size: 12px; color: #888; margin-top: 3px; }
+.rc-step .rc-warning { font-size: 12px; color: #dc2626; display: block; margin-top: 2px; }
 </style>
-
-
-
 
 

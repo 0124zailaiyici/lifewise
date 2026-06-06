@@ -237,12 +237,12 @@ difficulty(入门/初级/中级)
 time(用时)
 servings(份量)
 ingredients(数组，每项name食材,amount用量,note备注)
-steps(数组，每项step序号,action操作,tip提示)
+steps(数组，每项step序号,action操作,tip提示,step_image步骤配图英文关键词如"cutting tomatoes")
 tips(提醒)
 key_point(关键)
 followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 
-示例：{"title":"西红柿炒鸡蛋","difficulty":"入门","time":"15分钟","servings":"2人份","ingredients":[{"name":"西红柿","amount":"2个","note":"选熟透的"},{"name":"鸡蛋","amount":"3个"}],"steps":[{"step":1,"action":"西红柿切块，鸡蛋打散加少许盐"},{"step":2,"action":"热锅倒油，倒入蛋液炒至凝固盛出"},{"step":3,"action":"锅中加油炒西红柿出汁，倒回鸡蛋翻炒均匀"}],"tips":"全程大火快炒","key_point":"西红柿要炒出红油再和鸡蛋混合"}
+示例：{"title":"西红柿炒鸡蛋","difficulty":"入门","time":"15分钟","servings":"2人份","ingredients":[{"name":"西红柿","amount":"2个","note":"选熟透的"},{"name":"鸡蛋","amount":"3个"}],"steps":[{"step":1,"action":"西红柿切块，鸡蛋打散加少许盐","step_image":"cutting tomatoes"},{"step":2,"action":"热锅倒油，倒入蛋液炒至凝固盛出","step_image":"frying eggs"},{"step":3,"action":"锅中加油炒西红柿出汁，倒回鸡蛋翻炒均匀","step_image":"stir frying"}],"tips":"全程大火快炒","key_point":"西红柿要炒出红油再和鸡蛋混合"}
 直接输出JSON，不要```标记。
 """;
                 break;
@@ -380,4 +380,6 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";
     }
 }
+
+
 

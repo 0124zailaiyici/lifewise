@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: LifeWiseBackend
 
@@ -41,6 +41,7 @@ ai:
 app:
   vision-enabled: true
   upload-dir: ./uploads
+  image-api-key: '' # Pixabay API key for step images (free, get at https://pixabay.com/api/docs/)
 
 logging:
   level:

@@ -3,7 +3,7 @@
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
       <span class="header-title" @click="handleRenameTitle" style="cursor:pointer">{{ currentLabel }}</span>
-      <div style="width:50px"></div>
+      <el-button text size="small" @click="exportConversation" title="导出对话">📥</el-button>
     </div>
 
     <div class="messages" ref="msgBox">
@@ -138,6 +138,7 @@
 </template>
 
 <script setup>
+import { exportConversationToFile } from "../api/index.js"
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus } from '../api'
@@ -314,6 +315,42 @@ function copyMsg(i) {
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
     ElMessage.success('已复制')
   })
+}
+
+
+async function exportConversation() {
+  const msgs = messages.value
+  if (!msgs.length) { ElMessage.info('没有可导出的消息'); return }
+  
+  let text = 'LifeWise AI \u751f\u6d3b\u52a9\u624b - \u5bf9\u8bdd\u8bb0\u5f55\n'
+  text += '\u573a\u666f\uff1a' + (localStorage.getItem('sceneLabel') || '\u751f\u6d3b\u5e38\u8bc6') + '\n'
+  text += '\u5bfc\u51fa\u65f6\u95f4\uff1a' + new Date().toLocaleString('zh-CN') + '\n'
+  text += '='.repeat(40) + '\n\n'
+  
+  for (const msg of msgs) {
+    if (msg.role === 'user') {
+      text += '\ud83d\ude4b \u6211\uff1a' + (msg.content || '(\u56fe\u7247)') + '\n\n'
+    } else if (msg.role === 'assistant' && msg.content) {
+      let answer = msg.content
+      try {
+        const parsed = JSON.parse(answer)
+        if (parsed.title) answer = parsed.title + '\n' + (parsed.answer || '')
+        if (parsed.question) answer = parsed.question + '\n' + answer
+      } catch(e) {}
+      answer = answer.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+      text += '\ud83e\udd16 AI\uff1a' + answer + '\n\n'
+    }
+  }
+  
+  text += '='.repeat(40) + '\n'
+  text += '\u7531 LifeWise AI \u751f\u6d3b\u52a9\u624b\u751f\u6210\n'
+  
+  try {
+    const res = await exportConversationToFile(text)
+    ElMessage.success('\u5bf9\u8bdd\u5df2\u4fdd\u5b58\u5230: ' + (res.data || 'exports/\u76ee\u5f55'))
+  } catch(e) {
+    ElMessage.error('\u5bfc\u51fa\u5931\u8d25: ' + (e.message || '\u672a\u77e5\u9519\u8bef'))
+  }
 }
 
 async function shareMsg(i) {

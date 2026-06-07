@@ -226,12 +226,42 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildSystemPrompt(String scene, boolean hasImage, boolean hasHistory) {
-        // Follow-up mode: use natural language when there is conversation history
+        // Follow-up mode: use natural language with scene context
         if (hasHistory) {
+            String scenePrompt;
+            switch (scene != null ? scene : "other") {
+                case "cooking":
+                    scenePrompt = "用户正在当前对话基础上追问食材替代、口味调整、烹饪技巧等，请保持烹饪菜谱风格回答";
+                    break;
+                case "shopping":
+                    scenePrompt = "用户正在当前对话基础上追问挑选细节、保存方法、季节品种等，请保持选购指南风格回答";
+                    break;
+                case "repair":
+                    scenePrompt = "用户正在当前对话基础上追问修理细节、工具替代、安全注意等，请保持修理指南风格回答";
+                    break;
+                case "housework":
+                    scenePrompt = "用户正在当前对话基础上追问清洁技巧、材料替代、注意事项等，请保持家务技巧风格回答";
+                    break;
+                case "health":
+                    scenePrompt = "用户正在当前对话基础上追问症状细节、用药建议、就医时机等，请保持健康常识风格回答";
+                    break;
+                case "fashion":
+                    scenePrompt = "用户正在当前对话基础上追问搭配细节、颜色选择、场合建议等，请保持穿搭指南风格回答";
+                    break;
+                case "etiquette":
+                    scenePrompt = "用户正在当前对话基础上追问礼仪细节、场合差异、文化说明等，请保持社交礼仪风格回答";
+                    break;
+                case "pet":
+                    scenePrompt = "用户正在当前对话基础上追问照料细节、常见问题、就医判断等，请保持宠物照料风格回答";
+                    break;
+                default:
+                    scenePrompt = "用户正在当前对话基础上追问细节、补充信息等，请保持之前的回答风格";
+                    break;
+            }
             return """
 你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。
 
-用户正在当前对话基础上追问（如替代食材、调整口味、补充细节等），请用自然语言回答。
+""" + scenePrompt + """
 保持口语化、亲切感，像朋友聊天一样。不要输出 JSON 格式，不要结构化卡片。
 """;
         }

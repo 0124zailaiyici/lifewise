@@ -213,3 +213,48 @@ convId = createConversation(...)   // AI 回复后才创建对话
 - 从日志搜索 "知识库新增"、"cache hit"、"Skipping cache" 可以判断缓存是否生效
 - 如果从来没出现过 "知识库新增"，说明保存逻辑从未执行
 - 此时检查调用链中 conversationId 是否被提前赋值
+## 2026-06-07 追问场景自动检测 + 对话导出
+
+### 问题
+1. Python 脚本修改 Java 文件时错误地匹配了 switch 的关闭大括号，误删了 baseRule 和 schema 变量声明
+2. Vite 没有配置 @ 路径别名，导致 import from "@/api/index.js" 编译失败
+3. 浏览器下载文件到默认下载文件夹，用户希望保存到项目目录
+
+### 修复方案
+
+#### 追问场景自动检测
+- 在 if(hasHistory) 块中添加场景判断 switch（cooking/repair/fashion 等8个场景）
+- 追问时返回场景相关的自然语言提示，保持对话风格一致
+- 使用 Node.js 脚本（而非 Python）从 git 历史恢复被删除的代码块
+
+#### 对话导出
+- 前端 Chat.vue 头部添加 📥 按钮
+- 新增后端 POST /api/chat/export 接口，保存到 backend/exports/ 目录
+- 文件名格式：对话记录_yyyyMMdd_HHmmss.txt
+
+### 关键教训
+
+#### 1. Python 字符串匹配 Java 大括号的风险
+- Python 脚本按关键字搜索 Java 文件时，如果两个结构用同一个关键字（如 "}"），可能匹配错误
+- switch 的关闭 `}` 和 if 块的关闭 `}` 在字符串中看起来一样
+- 修复方法：从 git 历史提取原文，用 Node.js/Python 做精确字符串替换
+- **建议**：修改 Java 文件时用行号定位替代关键字搜索
+
+#### 2. Vite @ 路径别名需要显式配置
+- Vite 默认不支持 `@/path` 的 import 写法
+- 需要在 vite.config.js 中添加 `resolve.alias` 配置：
+  ```js
+  resolve: { alias: { '@': path.resolve(__dirname, 'src') } }
+  ```
+- 没有配置的话，必须用相对路径 `../api/index.js`
+- **建议**：使用相对路径，减少配置依赖
+
+#### 3. 浏览器无法保存到指定目录
+- 网页的 download API 只能下载到浏览器的默认下载文件夹
+- 无法指定任意保存路径
+- 解决方案：通过后端 API 保存到服务器本地目录
+- **建议**：文件保存类功能优先走后端 API
+
+#### 4. Spring Boot 构建问题
+- 如果之前的 java 进程还在运行，mvn package 会因 jar 文件被占用而失败
+- 必须先 taskkill /f /im java.exe 再重建

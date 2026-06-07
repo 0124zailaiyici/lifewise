@@ -10,6 +10,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.util.Map;
 import org.springframework.web.bind.annotation.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -88,6 +97,26 @@ public class ChatController {
         }
         return ApiResponse.success(conversationService.getUserConversations(userId));
     }
+
+    @PostMapping("/export")
+    public ApiResponse<?> exportConversation(@RequestBody Map<String, String> body) {
+        String text = body.get("text");
+        if (text == null || text.trim().isEmpty()) {
+            return ApiResponse.error("导出内容不能为空");
+        }
+        try {
+            String exportDir = System.getProperty("user.dir") + File.separator + "exports";
+            Files.createDirectories(Paths.get(exportDir));
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String fileName = "对话记录_" + timestamp + ".txt";
+            Path filePath = Paths.get(exportDir, fileName);
+            Files.writeString(filePath, text, java.nio.charset.StandardCharsets.UTF_8);
+            return ApiResponse.success(filePath.toString());
+        } catch (IOException e) {
+            return ApiResponse.error("导出失败: " + e.getMessage());
+        }
+    }
+
 
     @GetMapping("/conversations/{id}")
     public ApiResponse<?> getConversation(@PathVariable Long id) {

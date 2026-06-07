@@ -1,0 +1,37 @@
+﻿[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< com.lifewise:life-wise-backend >-------------------
+[INFO] Building LifeWiseBackend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ life-wise-backend ---
+[INFO] Copying 4 resources from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.0:compile (default-compile) @ life-wise-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 48 source files with javac [debug parameters release 17] to target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /D:/demo/AI/codex/LifeWise/backend/src/main/java/com/lifewise/service/impl/AiServiceImpl.java:[351,35] δ�������ַ�������
+[ERROR] /D:/demo/AI/codex/LifeWise/backend/src/main/java/com/lifewise/service/impl/AiServiceImpl.java:[366,35] δ�������ַ�������
+[INFO] 2 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.632 s
+[INFO] Finished at: 2026-06-07T20:26:32+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.0:compile (default-compile) on project life-wise-backend: Compilation failure: Compilation failure: 
+[ERROR] /D:/demo/AI/codex/LifeWise/backend/src/main/java/com/lifewise/service/impl/AiServiceImpl.java:[351,35] δ�������ַ�������
+[ERROR] /D:/demo/AI/codex/LifeWise/backend/src/main/java/com/lifewise/service/impl/AiServiceImpl.java:[366,35] δ�������ַ�������
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

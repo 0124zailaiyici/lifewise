@@ -98,7 +98,7 @@ public class AiServiceImpl implements AiService {
 
         // Skip cache when there is conversation history (follow-up) or image present
         if (conversationId == null && (imageUrl == null || imageUrl.isEmpty())) {
-            String cached = knowledgeBaseService.findAnswer(message, scene);
+            String cached = knowledgeBaseService.findAnswer(message, scene, userId);
             if (cached != null) {
                 log.info("cache hit: {}", message);
                 return cached;
@@ -111,7 +111,7 @@ public class AiServiceImpl implements AiService {
 
         // Only cache first questions (no history), skip caching follow-ups
         if (conversationId == null && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
-            knowledgeBaseService.saveAnswer(message, answer, scene);
+            knowledgeBaseService.saveAnswer(message, answer, scene, userId);
         } else {
             log.debug("Skipping cache for mock/error response");
         }

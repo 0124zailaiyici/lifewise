@@ -35,12 +35,12 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     };
 
     @Override
-    public String findAnswer(String question, String scene) {
+    public String findAnswer(String question, String scene, Long userId) {
         List<KnowledgeBase> list;
         if (scene != null && !scene.isEmpty()) {
-            list = knowledgeBaseRepository.findBySceneOrderByHelpfulCountDesc(scene);
+            list = knowledgeBaseRepository.findBySceneAndUserIdOrderByHelpfulCountDesc(scene, userId);
         } else {
-            list = knowledgeBaseRepository.findAll();
+            list = knowledgeBaseRepository.findByUserId(userId);
         }
 
         String normalized = normalizeQuestion(question);
@@ -103,7 +103,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
-    public void saveAnswer(String question, String answer, String scene) {
+    public void saveAnswer(String question, String answer, String scene, Long userId) {
         try {
             if (question == null || question.trim().isEmpty()) return;
             if (answer == null || answer.trim().isEmpty()) return;
@@ -112,7 +112,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             String normalized = normalizeQuestion(question);
             String core = extractCore(normalized);
 
-            List<KnowledgeBase> existing = knowledgeBaseRepository.findBySceneOrderByHelpfulCountDesc(scene);
+            List<KnowledgeBase> existing = knowledgeBaseRepository.findBySceneAndUserIdOrderByHelpfulCountDesc(scene, userId);
             for (KnowledgeBase kb : existing) {
                 if (kb.getQuestion() == null) continue;
                 String kbNorm = normalizeQuestion(kb.getQuestion());
@@ -125,6 +125,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             }
 
             KnowledgeBase kb = new KnowledgeBase();
+            kb.setUserId(userId);
             kb.setQuestion(question.length() > 200 ? question.substring(0, 200) : question);
             kb.setAnswer(answer);
             kb.setScene(scene);
@@ -137,12 +138,12 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
-    public List<KnowledgeBase> search(String keyword, String scene) {
+    public List<KnowledgeBase> search(String keyword, String scene, Long userId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             if (scene != null && !scene.isEmpty()) {
-                return knowledgeBaseRepository.findBySceneOrderByHelpfulCountDesc(scene);
+                return knowledgeBaseRepository.findBySceneAndUserIdOrderByHelpfulCountDesc(scene, userId);
             }
-            return knowledgeBaseRepository.findAll();
+            return knowledgeBaseRepository.findByUserId(userId);
         }
 
         List<KnowledgeBase> results = knowledgeBaseRepository.findByQuestionContaining(keyword.trim());

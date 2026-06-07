@@ -16,9 +16,10 @@ public class KnowledgeBaseController {
     private final KnowledgeBaseService knowledgeBaseService;
 
     @GetMapping("/search")
-    public ApiResponse<?> search(@RequestParam(required = false) String keyword,
+    public ApiResponse<?> search(@RequestAttribute Long userId,
+                                  @RequestParam(required = false) String keyword,
                                   @RequestParam(required = false) String scene) {
-        return ApiResponse.success(knowledgeBaseService.search(keyword, scene));
+        return ApiResponse.success(knowledgeBaseService.search(keyword, scene, userId));
     }
 
     @DeleteMapping("/{id}")
@@ -49,9 +50,10 @@ public class KnowledgeBaseController {
     }
 
     @PostMapping("/import")
-    public ApiResponse<?> importAll(@RequestBody List<Map<String, Object>> items) {
+    public ApiResponse<?> importAll(@RequestAttribute Long userId, @RequestBody List<Map<String, Object>> items) {
         List<KnowledgeBase> list = items.stream().map(m -> {
             KnowledgeBase kb = new KnowledgeBase();
+            kb.setUserId(userId);
             kb.setQuestion((String) m.get("question"));
             kb.setAnswer((String) m.get("answer"));
             kb.setScene((String) m.get("scene"));

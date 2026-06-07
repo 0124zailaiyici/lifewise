@@ -12,6 +12,9 @@ public class KnowledgeBase {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     @Column(length = 20)
     private String scene;
 

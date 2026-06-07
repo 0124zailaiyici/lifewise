@@ -263,7 +263,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 输出 JSON 格式，字段说明：
 - category: 品类名称
 - season: 当前是否应季
-- selection_steps: 挑选步骤，每个对象包含 step_name（步骤名称）、action（具体操作描述）
+- selection_steps: 挑选步骤，每个对象包含 step_name（步骤名称）、action（具体操作描述）、step_image（步骤配图英文关键词如"checking watermelon"）
 - common_mistakes: 常见误区列表
 - storage_tip: 保存方法
 - summary_slogan: 总结口诀
@@ -280,7 +280,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - severity: 严重程度（轻微/中等/严重）
 - need_professional: 是否需要请专业人员（true/false）
 - tools: 所需工具列表
-- steps: 修理步骤，每个对象包含 step（序号）、action（操作描述）、warning（安全提醒，可选）
+- steps: 修理步骤，每个对象包含 step（序号）、action（操作描述）、warning（安全提醒，可选）、step_image（步骤配图英文关键词如"turning off valve"）
 - professional_advice: 什么情况下建议找专业人士
 """;
                 break;
@@ -291,7 +291,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - problem: 问题描述
 - difficulty: 难度（简单/中等/困难）
 - materials: 所需材料列表，每个对象包含 name（材料名）、alternative（替代品，可选）
-- steps: 操作步骤列表
+- steps: 操作步骤列表，每个对象包含 step（序号）、action（操作描述）、step_image（步骤配图英文关键词如"cleaning stain"）
 - safety_tip: 安全提示
 - prevention: 如何预防此类问题
 """;
@@ -303,7 +303,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - question: 问题描述
 - category: 分类（症状处理/用药常识/营养建议/急救知识）
 - disclaimer: 免责声明（此回答仅供参考，不能代替专业医疗建议）
-- suggestions: 建议列表，每个对象包含 item（建议项）、detail（详细说明）
+- suggestions: 建议列表，每个对象包含 item（建议项）、detail（详细说明）、step_image（配图英文关键词如"fever thermometer"）
 - when_to_see_doctor: 什么情况下必须去看医生
 - prevention: 日常预防措施
 """;
@@ -315,7 +315,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - occasion: 场合
 - style: 推荐风格
 - color_palette: 推荐颜色列表
-- outfits: 推荐穿搭列表，每个对象包含 piece（单品）、description（款式建议）、color（推荐颜色）
+- outfits: 推荐穿搭列表，每个对象包含 piece（单品）、description（款式建议）、color（推荐颜色）、step_image（商品配图英文关键词如"white tshirt"）
 - avoid: 避免什么
 - tips: 穿搭小技巧
 """;
@@ -338,7 +338,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - pet_type: 宠物类型
 - topic: 问题主题
 - difficulty: 难度（入门/初级/中级）
-- steps: 照料步骤列表
+- steps: 照料步骤列表，每个对象包含 step（序号）、action（操作描述）、step_image（步骤配图英文关键词如"brushing dog"）
 - common_mistakes: 常见错误列表
 - when_to_see_vet: 什么情况下需要看兽医
 """;

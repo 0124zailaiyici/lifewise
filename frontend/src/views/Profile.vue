@@ -74,7 +74,7 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.content { padding: 20px 20px calc(80px + env(safe-area-inset-bottom, 0px))px; }
+.content { padding: 20px 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
 .user-card {
   display: flex; align-items: center; gap: 16px; padding: 20px;
   background: linear-gradient(135deg, #f0fdf4, #dcfce7);
@@ -107,7 +107,7 @@ function handleLogout() {
 .app-name { font-size: 13px; color: #ccc; font-weight: 500; }
 .app-desc { font-size: 11px; color: #bbb; margin-top: 4px; }
 
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 64px; background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: 8px; z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
+.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

@@ -717,12 +717,7 @@ function renderStructured(data) {
     parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
     data.steps.forEach(s => {
       const stepKw = s.step_image || (s.action || "").substring(0, 30)
-      const stepImg = (() => {
-        const kw = stepKw
-        const emoji = stepEmoji(kw)
-        const cls = stepGradient(kw)
-        return `<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=${encodeURIComponent(kw)}" alt="${esc(kw)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="rc-step-illustration ${cls}" style="display:none"><span>${emoji}</span></div></div>`
-      })()
+      const stepImg = makeStepImg(stepKw)
       const tip = s.tip ? `<span class="rc-note">💡 ${esc(s.tip)}</span>` : ''
       const warning = s.warning ? `<span class="rc-warning">⚠️ ${esc(s.warning)}</span>` : ''
       parts.push(`<div class="rc-step"><div class="rc-step-badge">${s.step || ''}</div><div class="rc-step-body">${stepImg}<div class="rc-step-text">${esc(s.action || s)}${tip}${warning}</div></div></div>`)
@@ -730,7 +725,11 @@ function renderStructured(data) {
   }
   if (data.selection_steps) {
     parts.push('<div class="rc-sec">🔍 挑选步骤</div>')
-    data.selection_steps.forEach(s => parts.push(`<div class="rc-item"><strong>${esc(s.step_name)}：</strong>${esc(s.action)}</div>`))
+    data.selection_steps.forEach(s => {
+      const stepKw = s.step_image || (s.action || "").substring(0, 30)
+      const stepImg = makeStepImg(stepKw)
+      parts.push('<div class="rc-step"><div class="rc-step-badge"></div><div class="rc-step-body">' + stepImg + '<div class="rc-step-text"><strong>' + esc(s.step_name) + '</strong>：' + esc(s.action) + '</div></div></div>')
+    })
   }
   if (data.tools) {
     parts.push('<div class="rc-sec">🔧 所需工具</div>')
@@ -743,8 +742,9 @@ function renderStructured(data) {
     parts.push('<div class="rc-sec">💡 建议</div>')
     const sa = Array.isArray(data.suggestions) ? data.suggestions : [data.suggestions]
     sa.forEach(s => {
-      if (typeof s === 'string') parts.push(`<div class="rc-item">· ${esc(s)}</div>`)
-      else parts.push(`<div class="rc-item"><strong>${esc(s.item)}</strong>：${esc(s.detail)}</div>`)
+      if (typeof s === 'string') { parts.push('<div class="rc-item">· ' + esc(s) + '</div>'); return }
+      const sImg = s.step_image ? '<div class="rc-step-img" style="margin:2px 0">' + makeStepImg(s.step_image) + '</div>' : ''
+      parts.push('<div class="rc-item">' + sImg + '<strong>' + esc(s.item) + '</strong>：' + esc(s.detail) + '</div>')
     })
   }
   // === extra field handlers ===
@@ -764,8 +764,10 @@ function renderStructured(data) {
     parts.push('<div class="rc-sec">👔 搭配方案</div>')
     data.outfits.forEach(function(o) {
       var name = o.piece || o.name || o.occasion || ""
-      var desc = o.description || o.items || o.detail || ""
-      parts.push('<div class="rc-item"><strong>' + esc(name) + '</strong>' + (desc ? "\uff1a" + esc(desc) : "") + (o.color ? '  ·  <span style="color:#666">' + esc(o.color) + '</span>' : "") + '</div>')
+      var desc = o.description || o.detail || ""
+      if (Array.isArray(o.items)) desc = o.items.join(", ")
+      const pImg = o.step_image ? '<div class="rc-step-img" style="margin:2px 0">' + makeStepImg(o.step_image) + '</div>' : ''
+      parts.push('<div class="rc-item">' + pImg + '<strong>' + esc(name) + '</strong>' + (desc ? "：" + desc : "") + (o.color ? '  ·  <span style="color:#666">' + esc(o.color) + '</span>' : "") + '</div>')
     })
   }
   if (data.color_palette && Array.isArray(data.color_palette)) {
@@ -852,12 +854,19 @@ function renderStructured(data) {
   return '<div class="rc-card">' + parts.join('') + '</div>'
 }
 
+function makeStepImg(kw) {
+  if (!kw) kw = "cooking"
+  const emoji = stepEmoji(kw)
+  const cls = stepGradient(kw)
+  return '<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=' + encodeURIComponent(kw) + '" alt="' + esc(kw) + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/><div class="rc-step-illustration ' + cls + '" style="display:none"><span>' + emoji + '</span></div></div>'
+}
+
 function stepEmoji(keyword) {
   if (!keyword) return '🍳'
   const kw = keyword.toLowerCase()
   if (/cut|chop|dice|slice|mince/.test(kw)) return '🔪'
   if (/wash|rinse|clean|peel/.test(kw)) return '🚿'
-  if (/fry|stir.?fry|saute|pan/.test(kw)) return '🍳'
+  if (/fry|stir.?fry|saute|\\bpan\\b/.test(kw)) return '🍳'
   if (/boil|cook|simmer|stew|braise|blanch/.test(kw)) return '🥘'
   if (/steam/.test(kw)) return '♨️'
   if (/bake|roast|oven/.test(kw)) return '🔥'
@@ -866,10 +875,16 @@ function stepEmoji(keyword) {
   if (/egg/.test(kw)) return '🥚'
   if (/meat|ribs|chicken|pork|beef|fish/.test(kw)) return '🥩'
   if (/vegetable|tomato|onion|garlic|ginger/.test(kw)) return '🥬'
-  if (/oil|heat/.test(kw)) return '🔥'
+  if (/oil|\\bheat\\b/.test(kw)) return '🔥'
   if (/serve|plate|dish|bowl/.test(kw)) return '🍽️'
   if (/garnish|green.?onion|herb/.test(kw)) return '🌿'
   if (/pour|add|drizzle/.test(kw)) return '🫗'
+  if (/repair|wrench|screwdriver|pliers|hammer|drill|valve|pipe|faucet|leak|clog|fix|tighten|loosen/.test(kw)) return '🔧'
+  if (/clean(?! )|scrub|wipe|mop|sweep|vacuum|dust|polish|organize|tidy|stain|laundry|fold|iron/.test(kw)) return '🧼'
+  if (/shirt|tshirt|pants|jeans|shoes|dress|skirt|jacket|coat|\\bhat\\b|belt|tie|scarf|outfit|wear|fashion|style|sneakers|boots|suit|blazer|top|bottom|hoodie|sweater|knit|chino|cardigan|blouse|vest|leather|cotton|linen|collar|pocket|sleeve|cuff|button|zip/.test(kw)) return '👔'
+  if (/medicine|pill|tablet|capsule|thermometer|bandage|fever|cough|cold|symptom|health|exercise|vitamin|firstaid/.test(kw)) return '💊'
+  if (/dog|cat|pet|puppy|kitten|feed|brush|bath|walk|leash|collar|bone|vet|groom|treat/.test(kw)) return '🐶'
+  if (/fruit|apple|banana|orange|grape|vegetable|tomato|fresh|ripe|choose|pick|select|buy|shop|market/.test(kw)) return '🍎'
   return '🍳'
 }
 
@@ -878,7 +893,7 @@ function stepGradient(keyword) {
   const kw = keyword.toLowerCase()
   if (/cut|chop|dice|slice|mince/.test(kw)) return 'grad-cut'
   if (/wash|rinse|clean|peel/.test(kw)) return 'grad-wash'
-  if (/fry|stir.?fry|saute|pan/.test(kw)) return 'grad-fry'
+  if (/fry|stir.?fry|saute|\\bpan\\b/.test(kw)) return 'grad-fry'
   if (/boil|cook|simmer|stew|braise|blanch/.test(kw)) return 'grad-boil'
   if (/steam/.test(kw)) return 'grad-steam'
   if (/bake|roast|oven/.test(kw)) return 'grad-bake'
@@ -887,10 +902,16 @@ function stepGradient(keyword) {
   if (/egg/.test(kw)) return 'grad-egg'
   if (/meat|ribs|chicken|pork|beef|fish/.test(kw)) return 'grad-meat'
   if (/vegetable|tomato|onion|garlic|ginger/.test(kw)) return 'grad-veg'
-  if (/oil|heat/.test(kw)) return 'grad-oil'
+  if (/oil|\\bheat\\b/.test(kw)) return 'grad-oil'
   if (/serve|plate|dish|bowl/.test(kw)) return 'grad-serve'
   if (/garnish|green.?onion|herb/.test(kw)) return 'grad-garnish'
   if (/pour|add|drizzle/.test(kw)) return 'grad-pour'
+  if (/repair|wrench|screwdriver|pliers|hammer|drill|valve|pipe|faucet|leak|clog|fix|tighten|loosen/.test(kw)) return 'grad-repair'
+  if (/clean(?! )|scrub|wipe|mop|sweep|vacuum|dust|polish|organize|tidy|stain|laundry|fold|iron/.test(kw)) return 'grad-housework'
+  if (/shirt|tshirt|pants|jeans|shoes|dress|skirt|jacket|coat|\\bhat\\b|belt|tie|scarf|outfit|wear|fashion|style|sneakers|boots|suit|blazer|top|bottom|hoodie|sweater|knit|chino|cardigan|blouse|vest|leather|cotton|linen|collar|pocket|sleeve|cuff|button|zip/.test(kw)) return 'grad-fashion'
+  if (/medicine|pill|tablet|capsule|thermometer|bandage|fever|cough|cold|symptom|health|exercise|vitamin|firstaid/.test(kw)) return 'grad-health'
+  if (/dog|cat|pet|puppy|kitten|feed|brush|bath|walk|leash|collar|bone|vet|groom|treat/.test(kw)) return 'grad-pet'
+  if (/fruit|apple|banana|orange|grape|vegetable|tomato|fresh|ripe|choose|pick|select|buy|shop|market/.test(kw)) return 'grad-shop'
   return 'grad-cook'
 }
 function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
@@ -1097,6 +1118,19 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-step-illustration.grad-serve { background: linear-gradient(135deg, #f0fdf4, #a7f3d0); }
 .rc-step-illustration.grad-garnish { background: linear-gradient(135deg, #ecfdf5, #6ee7b7); }
 .rc-step-illustration.grad-pour { background: linear-gradient(135deg, #eff6ff, #93c5fd); }
+
+.rc-step-illustration.grad-repair { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+.rc-step-illustration.grad-housework { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); }
+.rc-step-illustration.grad-fashion { background: linear-gradient(135deg, #fdf2f8, #fce7f3); }
+.rc-step-illustration.grad-health { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+.rc-step-illustration.grad-pet { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.rc-step-illustration.grad-shop { background: linear-gradient(135deg, #fef9c3, #fde68a); }
+.rc-step-illustration.grad-repair { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
+.rc-step-illustration.grad-housework { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); }
+.rc-step-illustration.grad-fashion { background: linear-gradient(135deg, #fdf2f8, #fce7f3); }
+.rc-step-illustration.grad-health { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+.rc-step-illustration.grad-pet { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.rc-step-illustration.grad-shop { background: linear-gradient(135deg, #fef9c3, #fde68a); }
 .rc-step-illustration.grad-cook { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); }
 .rc-step .rc-note { font-size: 12px; color: #888; margin-top: 3px; }
 .rc-step .rc-warning { font-size: 12px; color: #dc2626; display: block; margin-top: 2px; }

@@ -1,34 +1,58 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
-      <h3>📋 历史记录</h3>
+      <h3>📰 历史记录</h3>
+      <el-button v-if="!batchMode" text size="small" @click="batchMode = true" style="color:#666">
+        批量删除
+      </el-button>
+      <template v-else>
+        <el-button text size="small" @click="batchMode = false" style="color:#666">取消</el-button>
+        <el-button text size="small" type="danger" @click="batchDelete" :disabled="selectedIds.size === 0">
+          删除 ({{ selectedIds.size }})
+        </el-button>
+      </template>
+    </div>
+
+    <!-- 场景筛选 -->
+    <div class="scene-filter">
+      <div class="scene-chip" :class="{ active: sceneFilter === '' }" @click="sceneFilter = ''">全部</div>
+      <div v-for="s in scenes" :key="s.key" class="scene-chip" :class="{ active: sceneFilter === s.key }"
+           @click="sceneFilter = s.key">
+        {{ s.icon }} {{ s.label }}
+      </div>
     </div>
 
     <div class="search-bar">
       <el-input v-model="keyword" placeholder="搜索历史对话..." size="default" clearable
-                prefix-icon="Search" @input="filterList" />
+                :prefix-icon="Search" @input="onSearch" />
     </div>
 
     <div class="content">
       <div v-if="loading" class="loading-state">
+        <div class="loading-icon">⏳</div>
         <div class="loading-text">加载中...</div>
       </div>
       <div v-else-if="filteredGroups.length === 0" class="empty-state">
-        <div class="empty-icon">{{ keyword ? '🔍' : '📥' }}</div>
-        <div class="empty-text">{{ keyword ? '没有找到匹配的对话' : '暂无历史记录' }}</div>
+        <div class="empty-icon">{{ keyword || sceneFilter ? '🔍' : '📰' }}</div>
+        <div class="empty-text">{{ keyword || sceneFilter ? '没有找到匹配的对话' : '暂无历史记录' }}</div>
       </div>
 
       <div v-for="group in filteredGroups" :key="group.date" class="group">
         <div class="date-label">{{ group.date }}</div>
         <div v-for="conv in group.items" :key="conv.id" class="history-item"
-             @click="$router.push('/chat/' + conv.id)">
+             :class="{ 'batch-mode': batchMode, 'selected': selectedIds.has(conv.id) }"
+             @click="batchMode ? toggleSelect(conv.id) : $router.push('/chat/' + conv.id)">
+          <el-checkbox v-if="batchMode" @click.stop :model-value="selectedIds.has(conv.id)"
+                       @change="toggleSelect(conv.id)" style="margin-right:8px" />
           <span class="icon">{{ conv.sceneIcon || '💬' }}</span>
           <div class="info">
             <div class="title" v-html="highlight(conv.title)"></div>
             <div class="meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
           </div>
-          <el-button text size="small" class="rename-btn" @click.stop="handleRename(conv.id, conv.title)"><el-icon><Edit /></el-icon></el-button>
-          <el-button text type="danger" size="small" class="del-btn" @click.stop="handleDelete(conv.id)">
+          <el-button v-if="!batchMode" text size="small" class="rename-btn" @click.stop="handleRename(conv.id, conv.title)">
+            <el-icon><Edit /></el-icon>
+          </el-button>
+          <el-button v-if="!batchMode" text type="danger" size="small" class="del-btn" @click.stop="handleDelete(conv.id)">
             <el-icon><Delete /></el-icon>
           </el-button>
         </div>
@@ -47,12 +71,26 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getConversations, deleteConversation, renameConversation } from '../api'
-import { HomeFilled, Timer, Star, User, Delete, Edit } from '@element-plus/icons-vue'
+import { HomeFilled, Timer, Star, User, Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(true)
 const groups = ref([])
 const keyword = ref('')
+const sceneFilter = ref('')
+const batchMode = ref(false)
+const selectedIds = ref(new Set())
+
+const scenes = [
+  { key: 'cooking', icon: '🍳', label: '做饭' },
+  { key: 'shopping', icon: '🛒', label: '买菜' },
+  { key: 'repair', icon: '🔧', label: '修理' },
+  { key: 'housework', icon: '🏠', label: '家务' },
+  { key: 'health', icon: '🌞', label: '健康' },
+  { key: 'fashion', icon: '👔', label: '穿搭' },
+  { key: 'pet', icon: '🐾', label: '宠物' },
+  { key: 'writing', icon: '✍️', label: '写作' },
+]
 
 onMounted(async () => {
   try {
@@ -70,15 +108,28 @@ onMounted(async () => {
 })
 
 const filteredGroups = computed(() => {
+  let result = groups.value
   const kw = keyword.value.trim().toLowerCase()
-  if (!kw) return groups.value
-  return groups.value.map(g => ({
-    ...g,
-    items: g.items.filter(c => (c.title || '').toLowerCase().includes(kw))
-  })).filter(g => g.items.length > 0)
+  const sf = sceneFilter.value
+
+  if (sf) {
+    result = result.map(g => ({
+      ...g,
+      items: g.items.filter(c => c.scene === sf)
+    })).filter(g => g.items.length > 0)
+  }
+
+  if (kw) {
+    result = result.map(g => ({
+      ...g,
+      items: g.items.filter(c => (c.title || '').toLowerCase().includes(kw))
+    })).filter(g => g.items.length > 0)
+  }
+
+  return result
 })
 
-function filterList() {} // reactive via computed
+function onSearch() {}
 
 function highlight(text) {
   const kw = keyword.value.trim()
@@ -88,11 +139,35 @@ function highlight(text) {
   return text.substring(0, idx) + '<mark>' + text.substring(idx, idx + kw.length) + '</mark>' + text.substring(idx + kw.length)
 }
 
+function toggleSelect(id) {
+  const s = new Set(selectedIds.value)
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  selectedIds.value = s
+}
+
+async function batchDelete() {
+  if (selectedIds.value.size === 0) return
+  try {
+    await ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.size} 条对话吗？`, '批量删除', {
+      type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消'
+    })
+    for (const id of selectedIds.value) {
+      try { await deleteConversation(id) } catch {}
+    }
+    ElMessage.success(`已删除 ${selectedIds.value.size} 条对话`)
+    groups.value = groups.value.map(g => ({
+      ...g, items: g.items.filter(c => !selectedIds.value.has(c.id))
+    })).filter(g => g.items.length > 0)
+    selectedIds.value = new Set()
+    batchMode.value = false
+  } catch {}
+}
+
 async function handleRename(id, currentTitle) {
   const { value: newTitle } = await ElMessageBox.prompt('输入新标题', '重命名对话', {
     inputValue: currentTitle,
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+    confirmButtonText: '确定', cancelButtonText: '取消',
     inputValidator: v => v?.trim() ? true : '标题不能为空'
   })
   if (newTitle?.trim()) {
@@ -101,23 +176,21 @@ async function handleRename(id, currentTitle) {
       ElMessage.success('已重命名')
       const conv = groups.value.flatMap(g => g.items).find(c => c.id === id)
       if (conv) conv.title = newTitle.trim()
-    } catch (e) {
-      ElMessage.error('重命名失败')
-    }
+    } catch (e) { ElMessage.error('重命名失败') }
   }
 }
 
 async function handleDelete(id) {
   try {
+    await ElMessageBox.confirm('确定删除此对话？', '删除', {
+      type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消'
+    })
     await deleteConversation(id)
     ElMessage.success('已删除')
     groups.value = groups.value.map(g => ({
-      ...g,
-      items: g.items.filter(c => c.id !== id)
+      ...g, items: g.items.filter(c => c.id !== id)
     })).filter(g => g.items.length > 0)
-  } catch (e) {
-    ElMessage.error('删除失败')
-  }
+  } catch {}
 }
 
 function formatTime(t) {
@@ -127,21 +200,47 @@ function formatTime(t) {
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
-.page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%);
+}
+.page-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
 
-.search-bar { padding: 12px 20px; }
+.scene-filter {
+  display: flex; gap: 6px; padding: 10px 20px;
+  overflow-x: auto; white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.scene-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 5px 12px; border-radius: 16px;
+  background: #f5f5f5; color: #666; font-size: 12px;
+  cursor: pointer; transition: .15s; flex-shrink: 0;
+}
+.scene-chip:hover { background: #e8f5e9; }
+.scene-chip.active { background: #22c55e; color: #fff; }
+
+.search-bar { padding: 0 20px 12px; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 20px; }
 
 .content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
-
 .group { margin-bottom: 24px; }
 .date-label { font-size: 12px; color: #777; margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
-.history-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; }
+.history-item {
+  display: flex; align-items: center; padding: 14px;
+  background: #fafcfa; border-radius: 14px;
+  border: 1px solid #f0f0f0; margin-bottom: 10px;
+  cursor: pointer; transition: .15s;
+}
 .history-item:active { transform: scale(.98); }
+.history-item.batch-mode { cursor: default; }
+.history-item.batch-mode:active { transform: none; }
+.history-item.selected { background: #f0fdf4; border-color: #bbf7d0; }
 .icon { font-size: 26px; margin-right: 14px; }
-.info { flex: 1; }
-.title { font-size: 14px; font-weight: 500; color: #333; }
+.info { flex: 1; min-width: 0; }
+.title { font-size: 14px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title :deep(mark) { background: #fde68a; color: #333; padding: 0 2px; border-radius: 2px; }
 .meta { font-size: 12px; color: #888; margin-top: 3px; }
 .del-btn { flex-shrink: 0; margin-left: 4px; }
@@ -149,10 +248,16 @@ function formatTime(t) {
 .rename-btn:hover { color: #22c55e; }
 
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
-.loading-text { font-size: 48px; margin-bottom: 12px; }
-.empty-text { font-size: 14px; color: #777; }
+.loading-icon { font-size: 48px; margin-bottom: 12px; }
+.loading-text { font-size: 14px; color: #777; }
 
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
+.bottom-tabs {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: #fff; border-top: 1px solid #e5e7eb; display: flex;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.06); z-index: 100;
+}
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }

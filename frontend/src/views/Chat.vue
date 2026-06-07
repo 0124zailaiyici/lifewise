@@ -571,7 +571,8 @@ function handleFileSelect(e) {
 function imgUrl(url) {
   if (!url) return ''
   if (url.startsWith('http') || url.startsWith('data:')) return url
-  return 'http://localhost:8080' + url
+  if (url.startsWith('/')) return url
+  return '/uploads/' + url
 }
 function startVoice() {
   // If already listening, stop manually
@@ -896,8 +897,27 @@ function renderStructured(data) {
 
   let recQ = data.followUps || []
   if (!recQ.length) {
-    const kw = (data.title || data.question || data.problem || '').replace(/[、，。]/g, ' ').trim()
-    if (kw && kw.length > 1) recQ = [`${kw}的做法`, `${kw}需要什么材料`, `${kw}有什么技巧`]
+    const kw = (data.title || data.question || data.problem || data.品类 || '').replace(/[、，。]/g, ' ').trim()
+    if (kw && kw.length > 1) {
+      // Detect scene from data fields
+      if (data.steps && data.ingredients) {
+        // Cooking scene
+        recQ = [`${kw}没有某种食材用什么代替`, `${kw}有什么技巧`, `${kw}可以加什么配菜`]
+      } else if (data.outfits || data.color_palette || data.occasion) {
+        // Fashion scene
+        recQ = [`${kw}适合什么场合穿`, `${kw}怎么搭配更好看`, `${kw}推荐什么颜色`]
+      } else if (data.selection_steps || data.category) {
+        // Shopping scene
+        recQ = [`${kw}怎么保存`, `${kw}什么季节最好`, `${kw}有什么注意事项`]
+      } else if (data.tools || data.problem) {
+        // Repair scene
+        recQ = [`${kw}需要什么工具`, `${kw}有什么注意事项`, `${kw}什么情况要找专业人员`]
+      } else if (data.suggestions || data.品类) {
+        recQ = [`${kw}有什么技巧`, `${kw}要注意什么`, `${kw}推荐什么`]
+      } else {
+        recQ = [`${kw}怎么做`, `${kw}需要什么`, `${kw}有什么技巧`]
+      }
+    }
   }
   if (recQ.length) {
     parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQ.map(q => `<span class="rc-followup-chip">${esc(q)}</span>`).join(' ')}</div>`)
@@ -909,7 +929,7 @@ function makeStepImg(kw) {
   if (!kw) kw = "cooking"
   const emoji = stepEmoji(kw)
   const cls = stepGradient(kw)
-  return '<div class="rc-step-img"><img class="rc-step-photo" src="http://localhost:8080/api/images/step-img?q=' + encodeURIComponent(kw) + '" alt="' + esc(kw) + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/><div class="rc-step-illustration ' + cls + '" style="display:none"><span>' + emoji + '</span></div></div>'
+  return '<div class="rc-step-img"><img class="rc-step-photo" src="/api/images/step-img?q=' + encodeURIComponent(kw) + '" alt="' + esc(kw) + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/><div class="rc-step-illustration ' + cls + '" style="display:none"><span>' + emoji + '</span></div></div>'
 }
 
 function stepEmoji(keyword) {

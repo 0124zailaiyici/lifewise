@@ -162,3 +162,54 @@
 - 所有场景关键词：在 stepEmoji、stepGradient、generateStepSvg 三处同步维护
 - 新增场景时：前端加 emoji + 渐变色 + CSS 样式，后端加 SVG 插画
 - 涉及正则表达式修改时：必须检查是否有其他词包含该子串
+
+## 2026-06-07 常识库缓存不生效 — 对话创建时序问题
+
+### 问题
+新对话的问题和回答不会自动缓存到常识库。第一次问某问题时没有命中缓存（正常），但 AI 回复后也没有保存到常识库，导致每次相同问题都需要调 API。
+
+### 原因
+ChatController.sendMessage() 中，处理新对话的逻辑顺序是：
+1. **先**创建 Conversation（生成 convId）
+2. **再**调用 iService.chat(..., convId, ...)
+
+而 AiServiceImpl.chat() 中的缓存逻辑依赖 conversationId == null 来判断是否为"新对话的首个问题"：
+`java
+if (conversationId == null && ...) {  // 永远为 false！
+    knowledgeBaseService.saveAnswer(...);  // 不会执行
+}
+`
+
+因为 Controller 在调用前已创建了对话，convId 永远不为 null，导致：
+- 缓存查询（indAnswer）被跳过（以为是追问）
+- 缓存保存（saveAnswer）被跳过（同上）
+
+### 修复
+将对话创建移到 AI 调用之后：
+
+`
+// 修复前
+convId = createConversation(...)    // convId = 123
+aiService.chat(..., convId=123)    // 服务端永远看不到 null
+
+// 修复后  
+aiService.chat(..., convId=null)   // 服务端看到 null → 可以查缓存+保存
+convId = createConversation(...)   // AI 回复后才创建对话
+`
+
+### 关键教训
+
+#### 1. 控制器的前置处理可能破坏服务层的状态判断
+- Controller 为了先把数据准备好，可能提前创建了实体
+- 但 Service 层依赖某些字段为 null 来做逻辑判断
+- **原则**：先调 Service 执行业务逻辑，再处理副作用（创建实体、保存记录）
+
+#### 2. 常识库缓存的生命周期
+- 缓存只存 **新对话的第一个问题**（conversationId == null）
+- 追问（已有 convId）不会存，避免冗余
+- 这需要在 Controller 和 Service 之间正确传递 null
+
+#### 3. 调试方法
+- 从日志搜索 "知识库新增"、"cache hit"、"Skipping cache" 可以判断缓存是否生效
+- 如果从来没出现过 "知识库新增"，说明保存逻辑从未执行
+- 此时检查调用链中 conversationId 是否被提前赋值

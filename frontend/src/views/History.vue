@@ -22,6 +22,29 @@
       </div>
     </div>
 
+    <!-- 右上角悬浮场景筛选 -->
+    <div class="fab-wrap">
+      <div class="fab-filter" @click="showScenePanel = !showScenePanel">
+        <span class="fab-filter-icon">🏷️</span>
+        <span v-if="sceneFilter" class="fab-filter-active">{{ sceneIconLabel(sceneFilter) }}</span>
+      </div>
+      <Transition name="fab-drop">
+        <div v-if="showScenePanel" class="fab-dropdown">
+          <div class="fab-drop-item" :class="{ active: sceneFilter === '' }"
+               @click="sceneFilter = ''; showScenePanel = false">
+            <span class="fd-icon">📋</span>
+            <span class="fd-label">全部</span>
+          </div>
+          <div v-for="s in scenes" :key="s.key" class="fab-drop-item"
+               :class="{ active: sceneFilter === s.key }"
+               @click="sceneFilter = s.key; showScenePanel = false">
+            <span class="fd-icon">{{ s.icon }}</span>
+            <span class="fd-label">{{ s.label }}</span>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
     <div class="search-bar">
       <el-input v-model="keyword" placeholder="搜索历史对话..." size="default" clearable
                 :prefix-icon="Search" @input="onSearch" />
@@ -79,6 +102,7 @@ const groups = ref([])
 const keyword = ref('')
 const sceneFilter = ref('')
 const batchMode = ref(false)
+const showScenePanel = ref(false)
 const selectedIds = ref(new Set())
 
 const scenes = [
@@ -128,6 +152,11 @@ const filteredGroups = computed(() => {
 
   return result
 })
+
+function sceneIconLabel(key) {
+  const s = scenes.find(x => x.key === key)
+  return s ? s.icon + ' ' + s.label : ''
+}
 
 function onSearch() {}
 
@@ -250,6 +279,23 @@ function formatTime(t) {
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
 .loading-icon { font-size: 48px; margin-bottom: 12px; }
 .loading-text { font-size: 14px; color: #777; }
+
+/* 右上角悬浮场景筛选 */
+.page-header { position: relative; }
+.fab-wrap { position: absolute; right: 16px; top: 14px; z-index: 30; }
+.fab-filter { display: flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 6px 12px; cursor: pointer; transition: .15s; }
+.fab-filter:hover { background: #dcfce7; transform: scale(1.05); }
+.fab-filter:active { transform: scale(.95); }
+.fab-filter-icon { font-size: 16px; line-height: 1; }
+.fab-filter-active { font-size: 11px; color: #16a34a; font-weight: 500; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fab-dropdown { position: absolute; right: 0; top: calc(100% + 6px); background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border: 1px solid #e5e7eb; padding: 6px; min-width: 110px; }
+.fab-drop-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #444; white-space: nowrap; transition: .1s; }
+.fab-drop-item:hover { background: #f0fdf4; }
+.fab-drop-item.active { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+.fd-icon { font-size: 16px; }
+.fd-label { font-size: 12px; }
+.fab-drop-enter-active, .fab-drop-leave-active { transition: all .15s ease; }
+.fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-4px) scale(.96); }
 
 .bottom-tabs {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);

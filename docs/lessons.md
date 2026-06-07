@@ -1,4 +1,4 @@
-﻿# 开发教训记录
+# 开发教训记录
 
 ## 2026-06-05 烹饪步骤配图功能
 
@@ -103,8 +103,7 @@
 - 新增页面时先参考现有页面结构
 
 
-## [2026-06-06] ????? + ???? + ??????
-### ????
+## ????
 - ????????????????task_id?taskId, is_final?isFinal?
 - ????????????
 - ?????????
@@ -118,3 +117,48 @@
 - ?? Chat.vue ?????????????
 - ??????? localStorage ???????? token
 - ?????? git stash ???????? git checkout ??
+
+## 2026-06-07 步骤配图正则匹配修复 + 全场景支持
+
+### 问题
+步骤配图的关键词基于正则表达式匹配场景，但存在以下问题：
+1. **pan 在 pants 中**：穿搭场景关键词 "pants" 包含 "pan"（炒锅），导致穿搭配图显示"炒制"
+2. **hat 误匹配**：	hat、chat、what 等常见词含 "hat"，可能被误识别为穿搭
+3. **heat 误匹配**：sweater、wheat 等词含 "heat"，可能被误识别为加热场景
+4. **关键词不全**：hoodie、chino、cardigan 等常见服饰词未收录
+5. **缺少中文支持**：后端 SVG 生成器只能匹配英文关键词，中文服饰名（卫衣、针织等）落到了默认的"通用"场景
+
+### 修复方案
+
+#### 后端（ImageController.java）
+- 添加 \b 单词边界：\bpan\b、\bhat\b、\bheat\b
+- 补充服饰关键词：hoodie、sweater、knit、chino、cardigan、blouse、vest 等
+- 添加中文匹配：卫衣、针织、衬衫、西装、夹克、裤、裙、鞋、帽 等
+
+#### 前端（Chat.vue）
+- 提取 makeStepImg(kw) 公共函数，消除 IIFE 重复代码
+- stepEmoji() / stepGradient() 同步添加 \b 单词边界和新关键词
+- 添加新场景渐变色 CSS：grad-repair、grad-housework、grad-fashion、grad-health、grad-pet、grad-shop
+- suggestions（健康）和 outfits（穿搭）增加 step_image 渲染
+
+### 关键教训
+
+#### 1. 正则匹配优先级和顺序很重要
+- Java 的 keyword.matches() 从上到下匹配，先匹配到的先返回
+- 短关键词（pan、hat、heat）容易误匹配长词中的子串
+- 所有短关键词都必须加 \b 单词边界
+
+#### 2. 中文关键词需要额外处理
+- AI 返回的 step_image 字段可能是中文（如"灰色卫衣"）
+- 后端 SVG 生成器需要同时支持中英文关键词匹配
+- 中文匹配不用加 \b（中文天然没有单词边界问题）
+
+#### 3. 前端 JS 和后端 Java 的正则一致性
+- 前后端关键词列表要保持同步，否则 emoji 和 SVG 场景可能不一致
+- JS 用 RegExp.test()，Java 用 String.matches()，行为有差异
+- JS 的 .test() 是部分匹配，Java 的 .matches() 是全串匹配，要用 .*pattern.*
+
+### 当前最佳实践
+- 所有场景关键词：在 stepEmoji、stepGradient、generateStepSvg 三处同步维护
+- 新增场景时：前端加 emoji + 渐变色 + CSS 样式，后端加 SVG 插画
+- 涉及正则表达式修改时：必须检查是否有其他词包含该子串

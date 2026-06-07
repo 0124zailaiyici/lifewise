@@ -13,30 +13,17 @@
       </template>
     </div>
 
-    <!-- 场景筛选 -->
-    <div class="scene-filter">
-      <div class="scene-chip" :class="{ active: sceneFilter === '' }" @click="sceneFilter = ''">全部</div>
-      <div v-for="s in scenes" :key="s.key" class="scene-chip" :class="{ active: sceneFilter === s.key }"
-           @click="sceneFilter = s.key">
-        {{ s.icon }} {{ s.label }}
-      </div>
-    </div>
-
-    <!-- 右上角悬浮场景筛选 -->
+    <!-- 悬浮场景筛选 -->
     <div class="fab-wrap">
       <div class="fab-filter" @click="showScenePanel = !showScenePanel">
         <span class="fab-filter-icon">🏷️</span>
         <span v-if="sceneFilter" class="fab-filter-active">{{ sceneIconLabel(sceneFilter) }}</span>
+        <span v-else class="fab-filter-placeholder">场景</span>
       </div>
       <Transition name="fab-drop">
-        <div v-if="showScenePanel" class="fab-dropdown">
-          <div class="fab-drop-item" :class="{ active: sceneFilter === '' }"
-               @click="sceneFilter = ''; showScenePanel = false">
-            <span class="fd-icon">📋</span>
-            <span class="fd-label">全部</span>
-          </div>
-          <div v-for="s in scenes" :key="s.key" class="fab-drop-item"
-               :class="{ active: sceneFilter === s.key }"
+        <div v-if="showScenePanel" class="fab-dropdown" @click.stop>
+          <div v-for="s in [{key:'',icon:'📋',label:'全部'}, ...scenes]" :key="s.key"
+               class="fab-drop-item" :class="{ active: sceneFilter === s.key }"
                @click="sceneFilter = s.key; showScenePanel = false">
             <span class="fd-icon">{{ s.icon }}</span>
             <span class="fd-label">{{ s.label }}</span>
@@ -237,19 +224,22 @@ function formatTime(t) {
 }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
 
-.scene-filter {
-  display: flex; gap: 6px; padding: 10px 20px;
-  overflow-x: auto; white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
-}
-.scene-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 5px 12px; border-radius: 16px;
-  background: #f5f5f5; color: #666; font-size: 12px;
-  cursor: pointer; transition: .15s; flex-shrink: 0;
-}
-.scene-chip:hover { background: #e8f5e9; }
-.scene-chip.active { background: #22c55e; color: #fff; }
+.page-header { position: relative; }
+.fab-wrap { position: absolute; right: 16px; top: 10px; z-index: 30; }
+.fab-filter { display: flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 5px 10px; cursor: pointer; transition: .15s; }
+.fab-filter:hover { background: #dcfce7; }
+.fab-filter:active { transform: scale(.95); }
+.fab-filter-icon { font-size: 14px; line-height: 1; }
+.fab-filter-active { font-size: 11px; color: #16a34a; font-weight: 500; }
+.fab-filter-placeholder { font-size: 11px; color: #999; }
+.fab-dropdown { position: absolute; right: 0; top: calc(100% + 4px); background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border: 1px solid #e5e7eb; padding: 6px; min-width: 110px; z-index: 40; }
+.fab-drop-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #444; white-space: nowrap; transition: .1s; }
+.fab-drop-item:hover { background: #f0fdf4; }
+.fab-drop-item.active { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+.fd-icon { font-size: 16px; }
+.fd-label { font-size: 12px; }
+.fab-drop-enter-active, .fab-drop-leave-active { transition: all .15s ease; }
+.fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-4px) scale(.96); }
 
 .search-bar { padding: 0 20px 12px; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 20px; }

@@ -1,0 +1,107 @@
+name: Build & Deploy LifeWise
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend: Build with Maven
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Build Backend
+        run: |
+          cd backend
+          mvn package -DskipTests -q
+          cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar
+
+      # Frontend: Build with Node
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          cp -r dist ../lifewise-frontend
+
+      # Package deployment artifacts
+      - name: Package Artifacts
+        run: |
+          mkdir -p deploy
+          cp lifewise-backend.jar deploy/
+          cp -r lifewise-frontend deploy/
+          # Create start script
+          cat > deploy/start.sh << 'SCRIPT'
+          #!/bin/bash
+          cd "$(dirname "$0")"
+          echo "Starting LifeWise backend..."
+          nohup java -jar lifewise-backend.jar --spring.profiles.active=cloud > backend.log 2>&1 &
+          echo $! > backend.pid
+          echo "Backend PID: $(cat backend.pid)"
+SCRIPT
+          chmod +x deploy/start.sh
+          cat > deploy/stop.sh << 'SCRIPT2'
+          #!/bin/bash
+          cd "$(dirname "$0")"
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) 2>/dev/null
+            rm backend.pid
+            echo "Backend stopped"
+          else
+            echo "No PID file found"
+          fi
+SCRIPT2
+          chmod +x deploy/stop.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifewise-deploy
+          path: deploy/
+
+  # Optional: Deploy to Alibaba Cloud via SCP/SSH
+  deploy:
+    needs: build
+    if: secrets.ALIYUN_HOST != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: lifewise-deploy
+
+      - name: Deploy to server
+        env:
+          HOST: ${{ secrets.ALIYUN_HOST }}
+          PORT: ${{ secrets.ALIYUN_PORT || '22' }}
+          USER: ${{ secrets.ALIYUN_USER || 'root' }}
+          SSH_KEY: ${{ secrets.ALIYUN_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p $PORT -H $HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Stop existing service
+          ssh -p $PORT $USER@$HOST "cd /opt/lifewise && ./stop.sh 2>/dev/null; rm -rf /opt/lifewise/*"
+
+          # Copy files
+          scp -P $PORT -r * $USER@$HOST:/opt/lifewise/
+
+          # Start service
+          ssh -p $PORT $USER@$HOST "cd /opt/lifewise && chmod +x start.sh stop.sh && ./start.sh"

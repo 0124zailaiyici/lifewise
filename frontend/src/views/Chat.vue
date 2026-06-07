@@ -1,4 +1,4 @@
-<!-- VERSION: 20260606-2 --> <template>
+﻿<!-- VERSION: 20260606-2 --> <template>
   <div class="page-container chat-page">
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
@@ -141,7 +141,7 @@
 import { exportConversationToFile } from "../api/index.js"
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -265,14 +265,26 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
       try {
         const parsed = tryParseJsonSafe(fullContent)
         if (parsed && parsed.title && parsed.steps) {
-          const dishKey = 'food_img_' + parsed.title.trim()
+          const dishName = parsed.title.trim()
+          const dishKey = 'food_img_' + dishName
+          // 1) local cache first
           const cached = localStorage.getItem(dishKey)
           if (cached) {
             m._foodImageUrl = cached
           } else {
             m._foodImageLoading = true
-            generateFoodImage(parsed.title).then(submitRes => {
-              const taskId = submitRes.data?.taskId
+            // 2) check server cache, or submit task
+            generateFoodImage(dishName).then(submitRes => {
+              const data = submitRes.data || {}
+              // server cache hit
+              if (data.cached && data.imageUrl) {
+                m._foodImageUrl = data.imageUrl
+                localStorage.setItem(dishKey, data.imageUrl)
+                m._foodImageLoading = false
+                return
+              }
+              // task submitted
+              const taskId = data.taskId
               if (!taskId) { m._foodImageLoading = false; return }
               m._foodImagePoll = setInterval(async () => {
                 try {
@@ -284,6 +296,8 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
                     if (url) {
                       m._foodImageUrl = url
                       localStorage.setItem(dishKey, url)
+                      // 3) save to server cache for future reuse
+                      saveFoodImageCache(dishName, url).catch(() => {})
                     }
                     m._foodImageLoading = false
                   } else if (st?.state === 'failed') {
@@ -1265,6 +1279,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
+
 
 
 

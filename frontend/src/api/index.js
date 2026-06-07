@@ -142,3 +142,7 @@ export function importKnowledge(items) {
 export function exportConversationToFile(text) {
   return api.post('/chat/export', { text })
 }
+
+export function saveFoodImageCache(dishName, imageUrl) {
+  return api.post('/food-image/cache', { dishName, imageUrl })
+}

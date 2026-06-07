@@ -23,17 +23,15 @@ jobs:
           mvn package -DskipTests -q
           cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar
 
-      - name: Set up Node.js
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Build Frontend
         run: |
           cd frontend
-          npm ci
+          npm install --legacy-peer-deps
           npm run build
           cp -r dist ../lifewise-frontend
 
@@ -42,26 +40,26 @@ jobs:
           mkdir -p deploy
           cp lifewise-backend.jar deploy/
           cp -r lifewise-frontend deploy/
-          # create start.sh
-          printf "#!/bin/bash
-          cd "$(dirname "$0")"
-          echo "Starting LifeWise backend..."
-          nohup java -jar lifewise-backend.jar --spring.profiles.active=cloud > backend.log 2>&1 &
-          echo $! > backend.pid
-          echo "Backend PID: $(cat backend.pid)"
-          " > deploy/start.sh
+          cat > deploy/start.sh << 'STARTEOF'
+#!/bin/bash
+cd "$(dirname "$0")"
+echo "Starting LifeWise backend..."
+nohup java -jar lifewise-backend.jar --spring.profiles.active=cloud > backend.log 2>&1 &
+echo $! > backend.pid
+echo "Backend PID: $(cat backend.pid)"
+STARTEOF
           chmod +x deploy/start.sh
-          # create stop.sh
-          printf "#!/bin/bash
-          cd "$(dirname "$0")"
-          if [ -f backend.pid ]; then
-            kill $(cat backend.pid) 2>/dev/null
-            rm backend.pid
-            echo "Backend stopped"
-          else
-            echo "No PID file found"
-          fi
-          " > deploy/stop.sh
+          cat > deploy/stop.sh << 'STOPEOF'
+#!/bin/bash
+cd "$(dirname "$0")"
+if [ -f backend.pid ]; then
+  kill $(cat backend.pid) 2>/dev/null
+  rm backend.pid
+  echo "Backend stopped"
+else
+  echo "No PID file found"
+fi
+STOPEOF
           chmod +x deploy/stop.sh
 
       - name: Upload Artifacts

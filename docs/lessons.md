@@ -258,3 +258,55 @@ convId = createConversation(...)   // AI 回复后才创建对话
 #### 4. Spring Boot 构建问题
 - 如果之前的 java 进程还在运行，mvn package 会因 jar 文件被占用而失败
 - 必须先 taskkill /f /im java.exe 再重建
+
+## 2026-06-07 阿里云服务器部署 + GitHub Actions CI
+
+### 问题
+1. 需要在手机使用 LifeWise，但项目只跑在本地 localhost
+2. 阿里云 ECS 已有另一个项目（Pose Guide）占用 8080 端口
+3. SSH 端口 22 连通但 SSH 协议超时（疑似服务器防火墙/sshd 配置问题）
+4. 手机访问需要开放安全组端口
+
+### 解决方案
+
+#### 部署方案
+- 使用 GitHub Actions 自动构建项目（后端 JAR + 前端 dist）
+- 通过阿里云 Workbench（网页控制台）连服务器手动操作
+- LifeWise 后端部署到 8082 端口（与 Pose Guide 的 8080 不冲突）
+- Nginx 监听 8081 端口，代理前端静态文件 + 后端 API
+- 编写 deploy/update.sh 一键更新脚本
+
+#### GitHub Actions 教训
+- YAML 的 heredoc（<< 'EOF'）可能导致解析错误
+- npm ci 比 npm install 更严格（lock 文件校验），改用 npm install --legacy-peer-deps
+- actions/upload-artifact@v4 用于保存构建产物供下载
+- workflow 文件不要超过一个 jobs（多 job 需要 secrets 配置复杂）
+
+### 关键教训
+
+#### 1. SSH 不通就用 Workbench
+- 阿里云 ECS 的 Workbench 远程连接（网页终端）比 SSH 更可靠
+- 无需配置安全组 22 端口
+- 支持文件上传/下载、复制粘贴
+
+#### 2. 端口规划很重要
+- 同一台服务器跑多个项目时，提前规划端口：
+  - 80/443：主站（通常是 Nginx）
+  - 8080：项目 A 后端
+  - 8081：项目 B 前端
+  - 8082：项目 B 后端
+- 每个项目互不干扰
+
+#### 3. 外网访问记得配安全组
+- 阿里云安全组入方向规则：端口开放 + 授权对象 0.0.0.0/0
+- 修改安全组后立即生效，不需重启服务器
+
+#### 4. 数据库文件锁问题
+- kill -9 无法正确释放 H2 数据库锁
+- 需要等待操作系统释放文件锁，或用 pgrep java 杀干净
+- 数据库文件备份很重要（更新脚本自动备份）
+
+#### 5. 一键更新脚本
+- 更新流程：下载构建包 → 停旧后端 → 备份数据库 → 解压覆盖 → 启动新后端
+- 配置文件（application-cloud.properties）单独保存不被覆盖
+- 脚本放在 deploy/update.sh，服务器下载后可直接执行

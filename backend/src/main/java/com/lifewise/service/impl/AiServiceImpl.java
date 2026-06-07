@@ -1,5 +1,6 @@
 package com.lifewise.service.impl;
 
+import com.lifewise.dto.ChatRequest;
 import com.lifewise.entity.Message;
 import com.lifewise.repository.MessageRepository;
 import com.lifewise.service.AiService;
@@ -58,8 +59,43 @@ public class AiServiceImpl implements AiService {
     @Value("${app.vision-enabled:false}")
     private boolean visionEnabled;
 
+    // DashScope (Qwen) 配置
+    @Value("${ai.dashscope-api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}")
+    private String dashscopeApiUrl;
+
+    @Value("${ai.dashscope-api-key:}")
+    private String dashscopeApiKey;
+
+    @Value("${ai.dashscope-model:qwen-plus}")
+    private String dashscopeModel;
+
+    // Ollama 配置
+    @Value("${ai.ollama-url:http://localhost:11434/api/chat}")
+    private String ollamaUrl;
+
+    @Value("${ai.ollama-model:qwen2.5:7b}")
+    private String ollamaModel;
+
     @Override
     public String chat(String message, String scene, Long userId, Long conversationId, String imageUrl) {
+        // 兼容旧接口
+        ChatRequest req = new ChatRequest();
+        req.setMessage(message);
+        req.setScene(scene);
+        req.setConversationId(conversationId);
+        req.setImageUrl(imageUrl);
+        req.setProvider("deepseek");
+        return chat(req, userId);
+    }
+
+    @Override
+    public String chat(ChatRequest request, Long userId) {
+        String message = request.getMessage();
+        String scene = request.getScene();
+        Long conversationId = request.getConversationId();
+        String imageUrl = request.getImageUrl();
+        String provider = request.getProvider() != null ? request.getProvider() : "qwen";
+
         // Skip cache when there is conversation history (follow-up) or image present
         if (conversationId == null && (imageUrl == null || imageUrl.isEmpty())) {
             String cached = knowledgeBaseService.findAnswer(message, scene);
@@ -70,7 +106,9 @@ public class AiServiceImpl implements AiService {
         } else {
             log.debug("skip cache (follow-up or image): {}", message);
         }
-        String answer = callAI(message, scene, conversationId, imageUrl);
+
+        String answer = callAI(message, scene, conversationId, imageUrl, provider);
+
         // Only cache first questions (no history), skip caching follow-ups
         if (conversationId == null && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
             knowledgeBaseService.saveAnswer(message, answer, scene);
@@ -80,16 +118,25 @@ public class AiServiceImpl implements AiService {
         return answer;
     }
 
-    private String callAI(String message, String scene, Long conversationId, String imageUrl) {
-        if (apiKey == null || apiKey.isEmpty()) {
-            log.warn("no api key, use mock");
-            return mockResponse(message, scene);
+    private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider) {
+        if ("deepseek".equals(provider) && (apiKey == null || apiKey.isEmpty())) {
+            log.warn("DeepSeek API key not configured");
+            if (!"deepseek".equals(provider)) {
+                // fall through to other providers
+            } else {
+                return mockResponse(message, scene);
+            }
         }
+        if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
+            log.warn("DashScope API key not configured, falling back to DeepSeek");
+            provider = "deepseek";
+        }
+
         // 最多重试 2 次（共 3 次尝试）
         Exception lastEx = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
-                return callLLMApi(message, scene, conversationId, imageUrl);
+                return callLLMApi(message, scene, conversationId, imageUrl, provider);
             } catch (Exception e) {
                 lastEx = e;
                 log.warn("AI call failed (attempt {}/3): {}", attempt, e.getMessage());
@@ -103,7 +150,7 @@ public class AiServiceImpl implements AiService {
     }
 
     @SuppressWarnings("unchecked")
-    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl) throws Exception {
+    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl, String provider) throws Exception {
         List<Map<String, Object>> messages = new ArrayList<>();
         boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
         boolean hasHistory = conversationId != null &&
@@ -116,7 +163,7 @@ public class AiServiceImpl implements AiService {
 
         if (conversationId != null) {
             List<Message> history = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
-            int startIdx = Math.max(0, history.size() - 10);
+            int startIdx = Math.max(0, history.size() - 5);
             for (int i = startIdx; i < history.size(); i++) {
                 Message msg = history.get(i);
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -165,23 +212,37 @@ public class AiServiceImpl implements AiService {
         }
         messages.add(userMsg);
 
-        boolean useVision = hasImage && visionEnabled && visionApiUrl != null && !visionApiUrl.isEmpty();
-        String targetUrl = useVision ? visionApiUrl : apiUrl;
-        String targetModel = useVision ? visionModel : model;
+        // 根据 provider 路由到不同的 API
+        if ("ollama".equals(provider)) {
+            return callOllama(messages, scene);
+        } else if ("qwen".equals(provider)) {
+            return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
+        } else {
+            // deepseek - 检查是否需要视觉 API
+            boolean useVision = hasImage && visionEnabled && visionApiUrl != null && !visionApiUrl.isEmpty();
+            if (useVision) {
+                return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
+            }
+            return callOpenAICompatible(apiUrl, apiKey, model, messages, false);
+        }
+    }
 
+    /** 调用 OpenAI 兼容接口（DeepSeek / DashScope Qwen） */
+    private String callOpenAICompatible(String url, String key, String modelName,
+                                         List<Map<String, Object>> messages, boolean useVision) throws Exception {
         Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", targetModel);
+        requestBody.put("model", modelName);
         requestBody.put("messages", messages);
         requestBody.put("temperature", 0.7);
         requestBody.put("max_tokens", 4096);
 
         String body = objectMapper.writeValueAsString(requestBody);
-        log.debug("AI request: {}", body);
+        log.debug("AI request to {}: {}", url, body.substring(0, Math.min(200, body.length())));
 
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(targetUrl))
+            .uri(URI.create(url))
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + (useVision ? visionApiKey : apiKey))
+            .header("Authorization", "Bearer " + key)
             .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
             .build();
 
@@ -193,8 +254,59 @@ public class AiServiceImpl implements AiService {
         }
 
         JsonNode root = objectMapper.readTree(response.body());
-        String result = root.path("choices").path(0).path("message").path("content").asText(); String finishReason = root.path("choices").path(0).path("finish_reason").asText(""); log.debug("AI finish_reason: {}, content_len: {}", finishReason, result.length());
-        log.debug("AI response: {}", result);
+        String result = root.path("choices").path(0).path("message").path("content").asText();
+        String finishReason = root.path("choices").path(0).path("finish_reason").asText("");
+        log.debug("AI finish_reason: {}, content_len: {}", finishReason, result.length());
+        return result;
+    }
+
+    /** 调用 Ollama 本地 API */
+    private String callOllama(List<Map<String, Object>> messages, String scene) throws Exception {
+        // Ollama 的 /api/chat 接口格式与 OpenAI 不同
+        List<Map<String, Object>> ollamaMessages = new ArrayList<>();
+        for (Map<String, Object> msg : messages) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("role", msg.get("role"));
+            Object content = msg.get("content");
+            if (content instanceof List) {
+                // 多模态内容，提取文本部分
+                StringBuilder text = new StringBuilder();
+                for (Map<String, Object> part : (List<Map<String, Object>>) content) {
+                    if ("text".equals(part.get("type"))) {
+                        text.append(part.get("text"));
+                    }
+                }
+                m.put("content", text.toString());
+            } else {
+                m.put("content", content != null ? content.toString() : "");
+            }
+            ollamaMessages.add(m);
+        }
+
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("model", ollamaModel);
+        requestBody.put("messages", ollamaMessages);
+        requestBody.put("stream", false);
+
+        String body = objectMapper.writeValueAsString(requestBody);
+        log.debug("Ollama request: {}", body.substring(0, Math.min(200, body.length())));
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(ollamaUrl))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+            .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            log.error("Ollama error: {} - {}", response.statusCode(), response.body());
+            throw new RuntimeException("Ollama error: " + response.statusCode() + " - " + response.body());
+        }
+
+        JsonNode root = objectMapper.readTree(response.body());
+        String result = root.path("message").path("content").asText();
+        log.debug("Ollama response length: {}", result.length());
         return result;
     }
 
@@ -204,10 +316,7 @@ public class AiServiceImpl implements AiService {
             if (imageUrl == null || imageUrl.isEmpty()) return "";
             if (imageUrl.startsWith("http")) return imageUrl;
             log.debug("imageToDataUrl() called with: {}", imageUrl);
-            // 本地文件路径： /uploads/20260604/uuid.jpg
-            String filePath = uploadDir + imageUrl.replace("/uploads", "").replace("/", "\\");
-            Path path = Paths.get(uploadDir, imageUrl.replace("/uploads", "").replace("/", "\\").replace("\\", "/"));
-            // Try more robust path resolution
+            // 本地文件路径：/uploads/20260604/uuid.jpg
             String relativePath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
             if (relativePath.startsWith("uploads/")) {
                 relativePath = relativePath.substring("uploads/".length());
@@ -234,7 +343,7 @@ public class AiServiceImpl implements AiService {
                     scenePrompt = "用户正在当前对话基础上追问食材替代、口味调整、烹饪技巧等，请保持烹饪菜谱风格回答";
                     break;
                 case "shopping":
-                    scenePrompt = "用户正在当前对话基础上追问挑选细节、保存方法、季节品种等，请保持选购指南风格回答";
+                    scenePrompt = "用户正在当前对话基础上追问挑选细节、保存方法、应季品种等，请保持选购指南风格回答";
                     break;
                 case "repair":
                     scenePrompt = "用户正在当前对话基础上追问修理细节、工具替代、安全注意等，请保持修理指南风格回答";
@@ -266,7 +375,7 @@ public class AiServiceImpl implements AiService {
 """;
         }
         String baseRule = """
-你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。涉及危险必须提醒。只输出纯 JSON，不要 markdown 标记。如果用户上传了图片，优先分析图片内容。
+你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。涉及危险必须提醒。只输出纯JSON，不要markdown标记。如果用户上传了图片，优先分析图片内容。
 """;
         String schema;
         switch (scene != null ? scene : "other") {
@@ -299,7 +408,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - summary_slogan: 总结口诀
 
 示例：
-{"category":"西瓜","season":"夏季应季","selection_steps":[{"step_name":"看外观","action":"选深绿带光泽、纹路清晰均匀的；瓜底部凹陷深、圆圈小的皮薄肉甜"},{"step_name":"听声音","action":"指关节轻敲，声音低沉浑厚像敲鼓为好"}],"common_mistakes":["不要只看瓜蒂是否弯曲，关键是颜色和鲜活度"],"storage_tip":"常温阴凉处保存，切开后冷藏","summary_slogan":"一看二摸三听四掂，凹陷深、藤新鲜就是好瓜"}
+{"category":"西瓜","season":"夏季应季","selection_steps":[{"step_name":"看外观","action":"选深绿带光泽、纹路清晰均匀的；瓜底部凹陷深、圆圈小的皮薄肉甜"},{"step_name":"听声音","action":"指关节轻敲，声音低沉浑厚像敲鼓为好"}],"common_mistakes":["不要只看瓜藤是否弯曲，关键是颜色和鲜活性"],"storage_tip":"常温阴凉处保存，切开后冷藏","summary_slogan":"一看二摸三听四掂，凹陷深、藤新鲜就是好瓜"}
 """;
                 break;
             case "repair":
@@ -380,7 +489,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 输出 JSON 格式：
 - title: 标题
 - preference: 用户需求概述
-- weekly_plan: 一周计划，每天包含 day（星期几）、meals（三餐列表，每餐含 type、name、time、difficulty）
+- weekly_plan: 一周计划，每天包含 day（星期几）、meals（三餐列表，每餐含type、name、time、difficulty）
 - shopping_list: 购物清单，按分类列出
 - tips: 省时省钱建议
 """;
@@ -401,7 +510,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 输出要求：
 - 使用 Markdown 格式，标题用 ## 或 ###，列表用 - 或 1.
 - 重点内容用 **加粗**
-- 直接输出内容，不要 JSON 包裹
+- 直接输出内容，不要 JSON 包装
 """;
                 break;
             default:
@@ -421,6 +530,3 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";
     }
 }
-
-
-

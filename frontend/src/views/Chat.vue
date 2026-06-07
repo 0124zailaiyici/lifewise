@@ -262,7 +262,8 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
       // Auto-generate food image for recipe responses (async polling + localStorage cache)
-      try {
+      const foodImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
+      if (foodImageEnabled) try {
         const parsed = tryParseJsonSafe(fullContent)
         if (parsed && parsed.title && parsed.steps) {
           const dishName = parsed.title.trim()
@@ -1299,6 +1300,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
+
 
 
 

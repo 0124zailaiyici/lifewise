@@ -22,7 +22,7 @@ api.interceptors.response.use(
       window.location.href = '/login'
       return Promise.reject(error)
     }
-    const msg = error.response?.data?.message || '缂冩垹绮堕柨娆掝嚖'
+    const msg = error.response?.data?.message || '网络错误'
     console.error(msg)
     return Promise.reject(error)
   }
@@ -47,6 +47,8 @@ export function resetPassword(phone, code, newPassword) {
 export function sendChat(message, scene, conversationId, imageUrl) {
   const body = { message, scene, conversationId }
   if (imageUrl) body.imageUrl = imageUrl
+  // 从 localStorage 读取 AI provider 设置
+  body.provider = localStorage.getItem('setting_aiProvider') || 'qwen'
   return api.post('/chat/send', body)
 }
 

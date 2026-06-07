@@ -33,6 +33,14 @@ ai:
   api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
   api-key: ${AI_API_KEY:}
   model: ${AI_MODEL:deepseek-v4-flash}
+  # DashScope (千问) 配置
+  dashscope-api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+  dashscope-api-key: ${AI_DASHSCOPE_KEY:}
+  dashscope-model: ${AI_DASHSCOPE_MODEL:qwen-plus}
+  # Ollama 本地配置
+  ollama-url: ${AI_OLLAMA_URL:http://localhost:11434/api/chat}
+  ollama-model: ${AI_OLLAMA_MODEL:qwen2.5:7b}
+  # 视觉/图片配置
   vision-api-url: ${AI_VISION_API_URL:}
   vision-api-key: ${AI_VISION_API_KEY:}
   vision-model: ${AI_VISION_MODEL:mimo-v2-omni}
@@ -49,4 +57,3 @@ logging:
 gl-image:
   api-key: ${GL_IMAGE_API_KEY:}
   api-url: ${GL_IMAGE_API_URL:https://api.lk888.ai/api}
-

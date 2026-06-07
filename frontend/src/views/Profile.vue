@@ -13,6 +13,37 @@
         </div>
       </div>
 
+      <!-- ===== 设置区域 ===== -->
+      <div class="menu-section">
+        <div class="menu-label">⚙️ 设置</div>
+        <div class="menu-list">
+          <div class="menu-item setting-item">
+            <div class="si-left">
+              <el-icon><Picture /></el-icon>
+              <div class="si-text">
+                <div class="si-title">🖼️ 菜品成品图</div>
+                <div class="si-desc">对话时自动生成菜品图片（消耗 Token）</div>
+              </div>
+            </div>
+            <el-switch v-model="setting_foodImage" @change="saveFoodImageSetting" />
+          </div>
+          <div class="menu-item setting-item">
+            <div class="si-left">
+              <el-icon><Cpu /></el-icon>
+              <div class="si-text">
+                <div class="si-title">🤖 AI 模型</div>
+                <div class="si-desc">选择对话使用的 AI 模型</div>
+              </div>
+            </div>
+            <el-select v-model="setting_aiProvider" @change="saveAiProvider" style="width:110px" size="small">
+              <el-option label="千问 (Qwen)" value="qwen" />
+              <el-option label="DeepSeek" value="deepseek" />
+              <el-option label="Ollama 本地" value="ollama" />
+            </el-select>
+          </div>
+        </div>
+      </div>
+
       <div class="menu-section">
         <div class="menu-label">功能</div>
         <div class="menu-list">
@@ -56,15 +87,30 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
+import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
 const user = computed(() => userStore.user)
+
+// ===== 设置状态 =====
+const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
+const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
+
+function saveFoodImageSetting(val) {
+  localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
+  ElMessage.success(val ? '菜品图已开启' : '菜品图已关闭')
+}
+
+function saveAiProvider(val) {
+  localStorage.setItem('setting_aiProvider', val)
+  const names = { qwen: '千问 (Qwen)', deepseek: 'DeepSeek', ollama: 'Ollama 本地' }
+  ElMessage.success('AI 模型已切换为 ' + (names[val] || val))
+}
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
@@ -103,6 +149,15 @@ function handleLogout() {
 .menu-arrow { margin-left: auto; color: #ccc; font-size: 14px; }
 .menu-item.logout { color: #ef4444; }
 .menu-item.logout .el-icon:first-child { color: #ef4444; }
+
+/* 设置项样式 */
+.setting-item { cursor: default; padding: 14px 16px; }
+.setting-item:active { background: inherit; }
+.setting-item .si-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+.setting-item .si-text { flex: 1; }
+.setting-item .si-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+.setting-item .si-desc { font-size: 11px; color: #999; margin-top: 2px; line-height: 1.4; }
+
 .footer-info { text-align: center; margin-top: 48px; }
 .app-name { font-size: 13px; color: #ccc; font-weight: 500; }
 .app-desc { font-size: 11px; color: #bbb; margin-top: 4px; }

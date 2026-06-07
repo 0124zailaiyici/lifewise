@@ -34,8 +34,8 @@ public class ChatController {
                                                   @Valid @RequestBody ChatRequest request) {
         Long convId = request.getConversationId();
 
-        // Call AI first with original convId (null for new conv = enable cache check + save)
-        String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId, convId, request.getImageUrl());
+        // Call AI first with the full ChatRequest (includes provider/model)
+        String aiResponse = aiService.chat(request, userId);
 
         // Create conversation if new (after AI call, so AiServiceImpl sees null convId for cache)
         if (convId == null) {

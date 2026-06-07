@@ -24,6 +24,11 @@ public class ChatController {
     public ApiResponse<ChatResponse> sendMessage(@RequestAttribute Long userId,
                                                   @Valid @RequestBody ChatRequest request) {
         Long convId = request.getConversationId();
+
+        // Call AI first with original convId (null for new conv = enable cache check + save)
+        String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId, convId, request.getImageUrl());
+
+        // Create conversation if new (after AI call, so AiServiceImpl sees null convId for cache)
         if (convId == null) {
             String title = request.getMessage().length() > 50
                 ? request.getMessage().substring(0, 50) + "..."
@@ -32,8 +37,6 @@ public class ChatController {
                 request.getScene() != null ? request.getScene() : "other");
             convId = conv.getId();
         }
-
-        String aiResponse = aiService.chat(request.getMessage(), request.getScene(), userId, convId, request.getImageUrl());
 
         Message userMsg = new Message();
         userMsg.setConversationId(convId);

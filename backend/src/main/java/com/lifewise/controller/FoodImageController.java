@@ -79,13 +79,30 @@ public class FoodImageController {
                     .build();
 
             HttpResponse<String> submitResp = httpClient.send(submitReq, HttpResponse.BodyHandlers.ofString());
+            var submitJson = objectMapper.readTree(submitResp.body());
+
             if (submitResp.statusCode() != 200) {
                 log.error("Submit failed: {} {}", submitResp.statusCode(), submitResp.body());
                 return ApiResponse.error(502, "Image generation submission failed");
             }
 
-            var submitJson = objectMapper.readTree(submitResp.body());
-            long taskId = submitJson.path("data").path("task_id").asLong();
+            // Check for business-level errors (e.g. insufficient balance)
+            int bizCode = submitJson.path("code").asInt(200);
+            if (bizCode != 200) {
+                String msg = submitJson.path("msg").asText("Unknown error");
+                log.warn("Relay API returned code={}: {}", bizCode, msg);
+                if (bizCode == 402) {
+                    return ApiResponse.error(429, "算力不足，请补充后再试");
+                }
+                return ApiResponse.error(502, msg);
+            }
+
+            long taskId = submitJson.path("data").path("task_id").asLong(0);
+            if (taskId == 0) {
+                log.error("Relay API returned 0 task_id: {}", submitResp.body());
+                return ApiResponse.error(502, "Failed to get task ID from relay");
+            }
+
             log.info("Food image task submitted: task_id={}, dishName={}", taskId, dishName);
 
             return ApiResponse.success(Map.of(

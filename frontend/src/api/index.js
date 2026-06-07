@@ -148,3 +148,5 @@ export function exportConversationToFile(text) {
 export function saveFoodImageCache(dishName, imageUrl) {
   return api.post('/food-image/cache', { dishName, imageUrl })
 }
+
+

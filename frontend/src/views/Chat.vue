@@ -3,7 +3,12 @@
     <div class="chat-header">
       <el-button text @click="goBack" class="back-btn">← 返回</el-button>
       <span class="header-title" @click="handleRenameTitle" style="cursor:pointer">{{ currentLabel }}</span>
-      <el-button text size="small" @click="exportConversation" title="导出对话">📥</el-button>
+      <el-button text size="small" @click="toggleExportMenu" title="导出对话">📥</el-button>
+      <div v-if="showExportMenu" class="export-menu" @mouseleave="showExportMenu = false">
+        <div class="export-menu-item" @click="exportConversation(); showExportMenu = false">📄 导出文本</div>
+        <div class="export-menu-item" @click="exportConversationAsImage(); showExportMenu = false">🖼️ 导出图片</div>
+        <div class="export-menu-item" @click="exportConversationAsPdf(); showExportMenu = false">📑 导出PDF</div>
+      </div>
     </div>
 
     <div class="messages" ref="msgBox">
@@ -170,6 +175,8 @@ const shareCardRef = ref(null)
 const isListening = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
 const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false, sharing: false })
+const showExportMenu = ref(false)
+function toggleExportMenu() { showExportMenu.value = !showExportMenu.value }
 const favCategories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
   { key: 'shopping', icon: '🛒', label: '买菜' },
@@ -365,6 +372,191 @@ async function exportConversation() {
     ElMessage.success('\u5bf9\u8bdd\u5df2\u4fdd\u5b58\u5230: ' + (res.data || 'exports/\u76ee\u5f55'))
   } catch(e) {
     ElMessage.error('\u5bfc\u51fa\u5931\u8d25: ' + (e.message || '\u672a\u77e5\u9519\u8bef'))
+  }
+}
+
+
+/**
+ * 处理导出菜单命令
+ */
+function handleExport(cmd) {
+  if (cmd === 'txt') exportConversation()
+  else if (cmd === 'image') exportConversationAsImage()
+  else if (cmd === 'pdf') exportConversationAsPdf()
+}
+
+/**
+ * 导出对话为图片（长截图）
+ */
+async function exportConversationAsImage() {
+  const msgs = messages.value
+  if (!msgs.length) { ElMessage.info('没有可导出的消息'); return }
+  
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    
+    // Build a temporary offscreen container with the rendered messages
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:420px;padding:20px;background:#fff;font-family:-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.6;z-index:999999'
+    document.body.appendChild(wrapper)
+    
+    // Header
+    const hdr = document.createElement('div')
+    hdr.style.cssText = 'text-align:center;padding:16px 0;border-bottom:2px solid #22c55e;margin-bottom:16px'
+    hdr.innerHTML = '<div style="font-size:20px;font-weight:700;color:#16a34a">🌿 LifeWise · AI 生活助手</div>' +
+      '<div style="font-size:12px;color:#999;margin-top:4px">' + (localStorage.getItem('sceneLabel') || '生活常识') + ' · ' + new Date().toLocaleString('zh-CN') + '</div>'
+    wrapper.appendChild(hdr)
+    
+    // Messages
+    for (const msg of msgs) {
+      const div = document.createElement('div')
+      div.style.cssText = 'margin-bottom:16px;padding:12px 14px;border-radius:12px;max-width:95%'
+      
+      if (msg.role === 'user') {
+        div.style.cssText += ';background:#f0fdf4;margin-left:auto;text-align:right;border:1px solid #bbf7d0'
+        div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🙋 我</div>' +
+          '<div style="color:#1a1a1a">' + (msg.content || '(图片)') + '</div>'
+      } else if (msg.role === 'assistant' && msg.content) {
+        div.style.cssText += ';background:#fff;border:1px solid #e5e7eb;margin-right:auto'
+        // Use the rendered HTML if available, or the content directly
+        let html = msg._displayHtml || msg.content
+        // Remove action parts that shouldn't render in export
+        const t = document.createElement('div'); t.innerHTML = html
+        t.querySelectorAll('.rc-followups, .msg-actions, .food-image-loading')?.forEach(el => el.remove())
+        html = t.innerHTML
+        div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🤖 AI</div>' + html
+        // Show food image if available
+        if (msg._foodImageUrl) {
+          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /></div>'
+        }
+      }
+      wrapper.appendChild(div)
+    }
+    
+    // Footer
+    const ftr = document.createElement('div')
+    ftr.style.cssText = 'text-align:center;padding:12px 0;border-top:1px solid #e5e7eb;margin-top:8px;color:#999;font-size:12px'
+    ftr.textContent = '由 LifeWise AI 生活助手生成'
+    wrapper.appendChild(ftr)
+    
+    await nextTick()
+    
+    const canvas = await html2canvas(wrapper, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      width: wrapper.scrollWidth,
+      height: wrapper.scrollHeight
+    })
+    
+    document.body.removeChild(wrapper)
+    
+    // Download the image
+    const link = document.createElement('a')
+    link.download = 'lifewise-conversation-' + Date.now() + '.png'
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    ElMessage.success('对话图片已下载')
+  } catch (e) {
+    console.error('[exportImage] err:', e)
+    ElMessage.error('导出图片失败: ' + (e.message || '未知错误'))
+  }
+}
+
+/**
+ * 导出对话为 PDF
+ */
+async function exportConversationAsPdf() {
+  const msgs = messages.value
+  if (!msgs.length) { ElMessage.info('没有可导出的消息'); return }
+  
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    const { jsPDF } = await import('jspdf')
+    
+    // Build same offscreen container as image export
+    const wrapper = document.createElement('div')
+    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:420px;padding:20px;background:#fff;font-family:-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.6;z-index:999999'
+    document.body.appendChild(wrapper)
+    
+    // Header
+    const hdr = document.createElement('div')
+    hdr.style.cssText = 'text-align:center;padding:16px 0;border-bottom:2px solid #22c55e;margin-bottom:16px'
+    hdr.innerHTML = '<div style="font-size:20px;font-weight:700;color:#16a34a">🌿 LifeWise · AI 生活助手</div>' +
+      '<div style="font-size:12px;color:#999;margin-top:4px">' + (localStorage.getItem('sceneLabel') || '生活常识') + ' · ' + new Date().toLocaleString('zh-CN') + '</div>'
+    wrapper.appendChild(hdr)
+    
+    for (const msg of msgs) {
+      const div = document.createElement('div')
+      div.style.cssText = 'margin-bottom:16px;padding:12px 14px;border-radius:12px;max-width:95%'
+      
+      if (msg.role === 'user') {
+        div.style.cssText += ';background:#f0fdf4;margin-left:auto;text-align:right;border:1px solid #bbf7d0'
+        div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🙋 我</div>' +
+          '<div style="color:#1a1a1a">' + (msg.content || '(图片)') + '</div>'
+      } else if (msg.role === 'assistant' && msg.content) {
+        div.style.cssText += ';background:#fff;border:1px solid #e5e7eb;margin-right:auto'
+        let html = msg._displayHtml || msg.content
+        const t = document.createElement('div'); t.innerHTML = html
+        t.querySelectorAll('.rc-followups, .msg-actions, .food-image-loading')?.forEach(el => el.remove())
+        html = t.innerHTML
+        div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🤖 AI</div>' + html
+        if (msg._foodImageUrl) {
+          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /></div>'
+        }
+      }
+      wrapper.appendChild(div)
+    }
+    
+    const ftr = document.createElement('div')
+    ftr.style.cssText = 'text-align:center;padding:12px 0;border-top:1px solid #e5e7eb;margin-top:8px;color:#999;font-size:12px'
+    ftr.textContent = '由 LifeWise AI 生活助手生成'
+    wrapper.appendChild(ftr)
+    
+    await nextTick()
+    
+    const canvas = await html2canvas(wrapper, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      width: wrapper.scrollWidth,
+      height: wrapper.scrollHeight
+    })
+    
+    document.body.removeChild(wrapper)
+    
+    // Convert canvas to image and add to PDF
+    const imgData = canvas.toDataURL('image/png')
+    const imgWidth = 210 // A4 width in mm
+    const imgHeight = (canvas.height / canvas.width) * imgWidth
+    
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    let heightLeft = imgHeight
+    let position = 0
+    const pageHeight = 297 // A4 height in mm
+    
+    // If content fits in one page
+    if (imgHeight <= pageHeight) {
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+    } else {
+      // Split across multiple pages
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      while (heightLeft > 0) {
+        position -= pageHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+    }
+    
+    pdf.save('lifewise-conversation-' + Date.now() + '.pdf')
+    ElMessage.success('PDF 已下载')
+  } catch (e) {
+    console.error('[exportPdf] err:', e)
+    ElMessage.error('导出PDF失败: ' + (e.message || '未知错误'))
   }
 }
 
@@ -990,7 +1182,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 </script>
 
 <style scoped>
-.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; background: #fff; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; background: #fff; position: relative; }
 .header-title { font-size: 16px; font-weight: 600; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; text-align: center; }
 .back-btn { font-size: 14px; }
 .messages { flex: 1; overflow-y: auto; padding: 20px 16px 8px; height: calc(100vh - 130px); }
@@ -1142,9 +1334,11 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 /* 链接 */
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
+.export-menu { position: absolute; top: 38px; right: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); z-index: 9999; min-width: 130px; overflow: hidden; }
+.export-menu-item { padding: 10px 16px; cursor: pointer; font-size: 14px; color: #333; transition: background .15s; }
+.export-menu-item:hover { background: #f0fdf4; color: #16a34a; }
 </style>
 <style>
-
 /* Unscoped styles for v-html content (scoped CSS does not apply to v-html) */
 .rc-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; margin: 4px 0; }
 .rc-card-title { font-size: 16px; margin: 0 0 4px; color: #1a1a1a; }
@@ -1190,7 +1384,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-step-illustration.grad-serve { background: linear-gradient(135deg, #f0fdf4, #a7f3d0); }
 .rc-step-illustration.grad-garnish { background: linear-gradient(135deg, #ecfdf5, #6ee7b7); }
 .rc-step-illustration.grad-pour { background: linear-gradient(135deg, #eff6ff, #93c5fd); }
-
 .rc-step-illustration.grad-repair { background: linear-gradient(135deg, #ede9fe, #ddd6fe); }
 .rc-step-illustration.grad-housework { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); }
 .rc-step-illustration.grad-fashion { background: linear-gradient(135deg, #fdf2f8, #fce7f3); }
@@ -1206,7 +1399,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .rc-step-illustration.grad-cook { background: linear-gradient(135deg, #ecfdf5, #a7f3d0); }
 .rc-step .rc-note { font-size: 12px; color: #888; margin-top: 3px; }
 .rc-step .rc-warning { font-size: 12px; color: #dc2626; display: block; margin-top: 2px; }
-
 /* 成品菜图片 */
 .food-image {
   margin-top: 6px;
@@ -1221,7 +1413,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   transition: transform .2s;
 }
 .food-image img:hover { transform: scale(1.01); }
-
 /* 成品图加载中 */
 .food-image-loading {
   display: flex;
@@ -1246,7 +1437,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   to { transform: rotate(360deg); }
 }
 .fil-text { font-size: 13px; color: #16a34a; font-weight: 500; }
-
 /* 上传进度条 */
 .upload-progress-bar {
   height: 4px;
@@ -1258,7 +1448,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 }
 .upload-progress-bar .upb-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a); border-radius: 2px; transition: width .3s ease; }
 .upload-progress-bar .upb-text { position: absolute; right: 0; top: -18px; font-size: 11px; color: #22c55e; font-weight: 600; }
-
 /* 麦克风接听动画 */
 .mic-listening.el-button {
   animation: mic-pulse 1.2s ease-in-out infinite;
@@ -1300,11 +1489,5 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
-
-
-
-
-
-
 
 

@@ -135,6 +135,10 @@
       </div>
     </div>
     <div class="input-area">
+      <div class="cost-hint" :class="costHint.type">
+        <span class="cost-hint-main">{{ costHint.text }}</span>
+        <span class="cost-hint-sub">{{ costHint.sub }}</span>
+      </div>
       <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :class="{ 'mic-listening': isListening }" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
@@ -166,6 +170,8 @@ const currentTyping = ref(false)
 const previewImg = ref(null)
 const uploadProgress = ref(0)
 const currentConvId = ref(null)
+const currentAiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
+const foodImageEnabled = ref(localStorage.getItem('setting_foodImage') !== 'off')
 function previewImage(url) { previewImg.value = url }
 function onImgError(e) {
   e.target.style.display = "none"
@@ -218,15 +224,55 @@ const isWritingScene = computed(() => {
 })
 
 const currentLabel = computed(() => localStorage.getItem('sceneLabel') || '生活常识')
+const costHint = computed(() => {
+  if (pendingFile.value) {
+    return {
+      type: 'warn',
+      text: '图片识别：可能调用视觉模型',
+      sub: '图片会跳过常识库缓存'
+    }
+  }
+  if (currentAiProvider.value === 'ollama') {
+    return {
+      type: 'free',
+      text: '当前模型：Ollama 本地',
+      sub: '本地模型，不扣平台费用'
+    }
+  }
+  if (currentAiProvider.value === 'deepseek') {
+    return {
+      type: 'danger',
+      text: '当前模型：DeepSeek',
+      sub: '服务端默认拦截；如开启会产生 DeepSeek 费用'
+    }
+  }
+  return {
+    type: 'normal',
+    text: '当前模型：千问 Qwen',
+    sub: foodImageEnabled.value ? '聊天会消耗千问；菜品图已开启时可能额外消耗' : '聊天会消耗千问；命中常识库则不扣费'
+  }
+})
 
 onMounted(async () => {
 
   msgBox.value?.addEventListener('click', handleFollowUpClick)
+  refreshLocalSettings()
+  window.addEventListener('focus', refreshLocalSettings)
+  window.addEventListener('storage', refreshLocalSettings)
   await nextTick()
   inputRef.value?.focus()
   if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
 })
-onUnmounted(() => msgBox.value?.removeEventListener('click', handleFollowUpClick))
+onUnmounted(() => {
+  msgBox.value?.removeEventListener('click', handleFollowUpClick)
+  window.removeEventListener('focus', refreshLocalSettings)
+  window.removeEventListener('storage', refreshLocalSettings)
+})
+
+function refreshLocalSettings() {
+  currentAiProvider.value = localStorage.getItem('setting_aiProvider') || 'qwen'
+  foodImageEnabled.value = localStorage.getItem('setting_foodImage') !== 'off'
+}
 
 async function loadConversation(id) {
   loading.value = true
@@ -1237,7 +1283,18 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 @keyframes blink { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
 .cursor { animation: cursorBlink 0.8s infinite; color: #22c55e; font-weight: bold; }
 @keyframes cursorBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
-.input-area { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
+.input-area { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
+.cost-hint { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 10px; font-size: 11px; line-height: 1.3; border: 1px solid #e5e7eb; background: #f9fafb; color: #4b5563; }
+.cost-hint-main { font-weight: 700; white-space: nowrap; }
+.cost-hint-sub { color: #6b7280; text-align: right; }
+.cost-hint.normal { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+.cost-hint.normal .cost-hint-sub { color: #2563eb; }
+.cost-hint.free { background: #ecfdf5; border-color: #bbf7d0; color: #15803d; }
+.cost-hint.free .cost-hint-sub { color: #16a34a; }
+.cost-hint.warn { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.cost-hint.warn .cost-hint-sub { color: #ea580c; }
+.cost-hint.danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.cost-hint.danger .cost-hint-sub { color: #dc2626; }
 .upload-btn { flex-shrink: 0; }
 .image-preview-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
 .ipb-preview { position: relative; flex-shrink: 0; }

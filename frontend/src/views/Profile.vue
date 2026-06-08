@@ -78,6 +78,25 @@
                 <div v-for="w in aiStatus.warnings" :key="w">⚠️ {{ w }}</div>
               </div>
               <div class="cost-guard">{{ aiStatus.costGuard }}</div>
+              <div class="audit-box">
+                <div class="audit-head">
+                  <span>最近 AI 调用记录</span>
+                  <small>只展示状态，不展示对话内容</small>
+                </div>
+                <div v-if="recentCalls.length" class="audit-list">
+                  <div v-for="(item, idx) in recentCalls" :key="idx" class="audit-item">
+                    <div class="audit-main">
+                      <span class="audit-provider">{{ providerName(item.provider) }}</span>
+                      <span class="audit-status" :class="item.status">{{ statusName(item.status) }}</span>
+                      <span class="audit-time">{{ formatAuditTime(item.time) }}</span>
+                    </div>
+                    <div class="audit-detail">
+                      {{ item.model || '-' }} · {{ item.detail || '-' }}
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="audit-empty">暂无 AI 调用记录</div>
+              </div>
             </div>
             <div v-else class="ai-empty">点“刷新”检查当前服务器配置</div>
           </div>
@@ -143,6 +162,7 @@ const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off
 const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
+const recentCalls = computed(() => aiStatus.value?.recentCalls || [])
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
@@ -157,6 +177,23 @@ function saveAiProvider(val) {
 
 function providerConfigured(key) {
   return !!aiStatus.value?.[key]?.configured
+}
+
+function providerName(provider) {
+  const names = { qwen: '千问', deepseek: 'DeepSeek', ollama: 'Ollama', cache: '常识库', vision: '视觉' }
+  return names[provider] || provider || '-'
+}
+
+function statusName(status) {
+  const names = { hit: '命中缓存', calling: '已发起', blocked: '已拦截' }
+  return names[status] || status || '-'
+}
+
+function formatAuditTime(time) {
+  if (!time) return ''
+  const d = new Date(time)
+  if (Number.isNaN(d.getTime())) return String(time).slice(11, 19)
+  return d.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
 async function loadAiStatus() {
@@ -237,6 +274,21 @@ function handleLogout() {
 .provider-card small { color: #9ca3af; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .warn-box { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: #fff7ed; color: #c2410c; font-size: 11px; line-height: 1.5; }
 .cost-guard { margin-top: 10px; color: #6b7280; font-size: 11px; line-height: 1.5; }
+.audit-box { margin-top: 12px; padding: 10px; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
+.audit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.audit-head span { font-size: 12px; font-weight: 700; color: #111827; }
+.audit-head small { font-size: 10px; color: #9ca3af; white-space: nowrap; }
+.audit-list { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; }
+.audit-item { padding: 8px; border-radius: 10px; background: #f9fafb; }
+.audit-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.audit-provider { font-size: 12px; font-weight: 700; color: #111827; }
+.audit-status { padding: 2px 6px; border-radius: 999px; font-size: 10px; background: #e5e7eb; color: #4b5563; }
+.audit-status.hit { background: #dcfce7; color: #15803d; }
+.audit-status.calling { background: #dbeafe; color: #1d4ed8; }
+.audit-status.blocked { background: #fee2e2; color: #b91c1c; }
+.audit-time { margin-left: auto; color: #9ca3af; font-size: 10px; }
+.audit-detail { margin-top: 4px; color: #6b7280; font-size: 10px; line-height: 1.4; word-break: break-word; }
+.audit-empty { color: #9ca3af; font-size: 11px; padding: 4px 0; }
 .ai-empty { color: #999; font-size: 12px; padding: 10px 0; }
 
 .footer-info { text-align: center; margin-top: 48px; }

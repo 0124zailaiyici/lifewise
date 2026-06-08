@@ -1,6 +1,7 @@
 package com.lifewise.controller;
 
 import com.lifewise.common.ApiResponse;
+import com.lifewise.service.AiCallAuditService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai-config")
 public class AiConfigController {
+
+    private final AiCallAuditService aiCallAuditService;
+
+    public AiConfigController(AiCallAuditService aiCallAuditService) {
+        this.aiCallAuditService = aiCallAuditService;
+    }
 
     @Value("${ai.api-url:}")
     private String deepseekApiUrl;
@@ -72,6 +79,7 @@ public class AiConfigController {
         data.put("vision", provider("图片识别", visionEnabled, hasText(visionApiKey), visionModel, visionApiUrl));
         data.put("foodImage", provider("菜品生图", false, hasText(imageApiKey), "gpt-image-2", imageApiUrl));
         data.put("warnings", warnings());
+        data.put("recentCalls", aiCallAuditService.recent());
         return ApiResponse.success(data);
     }
 

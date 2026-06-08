@@ -3,6 +3,7 @@ package com.lifewise.service.impl;
 import com.lifewise.dto.ChatRequest;
 import com.lifewise.entity.Message;
 import com.lifewise.repository.MessageRepository;
+import com.lifewise.service.AiCallAuditService;
 import com.lifewise.service.AiService;
 import com.lifewise.service.KnowledgeBaseService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +33,7 @@ public class AiServiceImpl implements AiService {
 
     private final KnowledgeBaseService knowledgeBaseService;
     private final MessageRepository messageRepository;
+    private final AiCallAuditService aiCallAuditService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -104,13 +106,14 @@ public class AiServiceImpl implements AiService {
             String cached = knowledgeBaseService.findAnswer(message, scene, userId);
             if (cached != null) {
                 log.info("cache hit: {}", message);
+                aiCallAuditService.record(userId, "cache", "knowledge-base", scene, "hit", "Knowledge base cache hit; no external AI call");
                 return cached;
             }
         } else {
             log.debug("skip cache (follow-up or image): {}", message);
         }
 
-        String answer = callAI(message, scene, conversationId, imageUrl, provider);
+        String answer = callAI(message, scene, conversationId, imageUrl, provider, userId);
 
         // Only cache first questions (no history), skip caching follow-ups
         if (conversationId == null && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
@@ -121,25 +124,28 @@ public class AiServiceImpl implements AiService {
         return answer;
     }
 
-    private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider) {
+    private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId) {
         if ("deepseek".equals(provider) && !deepseekEnabled) {
             log.warn("DeepSeek is disabled by server cost guard");
-            return disabledProviderResponse("DeepSeek ???????????????????? (Qwen) ? Ollama?");
+            aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek disabled by server cost guard; no external API call");
+            return disabledProviderResponse("DeepSeek is disabled by server cost guard. Use Qwen or Ollama.");
         }
         if ("deepseek".equals(provider) && (apiKey == null || apiKey.isEmpty())) {
             log.warn("DeepSeek API key not configured");
-            return disabledProviderResponse("DeepSeek ??? API Key??????? (Qwen) ? Ollama?");
+            aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek API key missing; no external API call");
+            return disabledProviderResponse("DeepSeek API key is missing. Use Qwen or Ollama.");
         }
         if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
             log.warn("DashScope API key not configured for Qwen, please check server config");
-            return "{\"answer\":\"⚙️ 千问 (Qwen) 未配置 API Key，请在服务器配置 ai.dashscope-api-key 或切换到 DeepSeek/Ollama。\",\"tips\":[\"前往 我的 → AI 模型 切换\"]}";
+            aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "blocked", "Qwen API key missing; no external API call");
+            return "{\"answer\":\"Qwen API key is not configured. Please set ai.dashscope-api-key on the server, or switch to Ollama.\",\"tips\":[\"Go to Profile -> AI Model to switch provider\"]}";
         }
 
         // 最多重试 2 次（共 3 次尝试）
         Exception lastEx = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
-                return callLLMApi(message, scene, conversationId, imageUrl, provider);
+                return callLLMApi(message, scene, conversationId, imageUrl, provider, userId);
             } catch (Exception e) {
                 lastEx = e;
                 log.warn("AI call failed (attempt {}/3): {}", attempt, e.getMessage());
@@ -153,7 +159,7 @@ public class AiServiceImpl implements AiService {
     }
 
     @SuppressWarnings("unchecked")
-    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl, String provider) throws Exception {
+    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId) throws Exception {
         List<Map<String, Object>> messages = new ArrayList<>();
         boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
         boolean hasHistory = conversationId != null &&
@@ -217,15 +223,19 @@ public class AiServiceImpl implements AiService {
 
         // 根据 provider 路由到不同的 API
         if ("ollama".equals(provider)) {
+            aiCallAuditService.record(userId, "ollama", ollamaModel, scene, "calling", "Calling Ollama local API");
             return callOllama(messages, scene);
         } else if ("qwen".equals(provider)) {
+            aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "Calling DashScope Qwen");
             return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
         } else {
             // deepseek - 检查是否需要视觉 API
             boolean useVision = hasImage && visionEnabled && visionApiUrl != null && !visionApiUrl.isEmpty();
             if (useVision) {
+                aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "Calling vision API");
                 return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
             }
+            aiCallAuditService.record(userId, "deepseek", model, scene, "calling", "Calling DeepSeek");
             return callOpenAICompatible(apiUrl, apiKey, model, messages, false);
         }
     }
@@ -530,7 +540,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
     }
 
     private String disabledProviderResponse(String reason) {
-        return "{\"answer\":\"?? " + reason.replace("\"", "\\\"") + "\",\"tips\":[\"?? ?? ? AI ?? ????? (Qwen)\",\"????? DeepSeek?????????? ai.deepseek-enabled=true\"]}";
+        return "{\"answer\":\"" + reason.replace("\"", "\\\"") + "\",\"tips\":[\"Go to Profile -> AI Model and switch to Qwen or Ollama\",\"To use DeepSeek, explicitly set ai.deepseek-enabled=true on the server\"]}";
     }
 
     private String mockResponse(String message, String scene) {

@@ -268,6 +268,15 @@ onMounted(async () => {
   await nextTick()
   inputRef.value?.focus()
   if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
+  else {
+    const pendingPrompt = localStorage.getItem('pendingPrompt')
+    if (pendingPrompt) {
+      inputText.value = pendingPrompt
+      localStorage.removeItem('pendingPrompt')
+      await nextTick()
+      inputRef.value?.focus()
+    }
+  }
 })
 onUnmounted(() => {
   msgBox.value?.removeEventListener('click', handleFollowUpClick)

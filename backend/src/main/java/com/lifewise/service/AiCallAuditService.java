@@ -4,6 +4,7 @@ import com.lifewise.entity.AiCallAudit;
 import com.lifewise.repository.AiCallAuditRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,20 @@ public class AiCallAuditService {
         aiCallAuditRepository.save(audit);
     }
 
+    public List<Map<String, Object>> recent(Long userId) {
+        return aiCallAuditRepository.findTop30ByUserIdOrderByCreatedAtDesc(userId != null ? userId : 0).stream()
+            .map(audit -> Map.<String, Object>of(
+                "time", audit.getCreatedAt() != null ? audit.getCreatedAt().toString() : "",
+                "userId", audit.getUserId() != null ? audit.getUserId() : 0,
+                "provider", safe(audit.getProvider()),
+                "model", safe(audit.getModel()),
+                "scene", safe(audit.getScene()),
+                "status", safe(audit.getStatus()),
+                "detail", safe(audit.getDetail())
+            ))
+            .collect(Collectors.toList());
+    }
+
     public List<Map<String, Object>> recent() {
         return aiCallAuditRepository.findTop30ByOrderByCreatedAtDesc().stream()
             .map(audit -> Map.<String, Object>of(
@@ -38,6 +53,11 @@ public class AiCallAuditService {
                 "detail", safe(audit.getDetail())
             ))
             .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void clear(Long userId) {
+        aiCallAuditRepository.deleteByUserId(userId != null ? userId : 0);
     }
 
     private String safe(String value) {

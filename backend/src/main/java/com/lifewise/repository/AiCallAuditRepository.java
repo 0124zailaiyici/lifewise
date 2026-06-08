@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface AiCallAuditRepository extends JpaRepository<AiCallAudit, Long> {
     List<AiCallAudit> findTop30ByOrderByCreatedAtDesc();
+    List<AiCallAudit> findTop30ByUserIdOrderByCreatedAtDesc(Long userId);
+    void deleteByUserId(Long userId);
 }

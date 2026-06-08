@@ -141,9 +141,9 @@
         <span class="ipb-remove" @click="pendingImage = null; pendingFile = null">✕</span>
       </div>
       <div class="ipb-actions">
-        <span class="ipb-chip" @click="inputText = '请分析这张图片'; tempScene = 'cooking'; send()">🔍 分析图片</span>
-        <span class="ipb-chip" @click="inputText = '请识别这张图片的内容'; tempScene = 'other'; send()">👀 识别内容</span>
-        <span class="ipb-chip" @click="inputText = '请描述这张图片'; tempScene = 'writing'; send()">📝 描述图片</span>
+        <span class="ipb-chip" @click="fillImagePrompt('请分析这张图片', 'cooking')">🔍 分析图片</span>
+        <span class="ipb-chip" @click="fillImagePrompt('请识别这张图片的内容', 'other')">👀 识别内容</span>
+        <span class="ipb-chip" @click="fillImagePrompt('请描述这张图片', 'writing')">📝 描述图片</span>
       </div>
     </div>
     <div class="input-area">
@@ -888,6 +888,11 @@ async function fillPrompt(prompt) {
   promptPrefilled.value = true
   await nextTick()
   inputRef.value?.focus()
+}
+
+async function fillImagePrompt(prompt, scene) {
+  tempScene.value = scene
+  await fillPrompt(prompt)
 }
 
 function handleFollowUpClick(e) {

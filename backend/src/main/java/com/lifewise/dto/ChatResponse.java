@@ -10,5 +10,8 @@ public class ChatResponse {
     private String role;
     private String content;
     private String imageUrl;
+    private String source;
+    private Boolean externalCall;
+    private String sourceLabel;
     private LocalDateTime createdAt;
 }

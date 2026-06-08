@@ -35,7 +35,8 @@ public class ChatController {
         Long convId = request.getConversationId();
 
         // Call AI first with the full ChatRequest (includes provider/model)
-        String aiResponse = aiService.chat(request, userId);
+        AiReply aiReply = aiService.chatWithMetadata(request, userId);
+        String aiResponse = aiReply.getContent();
 
         // Create conversation if new (after AI call, so AiServiceImpl sees null convId for cache)
         if (convId == null) {
@@ -67,6 +68,9 @@ public class ChatController {
         resp.setConversationId(convId);
         resp.setRole(aiMsg.getRole());
         resp.setContent(aiMsg.getContent());
+        resp.setSource(aiReply.getSource());
+        resp.setExternalCall(aiReply.isExternalCall());
+        resp.setSourceLabel(aiReply.getSourceLabel());
         resp.setCreatedAt(aiMsg.getCreatedAt());
 
         return ApiResponse.success(resp);

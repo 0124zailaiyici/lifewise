@@ -46,6 +46,12 @@
             </div>
           </div>
         </div>
+        <div v-if="msg.role === 'assistant' && !msg._typing && msg._source === 'knowledge-base'" class="source-badge free">
+          ✅ 来自常识库，未调用 AI
+        </div>
+        <div v-else-if="msg.role === 'assistant' && !msg._typing && msg._externalCall === false" class="source-badge free">
+          ✅ {{ msg._sourceLabel || '未调用外部 AI' }}
+        </div>
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
           <el-button text size="small" @click="copyMsg(i)">📋 复制</el-button>
           <el-button text size="small" @click="shareMsg(i)">📤 分享</el-button>
@@ -296,6 +302,19 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
   const msg = inputText.value.trim()
   if (!msg && !pendingFile.value) return
 
+  refreshLocalSettings()
+  if (currentAiProvider.value === 'deepseek') {
+    const allowUntil = Number(localStorage.getItem('allow_deepseek_until') || 0)
+    if (allowUntil > Date.now()) {
+      // User has explicitly confirmed DeepSeek in Profile recently.
+    } else {
+    localStorage.setItem('setting_aiProvider', 'qwen')
+    currentAiProvider.value = 'qwen'
+    ElMessage.warning('DeepSeek 已被前端拦截并切回千问，避免误扣费')
+    return
+    }
+  }
+
   const scene = tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
   let convId = currentConvId.value
   let imageUrl = ''
@@ -324,6 +343,9 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
     const _ct = res.data?.content||""; const _ctStr = typeof _ct === "string" ? _ct : JSON.stringify(_ct); console.log("[IMG] chat res keys:", Object.keys(res||{}), "data_keys:", Object.keys(res.data||{}), "content_len:", _ctStr.length, "typeof:", typeof _ct, "first:", _ctStr.charCodeAt(0), _ctStr.charCodeAt(1), "json_parse_ok:", (()=>{try{JSON.parse(_ctStr);return true}catch(e){console.warn("[JSON] parse error:",e.message);return false}})()); const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
     if (m) {
       m._typing = false; m.content = fullContent
+      m._source = res.data?.source || ''
+      m._externalCall = res.data?.externalCall
+      m._sourceLabel = res.data?.sourceLabel || ''
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
       // Auto-generate food image for recipe responses (async polling + localStorage cache)
@@ -1274,6 +1296,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .msg-user { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .msg-user .bubble { display: inline-block; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 12px 18px; border-radius: 18px 18px 4px 18px; font-size: 14px; max-width: 85%; text-align: left; line-height: 1.6; word-break: break-word; box-shadow: 0 2px 8px rgba(34,197,94,.15); }
 .msg-assistant .bubble { display: inline-block; background: #fff; border: 1px solid #eee; color: #333; padding: 14px 18px; border-radius: 18px 18px 18px 4px; font-size: 14px; max-width: 98%; text-align: left; line-height: 1.7; word-break: break-word; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.source-badge { display: inline-flex; align-items: center; gap: 4px; margin: 6px 0 0 4px; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.source-badge.free { background: #ecfdf5; color: #15803d; border: 1px solid #bbf7d0; }
 .msg-actions { display: flex; gap: 4px; margin-top: 6px; padding-left: 4px; opacity: .6; }
 .msg-actions:hover { opacity: 1; }
 .thinking { color: #999 !important; font-size: 24px !important; letter-spacing: 4px; }

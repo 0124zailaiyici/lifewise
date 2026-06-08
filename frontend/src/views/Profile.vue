@@ -168,6 +168,7 @@ const user = computed(() => userStore.user)
 // ===== 设置状态 =====
 const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
 const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
+const previousAiProvider = ref(setting_aiProvider.value)
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
 const auditFilter = ref('all')
@@ -191,8 +192,32 @@ function saveFoodImageSetting(val) {
   ElMessage.success(val ? '菜品图已开启' : '菜品图已关闭')
 }
 
-function saveAiProvider(val) {
+async function saveAiProvider(val) {
+  if (val === 'deepseek') {
+    if (!aiStatus.value?.deepseekEnabled) {
+      setting_aiProvider.value = previousAiProvider.value || 'qwen'
+      localStorage.setItem('setting_aiProvider', setting_aiProvider.value)
+      ElMessage.warning('DeepSeek 已被服务端禁用，已保持为当前模型，避免误扣费')
+      return
+    }
+    try {
+      await ElMessageBox.confirm(
+        'DeepSeek 会产生 DeepSeek 费用，且不会命中千问缓存。确定要临时切换吗？',
+        '确认使用 DeepSeek',
+        { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch (e) {
+      setting_aiProvider.value = previousAiProvider.value || 'qwen'
+      localStorage.setItem('setting_aiProvider', setting_aiProvider.value)
+      ElMessage.info('已取消切换 DeepSeek')
+      return
+    }
+    localStorage.setItem('allow_deepseek_until', String(Date.now() + 30 * 60 * 1000))
+  } else {
+    localStorage.removeItem('allow_deepseek_until')
+  }
   localStorage.setItem('setting_aiProvider', val)
+  previousAiProvider.value = val
   const names = { qwen: '千问 (Qwen)', deepseek: 'DeepSeek', ollama: 'Ollama 本地' }
   ElMessage.success('AI 模型已切换为 ' + (names[val] || val))
 }

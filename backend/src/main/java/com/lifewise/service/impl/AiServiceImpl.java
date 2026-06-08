@@ -1,6 +1,7 @@
 package com.lifewise.service.impl;
 
 import com.lifewise.dto.ChatRequest;
+import com.lifewise.dto.AiReply;
 import com.lifewise.entity.Message;
 import com.lifewise.repository.MessageRepository;
 import com.lifewise.service.AiCallAuditService;
@@ -95,6 +96,11 @@ public class AiServiceImpl implements AiService {
 
     @Override
     public String chat(ChatRequest request, Long userId) {
+        return chatWithMetadata(request, userId).getContent();
+    }
+
+    @Override
+    public AiReply chatWithMetadata(ChatRequest request, Long userId) {
         String message = request.getMessage();
         String scene = request.getScene();
         Long conversationId = request.getConversationId();
@@ -107,7 +113,7 @@ public class AiServiceImpl implements AiService {
             if (cached != null) {
                 log.info("cache hit: {}", message);
                 aiCallAuditService.record(userId, "cache", "knowledge-base", scene, "hit", "Knowledge base cache hit; no external AI call");
-                return cached;
+                return new AiReply(cached, "knowledge-base", false, "来自常识库，未调用 AI");
             }
         } else {
             log.debug("skip cache (follow-up or image): {}", message);
@@ -121,7 +127,26 @@ public class AiServiceImpl implements AiService {
         } else {
             log.debug("Skipping cache for mock/error response");
         }
-        return answer;
+        boolean externalCall = isExternalProviderCall(provider, answer);
+        return new AiReply(answer, provider, externalCall, sourceLabel(provider, externalCall));
+    }
+
+    private boolean isExternalProviderCall(String provider, String answer) {
+        if ("ollama".equals(provider)) return false;
+        if (answer == null) return false;
+        String lower = answer.toLowerCase();
+        return !lower.contains("api key is not configured")
+            && !lower.contains("api key is missing")
+            && !lower.contains("disabled by server cost guard")
+            && !lower.contains("mock response");
+    }
+
+    private String sourceLabel(String provider, boolean externalCall) {
+        if ("ollama".equals(provider)) return "来自 Ollama 本地模型，未调用外部 AI";
+        if (!externalCall) return "未调用外部 AI";
+        if ("qwen".equals(provider)) return "来自千问 Qwen";
+        if ("deepseek".equals(provider)) return "来自 DeepSeek";
+        return "来自 AI";
     }
 
     private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId) {

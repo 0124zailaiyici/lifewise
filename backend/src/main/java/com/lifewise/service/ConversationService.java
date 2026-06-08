@@ -10,5 +10,6 @@ public interface ConversationService {
     List<ConversationResponse> getUserConversationsByScene(Long userId, String scene);
     void deleteConversation(Long conversationId, Long userId);
     ConversationResponse renameConversation(Long conversationId, Long userId, String newTitle);
+    int repairBadTitles(Long userId);
 }
 

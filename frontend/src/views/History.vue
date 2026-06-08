@@ -1,40 +1,52 @@
 ﻿<template>
   <div class="page-container">
     <div class="page-header">
-      <h3>📰 历史记录</h3>
-      <el-button v-if="!batchMode" text size="small" @click="batchMode = true" style="color:#666">
-        批量删除
-      </el-button>
+      <h3>&#x1f4f0; &#x5386;&#x53f2;&#x8bb0;&#x5f55;</h3>
+      <div v-if="!batchMode" class="header-actions">
+        <el-button text size="small" @click="batchMode = true" style="color:#666">
+          &#x6279;&#x91cf;&#x5220;&#x9664;
+        </el-button>
+        <div class="more-wrap">
+          <button class="more-btn" @click="showToolMenu = !showToolMenu">&#x22ef;</button>
+          <Transition name="fab-drop">
+            <div v-if="showToolMenu" class="tool-menu" @click.stop>
+              <div class="tool-menu-item" @click="repairTitles(); showToolMenu = false">
+                <span>&#x1f9f9;</span><span>&#x4fee;&#x590d;&#x65e7;&#x6807;&#x9898;</span>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </div>
       <template v-else>
-        <el-button text size="small" @click="batchMode = false" style="color:#666">取消</el-button>
+        <el-button text size="small" @click="batchMode = false" style="color:#666">&#x53d6;&#x6d88;</el-button>
         <el-button text size="small" type="danger" @click="batchDelete" :disabled="selectedIds.size === 0">
-          删除 ({{ selectedIds.size }})
+          &#x5220;&#x9664; ({{ selectedIds.size }})
         </el-button>
       </template>
     </div>
 
-    <!-- 悬浮场景筛选 -->
-    <div class="fab-wrap">
-      <div class="fab-filter" @click="showScenePanel = !showScenePanel">
-        <span class="fab-filter-icon">🏷️</span>
-        <span v-if="sceneFilter" class="fab-filter-active">{{ sceneIconLabel(sceneFilter) }}</span>
-        <span v-else class="fab-filter-placeholder">场景</span>
-      </div>
-      <Transition name="fab-drop">
-        <div v-if="showScenePanel" class="fab-dropdown" @click.stop>
-          <div v-for="s in [{key:'',icon:'📋',label:'全部'}, ...scenes]" :key="s.key"
-               class="fab-drop-item" :class="{ active: sceneFilter === s.key }"
-               @click="sceneFilter = s.key; showScenePanel = false">
-            <span class="fd-icon">{{ s.icon }}</span>
-            <span class="fd-label">{{ s.label }}</span>
-          </div>
-        </div>
-      </Transition>
-    </div>
-
     <div class="search-bar">
-      <el-input v-model="keyword" placeholder="搜索历史对话..." size="default" clearable
-                :prefix-icon="Search" @input="onSearch" />
+      <div class="search-row">
+        <el-input v-model="keyword" placeholder="&#x641c;&#x7d22;&#x5386;&#x53f2;&#x5bf9;&#x8bdd;..." size="default" clearable
+                  :prefix-icon="Search" @input="onSearch" />
+        <div class="fab-wrap inline-filter scene-filter-inline">
+          <div class="fab-filter" @click="showScenePanel = !showScenePanel">
+            <span class="fab-filter-icon">&#x1f3f7;&#xfe0f;</span>
+            <span v-if="sceneFilter" class="fab-filter-active">{{ sceneIconLabel(sceneFilter) }}</span>
+            <span v-else class="fab-filter-placeholder">&#x573a;&#x666f;</span>
+          </div>
+          <Transition name="fab-drop">
+            <div v-if="showScenePanel" class="fab-dropdown" @click.stop>
+              <div v-for="s in [{key:'',icon:'&#x1f4cb;',label:'&#x5168;&#x90e8;'}, ...scenes]" :key="s.key"
+                   class="fab-drop-item" :class="{ active: sceneFilter === s.key }"
+                   @click="sceneFilter = s.key; showScenePanel = false">
+                <span class="fd-icon">{{ s.icon }}</span>
+                <span class="fd-label">{{ s.label }}</span>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </div>
     </div>
 
     <div class="content">
@@ -80,7 +92,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getConversations, deleteConversation, renameConversation } from '../api'
+import { getConversations, deleteConversation, renameConversation, repairConversationTitles } from '../api'
 import { HomeFilled, Timer, Star, User, Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -90,7 +102,9 @@ const keyword = ref('')
 const sceneFilter = ref('')
 const batchMode = ref(false)
 const showScenePanel = ref(false)
+const showToolMenu = ref(false)
 const selectedIds = ref(new Set())
+const repairing = ref(false)
 
 const scenes = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
@@ -103,20 +117,23 @@ const scenes = [
   { key: 'writing', icon: '✍️', label: '写作' },
 ]
 
-onMounted(async () => {
+onMounted(loadConversations)
+
+async function loadConversations() {
+  loading.value = true
   try {
     const res = await getConversations()
     const list = res.data || []
     const map = {}
     list.forEach(conv => {
-      const date = conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('zh-CN') : '其他'
+      const date = conv.createdAt ? new Date(conv.createdAt).toLocaleDateString('zh-CN') : '\u5176\u4ed6'
       if (!map[date]) map[date] = { date, items: [] }
       map[date].items.push(conv)
     })
     groups.value = Object.values(map)
   } catch (e) { console.error(e) }
   finally { loading.value = false }
-})
+}
 
 const filteredGroups = computed(() => {
   let result = groups.value
@@ -160,6 +177,23 @@ function toggleSelect(id) {
   if (s.has(id)) s.delete(id)
   else s.add(id)
   selectedIds.value = s
+}
+
+async function repairTitles() {
+  if (repairing.value) return
+  repairing.value = true
+  try {
+    const res = await repairConversationTitles()
+    const count = res.data?.repaired || 0
+    ElMessage.success(count > 0 ? `\u5df2\u4fee\u590d ${count} \u4e2a\u65e7\u6807\u9898` : '\u6ca1\u6709\u9700\u8981\u4fee\u590d\u7684\u65e7\u6807\u9898')
+    await loadConversations()
+  } catch (e) {
+    console.error(e)
+    const msg = e?.response?.data?.message || e?.message || '\u4fee\u590d\u5931\u8d25'
+    ElMessage.error(msg)
+  } finally {
+    repairing.value = false
+  }
 }
 
 async function batchDelete() {
@@ -242,7 +276,27 @@ function formatTime(t) {
 .fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-4px) scale(.96); }
 
 .search-bar { padding: 0 20px 12px; }
+.search-row { display: flex; align-items: center; gap: 8px; }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.vertical-actions { flex-direction: column; align-items: stretch; gap: 6px; }
+.search-row .el-input { flex: 1; min-width: 0; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 20px; }
+.repair-chip {
+  flex-shrink: 0;
+  height: 32px;
+  border-radius: 16px;
+  color: #16a34a;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  padding: 0 10px;
+  min-width: 104px;
+  justify-content: center;
+}
+.repair-chip:hover { background: #dcfce7; border-color: #86efac; color: #15803d; }
+@media (max-width: 380px) {
+  .search-row { align-items: stretch; flex-direction: column; }
+  .repair-chip { width: 100%; justify-content: center; }
+}
 
 .content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
 .group { margin-bottom: 24px; }
@@ -297,4 +351,25 @@ function formatTime(t) {
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
 .tab.active { color: #22c55e; }
 .tab .el-icon { font-size: 20px; }
+
+
+/* ???????????????????? */
+.header-actions { display:flex; align-items:center; gap:8px; position:relative; }
+.more-wrap { position:relative; }
+.more-btn { width:32px; height:32px; border-radius:50%; border:1px solid #dcfce7; background:#f0fdf4; color:#16a34a; display:grid; place-items:center; font-size:18px; line-height:1; cursor:pointer; }
+.more-btn:active { transform:scale(.94); }
+.tool-menu { position:absolute; right:0; top:calc(100% + 8px); width:150px; background:rgba(255,255,255,.98); border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.12); border-radius:16px; padding:8px; z-index:120; }
+.tool-menu-item { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; font-size:13px; color:#0f766e; cursor:pointer; }
+.tool-menu-item:hover { background:#f0fdf4; color:#16a34a; }
+.search-row { display:flex; align-items:center; gap:8px; }
+.search-row .el-input { flex:1; min-width:0; }
+.scene-filter-inline { position:relative !important; right:auto !important; top:auto !important; z-index:40; flex-shrink:0; }
+.scene-filter-inline .fab-filter { width:auto !important; min-width:78px !important; height:36px; box-sizing:border-box; justify-content:center; padding:0 12px; }
+.scene-filter-inline .fab-dropdown { right:0; top:calc(100% + 6px); }
+@media (max-width:380px) {
+  .search-row { flex-wrap:wrap; }
+  .scene-filter-inline { margin-left:auto; }
+}
+
 </style>
+

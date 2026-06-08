@@ -19,14 +19,14 @@ jobs:
           java -version
           mvn --version
           cd backend
-          mvn package -Dmaven.test.skip=true --no-transfer-progress -e 2>&1 | tail -50
-          cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar || echo "Backend build FAILED but continuing"
+          mvn package -Dmaven.test.skip=true --no-transfer-progress
+          cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar
       - name: Upload Backend JAR
         uses: actions/upload-artifact@v4
         with:
           name: lifewise-backend
           path: lifewise-backend.jar
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   frontend:
     runs-on: ubuntu-latest
@@ -90,7 +90,7 @@ jobs:
         with:
           name: lifewise-deploy
           path: lifewise-full-deploy.zip
-          if-no-files-found: ignore
+          if-no-files-found: error
 
 
 

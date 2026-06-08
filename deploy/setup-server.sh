@@ -31,7 +31,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8082;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -52,5 +52,5 @@ echo ""
 echo "=== 初始化完成 ==="
 echo "请将 frontend/dist 文件放入 /opt/lifewise/frontend/"
 echo "将 lifewise-backend.jar 放入 /opt/lifewise/"
-echo "后端启动: java -jar /opt/lifewise/lifewise-backend.jar --spring.profiles.active=cloud"
+echo "Backend start: cd /opt/lifewise && bash start.sh"
 echo "访问地址: http://SERVER_IP:8081"

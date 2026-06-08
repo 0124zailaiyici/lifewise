@@ -89,6 +89,12 @@ public class ChatController {
         return ApiResponse.success(null);
     }
 
+    @PostMapping("/conversations/repair-titles")
+    public ApiResponse<?> repairConversationTitles(@RequestAttribute Long userId) {
+        int count = conversationService.repairBadTitles(userId);
+        return ApiResponse.success(Map.of("repaired", count));
+    }
+
     @GetMapping("/conversations")
     public ApiResponse<?> getConversations(@RequestAttribute Long userId,
                                             @RequestParam(required = false) String scene) {

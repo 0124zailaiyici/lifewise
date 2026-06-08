@@ -96,6 +96,10 @@ export function deleteConversation(id) {
   return api.delete('/chat/conversations/' + id)
 }
 
+export function repairConversationTitles() {
+  return api.post('/chat/conversations/repair-titles')
+}
+
 export function searchKnowledge(keyword, scene) {
   const params = {}
   if (keyword) params.keyword = keyword

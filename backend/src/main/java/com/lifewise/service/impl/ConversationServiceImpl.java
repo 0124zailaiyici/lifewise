@@ -95,6 +95,51 @@ public class ConversationServiceImpl implements ConversationService {
         return toResponse(conv);
     }
 
+
+    @Override
+    @Transactional
+    public int repairBadTitles(Long userId) {
+        List<Conversation> conversations = conversationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        int count = 0;
+        for (Conversation conv : conversations) {
+            if (isBadTitle(conv.getTitle())) {
+                conv.setTitle(sceneTitle(conv.getScene()));
+                conversationRepository.save(conv);
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private boolean isBadTitle(String title) {
+        if (title == null || title.trim().isEmpty()) return true;
+        String trimmed = title.trim();
+        long questionMarks = trimmed.chars().filter(ch -> ch == '?').count();
+        if (questionMarks >= 3) return true;
+        if (trimmed.indexOf('\uFFFD') >= 0 || trimmed.indexOf('\u951F') >= 0) return true;
+        String[] mojibakeMarkers = {"\u940E", "\u934B", "\u7035", "\u7487", "\u93B8", "\u6D93", "\u951B"};
+        for (String marker : mojibakeMarkers) {
+            if (trimmed.contains(marker)) return true;
+        }
+        return false;
+    }
+
+    private String sceneTitle(String scene) {
+        return switch (Scene.fromString(scene)) {
+            case cooking -> "\u505a\u996d\u5bf9\u8bdd";
+            case shopping -> "\u4e70\u83dc\u5bf9\u8bdd";
+            case repair -> "\u4fee\u7406\u5bf9\u8bdd";
+            case housework -> "\u5bb6\u52a1\u5bf9\u8bdd";
+            case health -> "\u5065\u5eb7\u5bf9\u8bdd";
+            case fashion -> "\u7a7f\u642d\u5bf9\u8bdd";
+            case etiquette -> "\u793c\u4eea\u5bf9\u8bdd";
+            case pet -> "\u5ba0\u7269\u5bf9\u8bdd";
+            case writing -> "\u5199\u4f5c\u5bf9\u8bdd";
+            case mealplan -> "\u98df\u8c31\u5bf9\u8bdd";
+            case other -> "\u751f\u6d3b\u5bf9\u8bdd";
+        };
+    }
+
     private MessageResponse toMessageResponse(Message msg) {
         MessageResponse r = new MessageResponse();
         r.setId(msg.getId());

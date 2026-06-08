@@ -16,9 +16,12 @@ spring:
       enabled: false
 
 ai:
-  api-url: https://api.deepseek.com/v1/chat/completions
-  api-key: sk-e85e1e7be2c14f6eb8555c3eff46e4ce
-  model: deepseek-v4-flash
+  api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:deepseek-v4-flash}
+  dashscope-api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+  dashscope-api-key: ${AI_DASHSCOPE_KEY:}
+  dashscope-model: ${AI_DASHSCOPE_MODEL:qwen-plus}
 
 app:
   upload-dir: ./uploads

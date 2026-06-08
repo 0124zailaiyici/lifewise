@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 cd "$(dirname "$0")"
 
 # 读取外部配置文件（如果存在）
@@ -30,6 +30,7 @@ UPLOAD_DIR="${UPLOAD_DIR:-/opt/lifewise/uploads}"
 
 echo "Starting LifeWise backend (port: $PORT)..."
 echo "AI_API_KEY: ${AI_API_KEY:0:10}... (configured: $([ -n "$AI_API_KEY" ] && echo yes || echo no))"
+echo "AI_DASHSCOPE_KEY: ${AI_DASHSCOPE_KEY:0:10}... (configured: $([ -n "$AI_DASHSCOPE_KEY" ] && echo yes || echo no))"
 
 nohup java -jar lifewise-backend.jar \
     --spring.profiles.active=cloud \

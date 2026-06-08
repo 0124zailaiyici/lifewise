@@ -32,7 +32,7 @@
               <el-icon><Cpu /></el-icon>
               <div class="si-text">
                 <div class="si-title">🤖 AI 模型</div>
-                <div class="si-desc">选择对话使用的 AI 模型</div>
+                <div class="si-desc">默认千问；不会自动回退到 DeepSeek</div>
               </div>
             </div>
             <el-select v-model="setting_aiProvider" @change="saveAiProvider" style="width:110px" size="small">
@@ -40,6 +40,46 @@
               <el-option label="DeepSeek" value="deepseek" />
               <el-option label="Ollama 本地" value="ollama" />
             </el-select>
+          </div>
+          <div class="ai-status-card" v-loading="aiStatusLoading">
+            <div class="ai-status-head">
+              <div>
+                <div class="ai-status-title">🛡️ AI 配置诊断</div>
+                <div class="ai-status-sub">只检查配置，不会调用 AI、不扣费</div>
+              </div>
+              <el-button size="small" round @click="loadAiStatus">刷新</el-button>
+            </div>
+            <div v-if="aiStatus" class="ai-status-body">
+              <div class="guard-line" :class="{ ok: !aiStatus.autoFallbackToDeepSeek }">
+                {{ aiStatus.autoFallbackToDeepSeek ? '⚠️ 存在 DeepSeek 自动回退风险' : '✅ 不会自动回退到 DeepSeek' }}
+              </div>
+              <div class="provider-grid">
+                <div class="provider-card" :class="{ active: setting_aiProvider === 'qwen', danger: providerConfigured('deepseek') }">
+                  <span class="provider-name">千问</span>
+                  <span class="provider-badge" :class="providerConfigured('qwen') ? 'ok' : 'bad'">
+                    {{ providerConfigured('qwen') ? '已配置' : '未配置' }}
+                  </span>
+                  <small>{{ aiStatus.qwen?.model || '-' }}</small>
+                </div>
+                <div class="provider-card" :class="{ active: setting_aiProvider === 'deepseek', danger: providerConfigured('deepseek') }">
+                  <span class="provider-name">DeepSeek</span>
+                  <span class="provider-badge" :class="providerConfigured('deepseek') ? 'warn' : 'ok'">
+                    {{ providerConfigured('deepseek') ? 'Key 存在' : '未配置' }}
+                  </span>
+                  <small>{{ aiStatus.deepseek?.model || '-' }}</small>
+                </div>
+                <div class="provider-card" :class="{ active: setting_aiProvider === 'ollama' }">
+                  <span class="provider-name">Ollama</span>
+                  <span class="provider-badge ok">本地接口</span>
+                  <small>{{ aiStatus.ollama?.model || '-' }}</small>
+                </div>
+              </div>
+              <div v-if="aiStatus.warnings?.length" class="warn-box">
+                <div v-for="w in aiStatus.warnings" :key="w">⚠️ {{ w }}</div>
+              </div>
+              <div class="cost-guard">{{ aiStatus.costGuard }}</div>
+            </div>
+            <div v-else class="ai-empty">点“刷新”检查当前服务器配置</div>
           </div>
         </div>
       </div>
@@ -87,11 +127,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { getAiConfigStatus } from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -100,6 +141,8 @@ const user = computed(() => userStore.user)
 // ===== 设置状态 =====
 const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
 const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
+const aiStatus = ref(null)
+const aiStatusLoading = ref(false)
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
@@ -111,6 +154,25 @@ function saveAiProvider(val) {
   const names = { qwen: '千问 (Qwen)', deepseek: 'DeepSeek', ollama: 'Ollama 本地' }
   ElMessage.success('AI 模型已切换为 ' + (names[val] || val))
 }
+
+function providerConfigured(key) {
+  return !!aiStatus.value?.[key]?.configured
+}
+
+async function loadAiStatus() {
+  aiStatusLoading.value = true
+  try {
+    const res = await getAiConfigStatus()
+    aiStatus.value = res.data
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('AI 配置诊断读取失败')
+  } finally {
+    aiStatusLoading.value = false
+  }
+}
+
+onMounted(loadAiStatus)
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
@@ -157,6 +219,25 @@ function handleLogout() {
 .setting-item .si-text { flex: 1; }
 .setting-item .si-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
 .setting-item .si-desc { font-size: 11px; color: #999; margin-top: 2px; line-height: 1.4; }
+.ai-status-card { padding: 14px 16px 16px; background: #fafafa; border-top: 1px solid #f5f5f5; }
+.ai-status-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.ai-status-title { font-size: 14px; font-weight: 700; color: #111827; }
+.ai-status-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.guard-line { padding: 9px 10px; border-radius: 10px; font-size: 12px; background: #fff7ed; color: #c2410c; margin-bottom: 10px; }
+.guard-line.ok { background: #ecfdf5; color: #15803d; }
+.provider-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.provider-card { border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; padding: 10px 8px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.provider-card.active { border-color: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.08); }
+.provider-card.danger { border-color: #fed7aa; }
+.provider-name { font-size: 12px; font-weight: 700; color: #111827; }
+.provider-badge { width: fit-content; padding: 2px 6px; border-radius: 999px; font-size: 10px; }
+.provider-badge.ok { background: #dcfce7; color: #15803d; }
+.provider-badge.warn { background: #ffedd5; color: #c2410c; }
+.provider-badge.bad { background: #fee2e2; color: #b91c1c; }
+.provider-card small { color: #9ca3af; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.warn-box { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: #fff7ed; color: #c2410c; font-size: 11px; line-height: 1.5; }
+.cost-guard { margin-top: 10px; color: #6b7280; font-size: 11px; line-height: 1.5; }
+.ai-empty { color: #999; font-size: 12px; padding: 10px 0; }
 
 .footer-info { text-align: center; margin-top: 48px; }
 .app-name { font-size: 13px; color: #ccc; font-weight: 500; }

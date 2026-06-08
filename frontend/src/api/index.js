@@ -145,6 +145,10 @@ export function importKnowledge(items) {
   return api.post("/kb/import", items)
 }
 
+export function getAiConfigStatus() {
+  return api.get('/ai-config/status')
+}
+
 export function exportConversationToFile(text) {
   return api.post('/chat/export', { text })
 }

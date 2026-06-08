@@ -84,7 +84,7 @@ public class AiServiceImpl implements AiService {
         req.setScene(scene);
         req.setConversationId(conversationId);
         req.setImageUrl(imageUrl);
-        req.setProvider("deepseek");
+        req.setProvider("qwen");
         return chat(req, userId);
     }
 
@@ -128,8 +128,8 @@ public class AiServiceImpl implements AiService {
             }
         }
         if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
-            log.warn("DashScope API key not configured, falling back to DeepSeek");
-            provider = "deepseek";
+            log.warn("DashScope API key not configured for Qwen, please check server config");
+            return "{\"answer\":\"⚙️ 千问 (Qwen) 未配置 API Key，请在服务器配置 ai.dashscope-api-key 或切换到 DeepSeek/Ollama。\",\"tips\":[\"前往 我的 → AI 模型 切换\"]}";
         }
 
         // 最多重试 2 次（共 3 次尝试）
@@ -530,3 +530,5 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";
     }
 }
+
+

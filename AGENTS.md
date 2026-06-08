@@ -72,3 +72,27 @@
 - 阿里云服务器 Ubuntu 自带 Node v12，Vite 8 需要 Node 18+
 - 用 nodesource 的 setup_20.x 脚本升级到 v20
 - 升级时如果报 \	rying to overwrite ... libnode-dev\ 错误，先 \pt remove -y libnode-dev\ 再装
+
+### 12. DeepSeek 偷跑烧钱：Qwen 未配 Key 时静默回退 (2026-06-08)
+**现象**：明明在设置里选了千问 Qwen，后台却一直在用 DeepSeek，一天烧十几块
+
+**根本原因**：
+1. 后端 AiServiceImpl.java 中，旧方法 chat(String, String, Long, Long, String) 硬编码 eq.setProvider("deepseek")
+2. **最关键**：callAI() 方法中，当 provider = "qwen" 但 dashscopeApiKey 为空时，会**静默回退到 DeepSeek**，用户完全不知道
+3. 服务器 start.sh 没有导出 AI_DASHSCOPE_KEY 环境变量，导致 DashScope Key 虽然写入了 pplication-cloud.properties，但后端读取不到
+
+**教训**：
+- 任何时候都不要在代码中硬编码 provider！新旧方法都要统一默认值
+- AI 服务降级时绝对不能静默切换到更贵的服务商
+- 检查整个调用链路：前端发送 → 后端路由 → 环境变量读取 → 实际 API 调用
+- 服务器上的 start.sh 必须同步更新以支持新配置项
+
+**修复措施**：
+- 旧方法 eq.setProvider("deepseek") → eq.setProvider("qwen")
+- Qwen Key 缺失时返回清晰错误提示，而不是回退到 DeepSeek
+- deploy/start.sh 添加 i.dashscope-api-key → AI_DASHSCOPE_KEY 的导出
+
+**验证方法**：
+1. 检查后端日志是否有 "DashScope API key not configured for Qwen" 警告
+2. 检查服务器环境变量 echo \ 是否有值
+3. 在 DeepSeek 控制台查看是否还有请求产生

@@ -10,6 +10,6 @@ public class ChatRequest {
     private String scene;
     private Long conversationId;
     private String imageUrl;
-    private String provider = "deepseek";
+    private String provider = "qwen";
     private String model;
 }

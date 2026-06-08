@@ -18,6 +18,9 @@ if [ -f application-cloud.properties ]; then
             server.port) PORT="$value" ;;
             gl-image.api-key) export GL_IMAGE_API_KEY="$value" ;;
             gl-image.api-url) export GL_IMAGE_API_URL="$value" ;;
+            ai.dashscope-api-key) export AI_DASHSCOPE_KEY="$value" ;;
+            ai.dashscope-api-url) export AI_DASHSCOPE_URL="$value" ;;
+            ai.dashscope-model) export AI_DASHSCOPE_MODEL="$value" ;;
         esac
     done < application-cloud.properties
 fi

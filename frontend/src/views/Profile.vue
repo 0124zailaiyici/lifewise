@@ -80,11 +80,19 @@
               <div class="cost-guard">{{ aiStatus.costGuard }}</div>
               <div class="audit-box">
                 <div class="audit-head">
-                  <span>最近 AI 调用记录</span>
-                  <small>只展示状态，不展示对话内容</small>
+                  <div>
+                    <span>最近 AI 调用记录</span>
+                    <small>只展示状态，不展示对话内容</small>
+                  </div>
+                  <el-button v-if="recentCalls.length" size="small" text type="danger" @click="clearAuditRecords">清空</el-button>
                 </div>
-                <div v-if="recentCalls.length" class="audit-list">
-                  <div v-for="(item, idx) in recentCalls" :key="idx" class="audit-item">
+                <div v-if="recentCalls.length" class="audit-filters">
+                  <button v-for="item in auditFilterOptions" :key="item.value" class="audit-chip" :class="{ active: auditFilter === item.value }" @click="auditFilter = item.value">
+                    {{ item.label }}
+                  </button>
+                </div>
+                <div v-if="filteredRecentCalls.length" class="audit-list">
+                  <div v-for="(item, idx) in filteredRecentCalls" :key="idx" class="audit-item">
                     <div class="audit-main">
                       <span class="audit-provider">{{ providerName(item.provider) }}</span>
                       <span class="audit-status" :class="item.status">{{ statusName(item.status) }}</span>
@@ -95,7 +103,7 @@
                     </div>
                   </div>
                 </div>
-                <div v-else class="audit-empty">暂无 AI 调用记录</div>
+                <div v-else class="audit-empty">{{ recentCalls.length ? '当前筛选下暂无记录' : '暂无 AI 调用记录' }}</div>
               </div>
             </div>
             <div v-else class="ai-empty">点“刷新”检查当前服务器配置</div>
@@ -151,7 +159,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getAiConfigStatus } from '../api'
+import { clearAiAudit, getAiConfigStatus } from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -162,7 +170,21 @@ const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off
 const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
+const auditFilter = ref('all')
+const auditFilterOptions = [
+  { label: '全部', value: 'all' },
+  { label: '扣费', value: 'paid' },
+  { label: '不扣费', value: 'free' },
+  { label: '已拦截', value: 'blocked' }
+]
 const recentCalls = computed(() => aiStatus.value?.recentCalls || [])
+const filteredRecentCalls = computed(() => recentCalls.value.filter(item => {
+  if (auditFilter.value === 'all') return true
+  if (auditFilter.value === 'paid') return item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)
+  if (auditFilter.value === 'free') return item.provider === 'cache' || item.provider === 'ollama'
+  if (auditFilter.value === 'blocked') return item.status === 'blocked'
+  return true
+}))
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
@@ -206,6 +228,24 @@ async function loadAiStatus() {
     ElMessage.error('AI 配置诊断读取失败')
   } finally {
     aiStatusLoading.value = false
+  }
+}
+
+async function clearAuditRecords() {
+  try {
+    await ElMessageBox.confirm('只清空 AI 调用记录，不会删除聊天、常识库或收藏。确定清空吗？', '清空记录', {
+      confirmButtonText: '清空',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await clearAiAudit()
+    ElMessage.success('AI 调用记录已清空')
+    await loadAiStatus()
+  } catch (e) {
+    if (e !== 'cancel' && e !== 'close') {
+      console.error(e)
+      ElMessage.error('清空失败')
+    }
   }
 }
 
@@ -275,9 +315,13 @@ function handleLogout() {
 .warn-box { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: #fff7ed; color: #c2410c; font-size: 11px; line-height: 1.5; }
 .cost-guard { margin-top: 10px; color: #6b7280; font-size: 11px; line-height: 1.5; }
 .audit-box { margin-top: 12px; padding: 10px; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; }
-.audit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.audit-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.audit-head > div { display: flex; flex-direction: column; gap: 2px; }
 .audit-head span { font-size: 12px; font-weight: 700; color: #111827; }
-.audit-head small { font-size: 10px; color: #9ca3af; white-space: nowrap; }
+.audit-head small { font-size: 10px; color: #9ca3af; }
+.audit-filters { display: flex; gap: 6px; margin: 8px 0; overflow-x: auto; padding-bottom: 2px; }
+.audit-chip { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; border-radius: 999px; padding: 4px 9px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.audit-chip.active { border-color: #22c55e; background: #ecfdf5; color: #15803d; font-weight: 700; }
 .audit-list { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; }
 .audit-item { padding: 8px; border-radius: 10px; background: #f9fafb; }
 .audit-main { display: flex; align-items: center; gap: 6px; min-width: 0; }

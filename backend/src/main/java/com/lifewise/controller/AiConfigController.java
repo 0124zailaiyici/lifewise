@@ -3,7 +3,9 @@ package com.lifewise.controller;
 import com.lifewise.common.ApiResponse;
 import com.lifewise.service.AiCallAuditService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -66,7 +68,7 @@ public class AiConfigController {
     private String imageApiUrl;
 
     @GetMapping("/status")
-    public ApiResponse<Map<String, Object>> status() {
+    public ApiResponse<Map<String, Object>> status(@RequestAttribute Long userId) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("defaultProvider", "qwen");
         data.put("autoFallbackToDeepSeek", false);
@@ -79,8 +81,14 @@ public class AiConfigController {
         data.put("vision", provider("图片识别", visionEnabled, hasText(visionApiKey), visionModel, visionApiUrl));
         data.put("foodImage", provider("菜品生图", false, hasText(imageApiKey), "gpt-image-2", imageApiUrl));
         data.put("warnings", warnings());
-        data.put("recentCalls", aiCallAuditService.recent());
+        data.put("recentCalls", aiCallAuditService.recent(userId));
         return ApiResponse.success(data);
+    }
+
+    @DeleteMapping("/audit")
+    public ApiResponse<?> clearAudit(@RequestAttribute Long userId) {
+        aiCallAuditService.clear(userId);
+        return ApiResponse.success("已清空 AI 调用记录");
     }
 
     private Map<String, Object> provider(String name, boolean recommended, boolean configured, String model, String url) {

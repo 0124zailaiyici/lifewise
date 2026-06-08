@@ -149,6 +149,10 @@ export function getAiConfigStatus() {
   return api.get('/ai-config/status')
 }
 
+export function clearAiAudit() {
+  return api.delete('/ai-config/audit')
+}
+
 export function exportConversationToFile(text) {
   return api.post('/chat/export', { text })
 }

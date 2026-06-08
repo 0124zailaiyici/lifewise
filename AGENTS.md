@@ -161,3 +161,17 @@ etstat -ano | findstr :8080 看 PID，再用 wmic process where "processid=PID" 
 - ✅ DeepSeek 仅保留为可手动切换的选项
 - ✅ 本地和服务器都使用新 JAR，旧 systemd 服务已禁用
 - ✅ 所有明文暴露的 DeepSeek Key 已删除
+
+### 17. 认证白名单不能包含需要 userId 的接口 (2026-06-08)
+**现象**：常识库页面看不到数据，接口返回 500，提示缺少 `userId`
+
+**根本原因**：
+- `JwtAuthFilter` 把 `/api/kb` 放进了免登录白名单
+- 请求被放行后没有解析 JWT，也就没有写入 `requestAttribute userId`
+- `KnowledgeBaseController.search()` 又要求 `@RequestAttribute Long userId`，最终触发 500
+
+**教训**：
+- 只要接口需要用户隔离或 `userId`，就不能放进认证白名单
+- 修改认证过滤器后必须至少测一次登录态接口
+- 看到 `Missing request attribute 'userId'`，优先检查 JWT 过滤器是否提前放行
+- 常识库、收藏、历史记录这类用户私有数据接口必须始终走认证

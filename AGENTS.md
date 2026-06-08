@@ -123,3 +123,41 @@ etstat -ano | findstr :8080 看 PID，再用 wmic process where "processid=PID" 
 - 后端日志第一条会显示启动时间，确认是最新的
 
 **简单记忆**：改完代码四步走 → 编译 → 重启 → 验证 → 部署
+
+### 15. 服务器有隐藏的 systemd 服务在后台跑旧代码 (2026-06-08)
+**现象**：明明停掉了 /opt/lifewise/ 的后端，DeepSeek 依然在疯狂扣费
+
+**根本原因**：
+- 服务器上有一个 lifewise.service 系统服务（/etc/systemd/system/lifewise.service）
+- 它在 /app/lifewise/ 目录跑另一个旧 JAR，完全独立于手动管理的 /opt/lifewise/
+- 配置了 Restart=always，kill 掉后 5 秒自动复活
+- 硬编码了 DeepSeek API Key 和环境变量，没有 Qwen 配置
+- 跑在 8080 端口（而主后端跑在 8082），所以 Nginx 的 8081 端口同时代理两个后端
+
+**教训**：
+- 停进程不能只靠 kill，要检查是否有 systemd 服务在自动重启
+- 命令：systemctl list-units --type=service | grep lifewise
+- 查看服务详情：systemctl status lifewise
+- 彻底停用：systemctl stop lifewise && systemctl disable lifewise
+- 部署时两个目录（/opt/lifewise/ 和 /app/lifewise/）都要检查
+
+### 16. API Key 泄露导致持续扣费 (2026-06-08)
+**现象**：后端全停了 DeepSeek 账单还在涨
+
+**根本原因**：
+- API Key 多次在聊天记录、配置文件、GitHub 中明文暴露
+- 恶意爬虫扫到后盗用 key 调接口
+- DeepSeek 按 token 计费，被盗用后账单持续上涨
+
+**教训**：
+- API Key 绝对不能出现在聊天记录、代码仓库、配置文件等任何可能被爬虫扫到的地方
+- 服务器上的 key 要放在环境变量中，不要硬编码在文件里
+- 怀疑泄露后立即在平台删除/重置 key
+- 给 key 设置用量上限和额度预警
+- 考虑用千问（DashScope）作为默认模型，其 key 更便宜，被盗损失也更小
+
+**最终改造结果**：
+- ✅ 默认 AI 模型改为千问 Qwen（DashScope）
+- ✅ DeepSeek 仅保留为可手动切换的选项
+- ✅ 本地和服务器都使用新 JAR，旧 systemd 服务已禁用
+- ✅ 所有明文暴露的 DeepSeek Key 已删除

@@ -60,3 +60,15 @@
 ### 11. 编码问题导致编译失败
 - Chat.vue 中出现乱码字符（如 `��`、`data.Ʒ��`）导致 Vite 编译错误
 - 修改代码后务必本地 `npm run build` 验证能通过再提交
+
+### 12. GitHub Actions 前后端分离 (2026-06-08)
+- 之前前后端在同一个 job，后端编译失败导致整个构建作废，前端也出不来
+- 改为独立 job 后，前端构建不再依赖后端编译结果
+- 前端产物可通过 nightly.link 获取：
+  - 完整包: \https://nightly.link/0124zailaiyici/lifewise/workflows/deploy/master/lifewise-deploy.zip\
+  - 仅前端: \https://nightly.link/0124zailaiyici/lifewise/workflows/deploy/master/lifewise-frontend.zip\
+
+### 13. 服务器 Node.js 升级 (2026-06-08)
+- 阿里云服务器 Ubuntu 自带 Node v12，Vite 8 需要 Node 18+
+- 用 nodesource 的 setup_20.x 脚本升级到 v20
+- 升级时如果报 \	rying to overwrite ... libnode-dev\ 错误，先 \pt remove -y libnode-dev\ 再装

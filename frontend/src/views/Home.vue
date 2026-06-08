@@ -47,7 +47,7 @@
         <div v-for="conv in conversations" :key="conv.id" class="conv-item" @click="$router.push('/chat/' + conv.id)">
           <span class="conv-icon">{{ conv.sceneIcon || '💬' }}</span>
           <div class="conv-info">
-            <div class="conv-title">{{ conv.title }}</div>
+            <div class="conv-title">{{ displayConversationTitle(conv) }}</div>
             <div class="conv-meta">{{ conv.sceneLabel }} · {{ formatTime(conv.createdAt) }}</div>
           </div>
           <el-icon class="conv-arrow"><ArrowRight /></el-icon>
@@ -137,6 +137,21 @@ function svgIcon(key) {
 function formatTime(t) {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+function displayConversationTitle(conv) {
+  const title = (conv?.title || '').trim()
+  if (!title || isBadTitle(title)) {
+    return conv?.sceneLabel ? `${conv.sceneLabel}对话` : '未命名对话'
+  }
+  return title
+}
+
+function isBadTitle(title) {
+  const questionMarks = (title.match(/\?/g) || []).length
+  if (questionMarks >= 3) return true
+  if (/�/.test(title)) return true
+  return false
 }
 </script>
 

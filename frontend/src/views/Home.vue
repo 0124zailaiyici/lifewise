@@ -210,9 +210,8 @@ function isBadTitle(title) {
 .section-title { margin: 0; font-size: 16px; font-weight: 900; color: #111827; }
 .section-hint { color: #9ca3af; font-size: 11px; }
 .link-btn { border: none; background: transparent; color: #16a34a; font-size: 12px; font-weight: 800; padding: 4px; cursor: pointer; }
-.prompt-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 3px; margin: 0 -20px; padding-left: 20px; padding-right: 20px; scrollbar-width: none; }
-.prompt-list::-webkit-scrollbar { display: none; }
-.prompt-chip { flex: 0 0 auto; border: 1px solid #e5f4e9; background: #fbfefc; color: #334155; border-radius: 999px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.prompt-list { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 3px; }
+.prompt-chip { flex: 1 1 calc(50% - 4px); min-width: 0; border: 1px solid #e5f4e9; background: #fbfefc; color: #334155; border-radius: 999px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .prompt-chip:active { transform: scale(.97); background: #ecfdf5; }
 .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
 .scene-card { min-height: 82px; border-radius: 17px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, #fff), #fff); border: 1px solid color-mix(in srgb, var(--accent) 22%, #e5e7eb); padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 18px rgba(15,23,42,.035); }

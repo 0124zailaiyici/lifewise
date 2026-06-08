@@ -1308,6 +1308,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .cursor { animation: cursorBlink 0.8s infinite; color: #22c55e; font-weight: bold; }
 @keyframes cursorBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
 .input-area { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
+.input-area :deep(.el-button.is-circle) { width: 40px; min-width: 40px; height: 40px; padding: 0; flex-shrink: 0; }
+.input-area :deep(.el-button--small.is-circle) { width: 36px; min-width: 36px; height: 36px; }
 .cost-hint { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 10px; font-size: 11px; line-height: 1.3; border: 1px solid #e5e7eb; background: #f9fafb; color: #4b5563; }
 .cost-hint-main { font-weight: 700; white-space: nowrap; }
 .cost-hint-sub { color: #6b7280; text-align: right; }

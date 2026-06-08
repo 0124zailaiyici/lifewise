@@ -263,7 +263,7 @@ function formatTime(t) {
 .header-actions { display: flex; align-items: center; gap: 8px; position: relative; }
 .more-wrap { position: relative; }
 .more-btn {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 36px; height: 36px; border-radius: 50%;
   border: 1px solid #dcfce7; background: #f0fdf4; color: #16a34a;
   display: grid; place-items: center; font-size: 18px; line-height: 1;
   cursor: pointer;
@@ -337,8 +337,8 @@ function formatTime(t) {
 .title { font-size: 14px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title :deep(mark) { background: #fde68a; color: #333; padding: 0 2px; border-radius: 2px; }
 .meta { font-size: 12px; color: #888; margin-top: 3px; }
-.del-btn { flex-shrink: 0; margin-left: 4px; }
-.rename-btn { flex-shrink: 0; color: #999; }
+.del-btn { flex-shrink: 0; margin-left: 4px; min-width: 36px; }
+.rename-btn { flex-shrink: 0; color: #999; min-width: 36px; }
 .rename-btn:hover { color: #22c55e; }
 .loading-state, .empty-state { text-align: center; padding: 80px 20px; }
 .loading-icon { font-size: 48px; margin-bottom: 12px; }

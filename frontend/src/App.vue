@@ -1,15 +1,12 @@
 <template>
-  <router-view v-slot="{ Component, route }">
-    <transition name="page" mode="out-in">
-      <component :is="Component" :key="route.path" />
-    </transition>
-  </router-view>
+  <router-view />
 </template>
 
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; -webkit-font-smoothing: antialiased; }
-.page-container { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; position: relative; }
+.page-container { width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; position: relative; overflow-x: hidden; }
 /* 移动端安全区域 */
 @supports (padding-top: env(safe-area-inset-top)) {
   .page-container { padding-top: env(safe-area-inset-top); }

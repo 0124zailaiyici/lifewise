@@ -125,12 +125,6 @@
       <div class="menu-section">
         <div class="menu-label">功能</div>
         <div class="menu-list">
-          <div class="menu-item" @click="$router.push('/history')">
-            <el-icon><Timer /></el-icon><span>历史记录</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
-          </div>
-          <div class="menu-item" @click="$router.push('/favorites')">
-            <el-icon><Star /></el-icon><span>我的收藏</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
-          </div>
           <div class="menu-item" @click="$router.push('/dashboard')">
             <el-icon><DataAnalysis /></el-icon><span>数据统计</span><el-icon class="menu-arrow"><ArrowRight /></el-icon>
           </div>

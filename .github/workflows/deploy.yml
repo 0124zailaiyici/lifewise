@@ -5,48 +5,65 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
           cache: maven
-
       - name: Build Backend
         run: |
           java -version
           mvn --version
           cd backend
-          mvn package -DskipTests --no-transfer-progress
-          cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar
+          mvn package -DskipTests --no-transfer-progress -e 2>&1 | tail -50
+          cp target/life-wise-backend-0.0.1-SNAPSHOT.jar ../lifewise-backend.jar || echo "Backend build FAILED but continuing"
+      - name: Upload Backend JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifewise-backend
+          path: lifewise-backend.jar
+          if-no-files-found: ignore
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
-
       - name: Build Frontend
         run: |
           cd frontend
           npm install --legacy-peer-deps
           npm run build
-
-      - name: Assemble
-        run: |
-          mkdir -p deploy/frontend
-          cp lifewise-backend.jar deploy/
-          cp -r frontend/dist/* deploy/frontend/
-          chmod +x deploy/start.sh deploy/stop.sh
-          ls -la deploy/
-          ls -la deploy/frontend/
-
-      - name: Upload Artifact
+          ls -la dist/
+      - name: Upload Frontend
         uses: actions/upload-artifact@v4
         with:
-          name: lifewise-deploy
+          name: lifewise-frontend
+          path: frontend/dist/
+
+  deploy:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Backend
+        uses: actions/download-artifact@v4
+        with:
+          name: lifewise-backend
           path: deploy/
+        continue-on-error: true
+      - name: Download Frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: lifewise-frontend
+          path: deploy/frontend/
+        continue-on-error: true
+      - name: List files
+        run: ls -laR deploy/

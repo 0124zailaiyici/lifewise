@@ -147,6 +147,9 @@
       </div>
     </div>
     <div class="input-area">
+      <div v-if="promptPrefilled && inputText.trim() && !loading" class="prefill-hint">
+        已填入示例问题，确认无误后点右侧发送
+      </div>
       <div class="cost-hint" :class="costHint.type">
         <span class="cost-hint-main">{{ costHint.text }}</span>
         <span class="cost-hint-sub">{{ costHint.sub }}</span>
@@ -155,8 +158,8 @@
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
       <el-input v-model="inputText" ref="inputRef" placeholder="输入你的问题..." size="large"
-                @keyup.enter="send" :disabled="loading" clearable />
-      <el-button type="success" :icon="Promotion" circle @click="send" :disabled="loading || !inputText.trim() && !pendingFile" />
+                @keyup.enter="send" :disabled="loading" clearable @input="promptPrefilled = false" />
+      <el-button type="success" :icon="Promotion" circle @click="send" :class="{ 'send-ready': inputText.trim() || pendingFile }" :disabled="loading || !inputText.trim() && !pendingFile" />
     </div>
   </div>
 </template>
@@ -178,6 +181,7 @@ const pendingFile = ref(null)
 const pendingImage = ref(null)
 const loading = ref(false)
 const messages = ref([])
+const promptPrefilled = ref(false)
 const currentTyping = ref(false)
 const previewImg = ref(null)
 const uploadProgress = ref(0)
@@ -294,6 +298,7 @@ onMounted(async () => {
     const pendingPrompt = localStorage.getItem('pendingPrompt')
     if (pendingPrompt) {
       inputText.value = pendingPrompt
+      promptPrefilled.value = true
       localStorage.removeItem('pendingPrompt')
       await nextTick()
       inputRef.value?.focus()
@@ -360,6 +365,7 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
 
   messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
   inputText.value = ''
+  promptPrefilled.value = false
   await nextTick(); scrollBottom()
 
   loading.value = true; currentTyping.value = true
@@ -879,6 +885,7 @@ async function shareToSocial() {
 
 async function fillPrompt(prompt) {
   inputText.value = prompt
+  promptPrefilled.value = true
   await nextTick()
   inputRef.value?.focus()
 }
@@ -1347,6 +1354,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .input-area { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
 .input-area :deep(.el-button.is-circle) { width: 40px; min-width: 40px; height: 40px; padding: 0; flex-shrink: 0; }
 .input-area :deep(.el-button--small.is-circle) { width: 36px; min-width: 36px; height: 36px; }
+.prefill-hint { grid-column: 1 / -1; padding: 7px 10px; border-radius: 10px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; text-align: center; }
+.input-area :deep(.send-ready) { box-shadow: 0 0 0 3px rgba(34,197,94,.16); transform: translateY(-1px); }
 .cost-hint { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 10px; font-size: 11px; line-height: 1.3; border: 1px solid #e5e7eb; background: #f9fafb; color: #4b5563; }
 .cost-hint-main { font-weight: 700; white-space: nowrap; }
 .cost-hint-sub { color: #6b7280; text-align: right; }

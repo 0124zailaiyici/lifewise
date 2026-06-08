@@ -1,4 +1,4 @@
-#!/bin/bash
+﻿#!/bin/bash
 cd "$(dirname "$0")"
 
 # 读取外部配置文件（如果存在）

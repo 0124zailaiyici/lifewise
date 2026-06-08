@@ -76,3 +76,6 @@ backend/src/main/resources/application-local.yml
 # Environment files
 .env
 *.env.local
+
+# Local startup script with secrets
+start-local.ps1

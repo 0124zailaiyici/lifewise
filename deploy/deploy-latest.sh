@@ -51,7 +51,7 @@ if [ -d "$APP_DIR/frontend" ] && [ -f frontend/index.html ]; then
   # Package is normally unzipped directly into /opt/lifewise, so this is often a no-op.
   true
 fi
-chmod +x start.sh stop.sh update.sh backup.sh install-backup-cron.sh deploy-latest.sh 2>/dev/null || true
+chmod +x start.sh stop.sh update.sh backup.sh install-backup-cron.sh deploy-latest.sh check-runtime.sh 2>/dev/null || true
 
 echo ">>> Config safety checks"
 if [ ! -f application-cloud.properties ]; then
@@ -86,9 +86,15 @@ if pgrep -af "/app/lifewise/lifewise-backend.jar" >/tmp/lifewise-legacy.txt 2>/d
   exit 1
 fi
 
+if [ -f check-runtime.sh ]; then
+  echo ">>> Runtime safety check"
+  APP_DIR="$APP_DIR" PORT="$PORT" bash check-runtime.sh
+fi
+
 echo "================================================"
 echo " Deploy complete"
 echo " PID: $(cat backend.pid 2>/dev/null || echo unknown)"
 echo " Recent log:"
 tail -8 backend.log || true
 echo "================================================"
+

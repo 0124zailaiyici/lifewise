@@ -49,7 +49,7 @@ else
   wget -O lifewise-backend.jar "$JAR_URL"
 fi
 
-chmod +x start.sh stop.sh update.sh backup.sh 2>/dev/null || true
+chmod +x start.sh stop.sh update.sh backup.sh install-backup-cron.sh 2>/dev/null || true
 
 echo ">>> Hardening local config..."
 if [ -f application-cloud.properties ]; then

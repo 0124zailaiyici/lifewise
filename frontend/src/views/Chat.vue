@@ -15,10 +15,16 @@
       <div v-if="messages.length === 0 && !loading" class="welcome">
         <div class="welcome-icon">🌿</div>
         <div class="welcome-text">问我关于{{ currentLabel }}的问题吧</div>
+        <div v-if="welcomePrompts.length" class="welcome-prompts">
+          <div class="wp-title">可以这样问</div>
+          <div class="wp-grid">
+            <button v-for="p in welcomePrompts" :key="p" class="wp-chip" @click="fillPrompt(p)">{{ p }}</button>
+          </div>
+        </div>
         <div v-if="isWritingScene" class="writing-modes">
-          <div class="wm-title">📝 选择写作类型快速开始</div>
+          <div class="wm-title">📝 选择写作类型预填问题</div>
           <div class="wm-grid">
-            <div v-for="wm in writingModes" :key="wm.key" class="wm-chip" @click="startWriting(wm)">
+            <div v-for="wm in writingModes" :key="wm.key" class="wm-chip" @click="fillPrompt(wm.prompt)">
               <span class="wm-icon">{{ wm.icon }}</span>
               <span class="wm-label">{{ wm.label }}</span>
             </div>
@@ -230,6 +236,22 @@ const isWritingScene = computed(() => {
 })
 
 const currentLabel = computed(() => localStorage.getItem('sceneLabel') || '生活常识')
+const welcomePrompts = computed(() => {
+  const scene = localStorage.getItem('currentScene') || 'other'
+  const map = {
+    cooking: ['今晚吃什么比较简单？', '红烧排骨怎么做？', '冰箱剩菜怎么搭配？'],
+    shopping: ['怎么挑西瓜？', '买牛肉怎么选？', '哪些水果适合囤？'],
+    repair: ['水龙头滴水怎么办？', '灯泡不亮怎么排查？', '马桶堵了先怎么处理？'],
+    housework: ['衣服染色怎么办？', '厨房油污怎么清理？', '冰箱异味怎么去除？'],
+    health: ['熬夜后怎么恢复？', '久坐腰酸怎么办？', '感冒时饮食注意什么？'],
+    fashion: ['面试穿什么合适？', '黑色裤子怎么搭配？', '矮个子怎么显高？'],
+    etiquette: ['第一次见家长带什么？', '怎么委婉拒绝别人？', '送礼怎么避免尴尬？'],
+    pet: ['猫不爱喝水怎么办？', '狗狗掉毛严重怎么办？', '新手养猫要准备什么？'],
+    mealplan: ['帮我安排一周晚餐', '今晚吃什么比较健康？', '两个人做饭怎么搭配？'],
+    writing: []
+  }
+  return map[scene] || ['家里临时有问题怎么处理？', '帮我整理一个解决步骤', '这个生活问题有什么注意事项？']
+})
 const costHint = computed(() => {
   if (pendingFile.value) {
     return {
@@ -855,9 +877,10 @@ async function shareToSocial() {
 }
 
 
-function startWriting(wm) {
-  inputText.value = wm.prompt
-  send()
+async function fillPrompt(prompt) {
+  inputText.value = prompt
+  await nextTick()
+  inputRef.value?.focus()
 }
 
 function handleFollowUpClick(e) {
@@ -1301,6 +1324,11 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .welcome { text-align: center; padding: 60px 20px; }
 .welcome-icon { font-size: 56px; margin-bottom: 16px; }
 .welcome-text { font-size: 15px; color: #999; }
+.welcome-prompts { margin-top: 18px; text-align: left; }
+.wp-title { font-size: 13px; color: #888; margin-bottom: 10px; text-align: center; }
+.wp-grid { display: flex; flex-direction: column; gap: 8px; }
+.wp-chip { width: 100%; border: 1px solid #e5f4e9; background: #fbfefc; color: #334155; border-radius: 14px; padding: 10px 12px; font-size: 13px; text-align: left; line-height: 1.4; cursor: pointer; }
+.wp-chip:active { transform: scale(.985); background: #ecfdf5; }
 .msg { margin-bottom: 20px; }
 .msg-user { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
 .msg-user .bubble { display: inline-block; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 12px 18px; border-radius: 18px 18px 4px 18px; font-size: 14px; max-width: 85%; text-align: left; line-height: 1.6; word-break: break-word; box-shadow: 0 2px 8px rgba(34,197,94,.15); }

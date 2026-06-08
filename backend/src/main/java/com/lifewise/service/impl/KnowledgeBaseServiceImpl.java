@@ -65,12 +65,22 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             // 1) 精确匹配（归一化后完全相同）
             if (kbNormalized.equals(normalized)) {
                 log.info("知识库精确命中: question={}", kb.getQuestion());
+                if (isInvalidCachedAnswer(kb.getAnswer())) {
+                    knowledgeBaseRepository.delete(kb);
+                    log.warn("知识库坏缓存已删除: id={}, question={}", kb.getId(), kb.getQuestion());
+                    return null;
+                }
                 return kb.getAnswer();
             }
 
             // 2) 核心内容完全相同（如 "西红柿炒鸡蛋怎么做" vs "如何做西红柿炒鸡蛋"）
             if (kbCore.equals(core)) {
                 log.info("知识库核心命中: question={} ≈ core={}", kb.getQuestion(), core);
+                if (isInvalidCachedAnswer(kb.getAnswer())) {
+                    knowledgeBaseRepository.delete(kb);
+                    log.warn("知识库坏缓存已删除: id={}, question={}", kb.getId(), kb.getQuestion());
+                    return null;
+                }
                 return kb.getAnswer();
             }
 
@@ -96,6 +106,11 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
         if (best != null) {
             log.info("知识库相似命中: question={}, sim={}", best.getQuestion(), String.format("%.2f", bestScore));
+            if (isInvalidCachedAnswer(best.getAnswer())) {
+                knowledgeBaseRepository.delete(best);
+                log.warn("知识库坏缓存已删除: id={}, question={}", best.getId(), best.getQuestion());
+                return null;
+            }
             return best.getAnswer();
         }
 
@@ -107,6 +122,10 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         try {
             if (question == null || question.trim().isEmpty()) return;
             if (answer == null || answer.trim().isEmpty()) return;
+            if (isInvalidCachedAnswer(answer)) {
+                log.warn("跳过保存错误回答到知识库: question={}", question);
+                return;
+            }
 
             // 去重检查：归一化后相同 OR 核心内容相同 都算重复
             String normalized = normalizeQuestion(question);
@@ -269,6 +288,15 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
         return intersection.size();
     }
+
+    private boolean isInvalidCachedAnswer(String answer) {
+        if (answer == null) return true;
+        return answer.contains("未配置 API Key")
+            || answer.contains("API key not configured")
+            || answer.contains("configure API key")
+            || answer.contains("Mock response");
+    }
+
     @Override
     public List<KnowledgeBase> exportAll(Long userId) {
         return knowledgeBaseRepository.findByUserId(userId);

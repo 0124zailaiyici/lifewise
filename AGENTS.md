@@ -99,3 +99,27 @@ eq.setProvider("qwen")
 1. 检查后端日志是否有 "DashScope API key not configured for Qwen" 警告
 2. 检查服务器环境变量 echo \ 是否有值
 3. 在 DeepSeek 控制台查看是否还有请求产生
+
+### 14. 改了代码必须验证"新代码是否真的在跑" (2026-06-08)
+**现象**：改了 3 层 DeepSeek 默认值，但 DeepSeek 依然在疯狂扣费
+
+**根本原因**：
+1. 代码改了，但 Maven 没有重新编译 → JAR 还是旧的
+2. JAR 重新编译了，但 Java 进程没重启 → 跑的依然是旧 JAR
+3. 本地测试通过后，服务器没部署 → 手机访问的还是旧代码
+4. 改代码时只关注了"代码对不对"，没验证"运行的是哪份代码"
+
+**教训**：
+- 改代码流程必须是：**改源码 → 编译 → 停旧进程 → 启动新进程 → 验证新代码在运行**
+- 每次改完 AI/网络相关代码，一定要从源码到运行全链路检查
+- 检查运行中的进程启动参数：wmic process where "name='java.exe'" get commandline (Windows) 或 ps aux | grep java (Linux)
+- 部署服务器后必须实际发请求测试，不能用"好像可以了"代替验证
+- 可以用 git log --oneline -1 结合 JAR 编译时间确认版本匹配
+
+**验证新代码在运行的快速方法**：
+- Windows: 
+etstat -ano | findstr :8080 看 PID，再用 wmic process where "processid=PID" get commandline 确认启动参数
+- Linux: ps aux | grep java | grep lifewise 看启动命令和 JAR 路径
+- 后端日志第一条会显示启动时间，确认是最新的
+
+**简单记忆**：改完代码四步走 → 编译 → 重启 → 验证 → 部署

@@ -49,6 +49,9 @@
         <div v-if="msg.role === 'assistant' && !msg._typing" class="msg-actions">
           <el-button text size="small" @click="copyMsg(i)">📋 复制</el-button>
           <el-button text size="small" @click="shareMsg(i)">📤 分享</el-button>
+          <el-button text size="small" @click="addMsgToKnowledge(i)" :disabled="msg._kbSaving">
+            {{ msg._kbSaving ? '⏳ 入库中...' : msg._kbSaved ? '✅ 已入库' : '📚 入库' }}
+          </el-button>
           <el-button text size="small" @click="toggleFavorite(i)" :type="msg._faved ? 'warning' : 'default'">
             {{ msg._favProcessing ? '⏳ 处理中...' : msg._faved ? '⭐ 已收藏' : '☆ 收藏' }}
           </el-button>
@@ -145,7 +148,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -684,6 +687,30 @@ async function confirmFavorite() {
     msg._faved = true
     ElMessage.success('已收藏')
   } catch(e) { console.error('[favorite] err:',e); ElMessage.error('收藏失败，请重试') }
+}
+
+async function addMsgToKnowledge(i) {
+  const msg = messages.value[i]
+  if (!msg || msg.role !== 'assistant') return
+  const prev = [...messages.value].slice(0, i).reverse().find(m => m.role === 'user')
+  if (!prev?.content) {
+    ElMessage.warning('没有找到对应的问题')
+    return
+  }
+  msg._kbSaving = true
+  try {
+    await addKnowledge({
+      question: prev.content,
+      answer: msg.content || '',
+      scene: localStorage.getItem('scene') || tempScene.value || 'other'
+    })
+    msg._kbSaved = true
+    ElMessage.success('已加入常识库')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '入库失败')
+  } finally {
+    msg._kbSaving = false
+  }
 }
 
 async function shareToSocial() {
@@ -1497,5 +1524,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
+
 
 

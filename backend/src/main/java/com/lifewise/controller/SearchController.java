@@ -74,7 +74,7 @@ public class SearchController {
 
         // 3. 搜索知识库
         List<Map<String, Object>> kbResults = new ArrayList<>();
-        List<KnowledgeBase> kbList = knowledgeBaseRepository.findByQuestionContaining(q);
+        List<KnowledgeBase> kbList = knowledgeBaseRepository.findByUserIdAndQuestionContaining(userId, q);
         for (KnowledgeBase kb : kbList) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", kb.getId());

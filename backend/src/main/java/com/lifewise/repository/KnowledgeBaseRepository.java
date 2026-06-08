@@ -8,5 +8,6 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBase, Lo
     List<KnowledgeBase> findBySceneAndUserIdOrderByHelpfulCountDesc(String scene, Long userId);
     List<KnowledgeBase> findByUserId(Long userId);
     List<KnowledgeBase> findBySceneOrderByHelpfulCountDesc(String scene);
-    List<KnowledgeBase> findByQuestionContaining(String keyword);
+    List<KnowledgeBase> findByUserIdAndQuestionContaining(Long userId, String keyword);
+    java.util.Optional<KnowledgeBase> findByIdAndUserId(Long id, Long userId);
 }

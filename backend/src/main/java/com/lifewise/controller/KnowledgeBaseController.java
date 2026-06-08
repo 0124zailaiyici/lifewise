@@ -15,6 +15,22 @@ public class KnowledgeBaseController {
 
     private final KnowledgeBaseService knowledgeBaseService;
 
+    @PostMapping
+    public ApiResponse<?> add(@RequestAttribute Long userId,
+                              @RequestBody Map<String, String> body) {
+        String question = body.get("question");
+        String answer = body.get("answer");
+        String scene = body.get("scene");
+        if (question == null || question.trim().isEmpty()) {
+            return ApiResponse.error("问题不能为空");
+        }
+        if (answer == null || answer.trim().isEmpty()) {
+            return ApiResponse.error("回答不能为空");
+        }
+        knowledgeBaseService.saveAnswer(question.trim(), answer.trim(), scene, userId);
+        return ApiResponse.success("已加入常识库");
+    }
+
     @GetMapping("/search")
     public ApiResponse<?> search(@RequestAttribute Long userId,
                                   @RequestParam(required = false) String keyword,
@@ -23,30 +39,33 @@ public class KnowledgeBaseController {
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<?> delete(@PathVariable Long id) {
-        knowledgeBaseService.delete(id);
-        return ApiResponse.success("???");
+    public ApiResponse<?> delete(@RequestAttribute Long userId,
+                                 @PathVariable Long id) {
+        knowledgeBaseService.delete(id, userId);
+        return ApiResponse.success("已删除");
     }
 
     
     @PutMapping("/{id}")
-    public ApiResponse<?> update(@PathVariable Long id,
+    public ApiResponse<?> update(@RequestAttribute Long userId,
+                                  @PathVariable Long id,
                                   @RequestBody Map<String, String> body) {
         String question = body.get("question");
         String answer = body.get("answer");
         String scene = body.get("scene");
-        knowledgeBaseService.update(id, question, answer, scene);
-        return ApiResponse.success("????");
+        knowledgeBaseService.update(id, userId, question, answer, scene);
+        return ApiResponse.success("已保存");
     }
 
     @PostMapping("/{id}/helpful")
-    public ApiResponse<?> markHelpful(@PathVariable Long id) {
-        knowledgeBaseService.markHelpful(id);
+    public ApiResponse<?> markHelpful(@RequestAttribute Long userId,
+                                      @PathVariable Long id) {
+        knowledgeBaseService.markHelpful(id, userId);
         return ApiResponse.success("感谢反馈");
     }
     @GetMapping("/export")
-    public ApiResponse<?> exportAll() {
-        return ApiResponse.success(knowledgeBaseService.exportAll());
+    public ApiResponse<?> exportAll(@RequestAttribute Long userId) {
+        return ApiResponse.success(knowledgeBaseService.exportAll(userId));
     }
 
     @PostMapping("/import")

@@ -103,6 +103,10 @@ export function searchKnowledge(keyword, scene) {
   return api.get('/kb/search', { params })
 }
 
+export function addKnowledge(data) {
+  return api.post('/kb', data)
+}
+
 export function deleteKnowledge(id) {
   return api.delete('/kb/' + id)
 }

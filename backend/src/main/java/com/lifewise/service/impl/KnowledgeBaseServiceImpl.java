@@ -146,7 +146,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             return knowledgeBaseRepository.findByUserId(userId);
         }
 
-        List<KnowledgeBase> results = knowledgeBaseRepository.findByQuestionContaining(keyword.trim());
+        List<KnowledgeBase> results = knowledgeBaseRepository.findByUserIdAndQuestionContaining(userId, keyword.trim());
 
         results.sort((a, b) -> {
             int cmp = Integer.compare(
@@ -159,14 +159,16 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     }
 
     @Override
-    public void delete(Long id) {
-        knowledgeBaseRepository.deleteById(id);
-        log.info("????? id={}", id);
+    public void delete(Long id, Long userId) {
+        knowledgeBaseRepository.findByIdAndUserId(id, userId).ifPresent(kb -> {
+            knowledgeBaseRepository.delete(kb);
+            log.info("知识库删除: id={}, userId={}", id, userId);
+        });
     }
 
     @Override
-    public void update(Long id, String question, String answer, String scene) {
-        knowledgeBaseRepository.findById(id).ifPresent(kb -> {
+    public void update(Long id, Long userId, String question, String answer, String scene) {
+        knowledgeBaseRepository.findByIdAndUserId(id, userId).ifPresent(kb -> {
             if (question != null && !question.trim().isEmpty()) {
                 kb.setQuestion(question.length() > 200 ? question.substring(0, 200) : question);
             }
@@ -177,12 +179,12 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
                 kb.setScene(scene);
             }
             knowledgeBaseRepository.save(kb);
-            log.info("?????: id={}", id);
+            log.info("知识库更新: id={}, userId={}", id, userId);
         });
     }
 
-    public void markHelpful(Long id) {
-        knowledgeBaseRepository.findById(id).ifPresent(kb -> {
+    public void markHelpful(Long id, Long userId) {
+        knowledgeBaseRepository.findByIdAndUserId(id, userId).ifPresent(kb -> {
             kb.setHelpfulCount(kb.getHelpfulCount() + 1);
             knowledgeBaseRepository.save(kb);
         });
@@ -268,8 +270,8 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
         return intersection.size();
     }
     @Override
-    public List<KnowledgeBase> exportAll() {
-        return knowledgeBaseRepository.findAll();
+    public List<KnowledgeBase> exportAll(Long userId) {
+        return knowledgeBaseRepository.findByUserId(userId);
     }
 
     @Override

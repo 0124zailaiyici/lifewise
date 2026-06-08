@@ -83,10 +83,13 @@
               </div>
             </div>
             <div class="audit-summary">
-              <div class="summary-tile"><b>{{ auditStats.total }}</b><span>近期记录</span></div>
-              <div class="summary-tile free"><b>{{ auditStats.free }}</b><span>不扣费</span></div>
-              <div class="summary-tile paid"><b>{{ auditStats.paid }}</b><span>外部调用</span></div>
-              <div class="summary-tile blocked"><b>{{ auditStats.blocked }}</b><span>已拦截</span></div>
+              <div class="summary-tile"><b>{{ todayStats.total }}</b><span>今日记录</span></div>
+              <div class="summary-tile free"><b>{{ todayStats.cacheHits }}</b><span>今日缓存</span></div>
+              <div class="summary-tile paid"><b>{{ todayStats.externalCalls }}</b><span>今日外调</span></div>
+              <div class="summary-tile blocked"><b>{{ todayStats.blocked }}</b><span>今日拦截</span></div>
+            </div>
+            <div v-if="todayStats.latestExternalAt" class="latest-external">
+              最近外部调用：{{ formatAuditTime(todayStats.latestExternalAt) }}
             </div>
 
             <div class="detail-toggle-row" @click="aiDetailExpanded = !aiDetailExpanded">
@@ -192,6 +195,13 @@ const filteredRecentCalls = computed(() => recentCalls.value.filter(item => {
   if (auditFilter.value === 'blocked') return item.status === 'blocked'
   return true
 }))
+const todayStats = computed(() => aiStatus.value?.todayStats || {
+  total: 0,
+  cacheHits: 0,
+  externalCalls: 0,
+  blocked: 0,
+  latestExternalAt: ''
+})
 const auditStats = computed(() => {
   const list = recentCalls.value
   return {
@@ -375,6 +385,7 @@ function handleLogout() {
 .summary-tile.paid b, .summary-tile.paid span { color: #1d4ed8; }
 .summary-tile.blocked { background: #fef2f2; border-color: #fecaca; }
 .summary-tile.blocked b, .summary-tile.blocked span { color: #b91c1c; }
+.latest-external { margin-top: 8px; padding: 7px 10px; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 700; text-align: center; }
 .detail-toggle-row { margin-top: 12px; padding: 8px 8px 8px 12px; border-radius: 999px; background: linear-gradient(135deg, #f8fafc, #f0fdf4); color: #64748b; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border: 1px solid #eef7f0; box-shadow: inset 0 1px 0 rgba(255,255,255,.9); }
 .detail-toggle-row:active { transform: scale(.99); background: #f0fdf4; }
 .detail-toggle-text { display: inline-flex; align-items: center; gap: 6px; }

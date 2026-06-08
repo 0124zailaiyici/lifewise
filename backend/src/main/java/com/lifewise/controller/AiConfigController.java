@@ -82,6 +82,7 @@ public class AiConfigController {
         data.put("foodImage", provider("菜品生图", false, hasText(imageApiKey), "gpt-image-2", imageApiUrl));
         data.put("warnings", warnings());
         data.put("recentCalls", aiCallAuditService.recent(userId));
+        data.put("todayStats", aiCallAuditService.todayStats(userId));
         return ApiResponse.success(data);
     }
 

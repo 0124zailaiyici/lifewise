@@ -33,7 +33,7 @@
           </div>
           <div v-else>
             <div v-if="msg.imageUrl" class="msg-image" @click="previewImage(msg.imageUrl)">
-              <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" />
+              <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" @error="onImgError($event)" />
             </div>
             <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
             <div v-if="msg._foodImageLoading" class="food-image-loading">
@@ -143,7 +143,6 @@
 </template>
 
 <script setup>
-import { exportConversationToFile } from "../api/index.js"
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache } from '../api'
@@ -165,6 +164,16 @@ const previewImg = ref(null)
 const uploadProgress = ref(0)
 const currentConvId = ref(null)
 function previewImage(url) { previewImg.value = url }
+function onImgError(e) {
+  e.target.style.display = "none"
+  const parent = e.target.parentElement
+  if (parent) {
+    const fallback = document.createElement("div")
+    fallback.style.cssText = "padding:20px;text-align:center;color:#999;font-size:13px"
+    fallback.textContent = "🖼️ 图片加载失败"
+    parent.appendChild(fallback)
+  }
+}
 function cancelFoodImage(m) {
   if (m._foodImagePoll) { clearInterval(m._foodImagePoll); m._foodImagePoll = null }
   m._foodImageLoading = false
@@ -332,13 +341,14 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
 
 function copyMsg(i) {
   const text = messages.value[i]?.content || ''
-  navigator.clipboard.writeText(text).then(() => ElMessage.success('已复制')).catch(() => {
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success({ message: '✅ 已复制到剪贴板', duration: 1200, offset: 80 })
+  }).catch(() => {
     const ta = document.createElement('textarea'); ta.value = text
     document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
-    ElMessage.success('已复制')
+    ElMessage.success({ message: '✅ 已复制到剪贴板', duration: 1200, offset: 80 })
   })
 }
-
 
 async function exportConversation() {
   const msgs = messages.value
@@ -367,23 +377,21 @@ async function exportConversation() {
   text += '='.repeat(40) + '\n'
   text += '\u7531 LifeWise AI \u751f\u6d3b\u52a9\u624b\u751f\u6210\n'
   
-  try {
-    const res = await exportConversationToFile(text)
-    ElMessage.success('\u5bf9\u8bdd\u5df2\u4fdd\u5b58\u5230: ' + (res.data || 'exports/\u76ee\u5f55'))
+   try {
+    // 直接下载到本地，不经过后端
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    const now = new Date()
+    const ts2 = now.getFullYear() + String(now.getMonth()+1).padStart(2,"0") + String(now.getDate()).padStart(2,"0") + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0")
+    a.download = "LifeWise对话_" + ts2 + ".txt"
+    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success("对话已下载到本地")
   } catch(e) {
-    ElMessage.error('\u5bfc\u51fa\u5931\u8d25: ' + (e.message || '\u672a\u77e5\u9519\u8bef'))
-  }
-}
-
-
-/**
- * 处理导出菜单命令
- */
-function handleExport(cmd) {
-  if (cmd === 'txt') exportConversation()
-  else if (cmd === 'image') exportConversationAsImage()
-  else if (cmd === 'pdf') exportConversationAsPdf()
-}
+    ElMessage.error("导出失败: " + (e.message || "未知错误"))
+  }}
 
 /**
  * 导出对话为图片（长截图）

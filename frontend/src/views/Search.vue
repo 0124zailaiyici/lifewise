@@ -37,7 +37,7 @@
              @click="$router.push('/chat/' + item.id)">
           <span class="r-icon">{{ item.sceneIcon }}</span>
           <div class="r-info">
-            <div class="r-title">{{ item.title }}</div>
+            <div class="r-title" v-html="highlight(item.title)"></div>
             <div class="r-meta">{{ item.sceneLabel }}</div>
           </div>
         </div>
@@ -50,7 +50,7 @@
           <span class="r-icon">{{ item.role === 'user' ? '👤' : '🤖' }}</span>
           <div class="r-info">
             <div class="r-title">{{ item.convTitle }}</div>
-            <div class="r-snippet">{{ item.snippet }}</div>
+            <div class="r-snippet" v-html="highlight(item.snippet)"></div>
           </div>
         </div>
       </div>
@@ -60,7 +60,7 @@
         <div v-for="item in knowledge" :key="'k'+item.id" class="result-item">
           <span class="r-icon">📖</span>
           <div class="r-info">
-            <div class="r-title">{{ item.question }}</div>
+            <div class="r-title" v-html="highlight(item.question)"></div>
             <div class="r-meta">有用 {{ item.helpfulCount }} 次</div>
           </div>
         </div>
@@ -76,6 +76,12 @@ import { search as searchApi } from '../api'
 
 const keyword = ref('')
 const inputRef = ref(null)
+
+function highlight(text) {
+  if (!text || !keyword.value.trim()) return text
+  const q = keyword.value.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return text.replace(new RegExp(q, "gi"), m => `<mark style="background:#fde68a;color:#92400e;padding:0 2px;border-radius:3px">${m}</mark>`)
+}
 const searched = ref(false)
 const loading = ref(false)
 const total = ref(0)

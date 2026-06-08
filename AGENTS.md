@@ -77,7 +77,8 @@
 **现象**：明明在设置里选了千问 Qwen，后台却一直在用 DeepSeek，一天烧十几块
 
 **根本原因**：
-1. 后端 AiServiceImpl.java 中，旧方法 chat(String, String, Long, Long, String) 硬编码 eq.setProvider("deepseek")
+1. 后端 AiServiceImpl.java 中，旧方法 chat(String, String, Long, Long, String) 硬编码 
+eq.setProvider("deepseek")
 2. **最关键**：callAI() 方法中，当 provider = "qwen" 但 dashscopeApiKey 为空时，会**静默回退到 DeepSeek**，用户完全不知道
 3. 服务器 start.sh 没有导出 AI_DASHSCOPE_KEY 环境变量，导致 DashScope Key 虽然写入了 pplication-cloud.properties，但后端读取不到
 
@@ -88,7 +89,9 @@
 - 服务器上的 start.sh 必须同步更新以支持新配置项
 
 **修复措施**：
-- 旧方法 eq.setProvider("deepseek") → eq.setProvider("qwen")
+- 旧方法 
+eq.setProvider("deepseek") → 
+eq.setProvider("qwen")
 - Qwen Key 缺失时返回清晰错误提示，而不是回退到 DeepSeek
 - deploy/start.sh 添加 i.dashscope-api-key → AI_DASHSCOPE_KEY 的导出
 

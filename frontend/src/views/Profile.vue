@@ -109,7 +109,9 @@
                     <el-button v-if="recentCalls.length" size="small" text type="danger" @click="clearAuditRecords">清空</el-button>
                   </div>
                   <div v-if="recentCalls.length" class="audit-filters">
-                    <button v-for="item in auditFilterOptions" :key="item.value" class="audit-chip" :class="{ active: auditFilter === item.value }" @click="auditFilter = item.value">{{ item.label }}</button>
+                    <button v-for="item in auditFilterOptions" :key="item.value" class="audit-chip" :class="{ active: auditFilter === item.value }" @click="auditFilter = item.value">
+                      <span>{{ item.label }}</span><b>{{ auditFilterCounts[item.value] || 0 }}</b>
+                    </button>
                   </div>
                   <div v-if="filteredRecentCalls.length" class="audit-list">
                     <div v-for="(item, idx) in filteredRecentCalls" :key="idx" class="audit-item">
@@ -188,28 +190,36 @@ const auditFilterOptions = [
   { label: '已拦截', value: 'blocked' }
 ]
 const recentCalls = computed(() => aiStatus.value?.recentCalls || [])
+function isExternalAudit(item) {
+  return item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)
+}
+
+function isFreeAudit(item) {
+  return item.provider === 'cache' || item.provider === 'ollama'
+}
+
 const filteredRecentCalls = computed(() => recentCalls.value.filter(item => {
   if (auditFilter.value === 'all') return true
-  if (auditFilter.value === 'paid') return item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)
-  if (auditFilter.value === 'free') return item.provider === 'cache' || item.provider === 'ollama'
+  if (auditFilter.value === 'paid') return isExternalAudit(item)
+  if (auditFilter.value === 'free') return isFreeAudit(item)
   if (auditFilter.value === 'blocked') return item.status === 'blocked'
   return true
 }))
+const auditFilterCounts = computed(() => {
+  const list = recentCalls.value
+  return {
+    all: list.length,
+    paid: list.filter(isExternalAudit).length,
+    free: list.filter(isFreeAudit).length,
+    blocked: list.filter(item => item.status === 'blocked').length
+  }
+})
 const todayStats = computed(() => aiStatus.value?.todayStats || {
   total: 0,
   cacheHits: 0,
   externalCalls: 0,
   blocked: 0,
   latestExternalAt: ''
-})
-const auditStats = computed(() => {
-  const list = recentCalls.value
-  return {
-    total: list.length,
-    free: list.filter(item => item.provider === 'cache' || item.provider === 'ollama').length,
-    paid: list.filter(item => item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)).length,
-    blocked: list.filter(item => item.status === 'blocked').length
-  }
 })
 
 function saveFoodImageSetting(val) {
@@ -405,8 +415,10 @@ function handleLogout() {
 .audit-head span { font-size: 12px; font-weight: 700; color: #111827; }
 .audit-head small { font-size: 10px; color: #9ca3af; }
 .audit-filters { display: flex; gap: 6px; margin: 8px 0; overflow-x: auto; padding-bottom: 2px; }
-.audit-chip { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; border-radius: 999px; padding: 4px 9px; font-size: 11px; white-space: nowrap; cursor: pointer; }
+.audit-chip { border: 1px solid #e5e7eb; background: #fff; color: #6b7280; border-radius: 999px; padding: 4px 5px 4px 9px; font-size: 11px; white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .audit-chip.active { border-color: #22c55e; background: #ecfdf5; color: #15803d; font-weight: 700; }
+.audit-chip b { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #f3f4f6; color: #6b7280; font-size: 10px; line-height: 18px; text-align: center; }
+.audit-chip.active b { background: #22c55e; color: #fff; }
 .audit-list { display: flex; flex-direction: column; gap: 8px; max-height: 190px; overflow-y: auto; }
 .audit-item { padding: 8px; border-radius: 10px; background: #f9fafb; }
 .audit-main { display: flex; align-items: center; gap: 6px; min-width: 0; }

@@ -44,6 +44,9 @@ public class AiServiceImpl implements AiService {
     @Value("${ai.model:deepseek-chat}")
     private String model;
 
+    @Value("${ai.deepseek-enabled:false}")
+    private boolean deepseekEnabled;
+
     @Value("${ai.vision-api-url:}")
     private String visionApiUrl;
 
@@ -119,13 +122,13 @@ public class AiServiceImpl implements AiService {
     }
 
     private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider) {
+        if ("deepseek".equals(provider) && !deepseekEnabled) {
+            log.warn("DeepSeek is disabled by server cost guard");
+            return disabledProviderResponse("DeepSeek ???????????????????? (Qwen) ? Ollama?");
+        }
         if ("deepseek".equals(provider) && (apiKey == null || apiKey.isEmpty())) {
             log.warn("DeepSeek API key not configured");
-            if (!"deepseek".equals(provider)) {
-                // fall through to other providers
-            } else {
-                return mockResponse(message, scene);
-            }
+            return disabledProviderResponse("DeepSeek ??? API Key??????? (Qwen) ? Ollama?");
         }
         if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
             log.warn("DashScope API key not configured for Qwen, please check server config");
@@ -524,6 +527,10 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
                 break;
         }
         return baseRule + "\n" + schema;
+    }
+
+    private String disabledProviderResponse(String reason) {
+        return "{\"answer\":\"?? " + reason.replace("\"", "\\\"") + "\",\"tips\":[\"?? ?? ? AI ?? ????? (Qwen)\",\"????? DeepSeek?????????? ai.deepseek-enabled=true\"]}";
     }
 
     private String mockResponse(String message, String scene) {

@@ -11,6 +11,7 @@ if [ -f application-cloud.properties ]; then
             ai.api-key) export AI_API_KEY="$value" ;;
             ai.model) export AI_MODEL="$value" ;;
             ai.api-url) export AI_API_URL="$value" ;;
+            ai.deepseek-enabled) export AI_DEEPSEEK_ENABLED="$value" ;;
             ai.vision-api-key) export AI_VISION_API_KEY="$value" ;;
             ai.vision-model) export AI_VISION_MODEL="$value" ;;
             app.vision-enabled) export APP_VISION_ENABLED="$value" ;;
@@ -31,6 +32,7 @@ UPLOAD_DIR="${UPLOAD_DIR:-/opt/lifewise/uploads}"
 echo "Starting LifeWise backend (port: $PORT)..."
 echo "AI_API_KEY: ${AI_API_KEY:0:10}... (configured: $([ -n "$AI_API_KEY" ] && echo yes || echo no))"
 echo "AI_DASHSCOPE_KEY: ${AI_DASHSCOPE_KEY:0:10}... (configured: $([ -n "$AI_DASHSCOPE_KEY" ] && echo yes || echo no))"
+echo "AI_DEEPSEEK_ENABLED: ${AI_DEEPSEEK_ENABLED:-false}"
 
 nohup java -jar lifewise-backend.jar \
     --spring.profiles.active=cloud \

@@ -33,6 +33,7 @@ ai:
   api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
   api-key: ${AI_API_KEY:}
   model: ${AI_MODEL:deepseek-v4-flash}  # 备用模型（贵，仅在选择 DeepSeek 时使用）
+  deepseek-enabled: ${AI_DEEPSEEK_ENABLED:false}  # 扣费保护：默认禁用 DeepSeek，必须显式开启
   # DashScope (千问) 配置 ⭐ 默认模型（便宜、缓存命中率高）
   dashscope-api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
   dashscope-api-key: ${AI_DASHSCOPE_KEY:}

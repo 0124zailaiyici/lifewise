@@ -51,7 +51,7 @@
             </div>
             <div v-if="aiStatus" class="ai-status-body">
               <div class="guard-line" :class="{ ok: !aiStatus.autoFallbackToDeepSeek }">
-                {{ aiStatus.autoFallbackToDeepSeek ? '⚠️ 存在 DeepSeek 自动回退风险' : '✅ 不会自动回退到 DeepSeek' }}
+                {{ aiStatus.autoFallbackToDeepSeek ? '\u26a0\ufe0f \u5b58\u5728 DeepSeek \u81ea\u52a8\u56de\u9000\u98ce\u9669' : '\u2705 DeepSeek \u670d\u52a1\u7aef\u9ed8\u8ba4\u7981\u7528' }}
               </div>
               <div class="provider-grid">
                 <div class="provider-card" :class="{ active: setting_aiProvider === 'qwen', danger: providerConfigured('deepseek') }">
@@ -63,8 +63,8 @@
                 </div>
                 <div class="provider-card" :class="{ active: setting_aiProvider === 'deepseek', danger: providerConfigured('deepseek') }">
                   <span class="provider-name">DeepSeek</span>
-                  <span class="provider-badge" :class="providerConfigured('deepseek') ? 'warn' : 'ok'">
-                    {{ providerConfigured('deepseek') ? 'Key 存在' : '未配置' }}
+                  <span class="provider-badge" :class="aiStatus.deepseekEnabled ? 'warn' : 'ok'">
+                    {{ aiStatus.deepseekEnabled ? (providerConfigured('deepseek') ? '\u5df2\u542f\u7528' : '\u7f3a Key') : '\u5df2\u7981\u7528' }}
                   </span>
                   <small>{{ aiStatus.deepseek?.model || '-' }}</small>
                 </div>

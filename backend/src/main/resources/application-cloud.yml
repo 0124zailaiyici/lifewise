@@ -21,6 +21,7 @@ ai:
   api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
   api-key: ${AI_API_KEY:}
   model: ${AI_MODEL:deepseek-v4-flash}
+  deepseek-enabled: ${AI_DEEPSEEK_ENABLED:false}
   vision-api-url: ${AI_VISION_API_URL:}
   vision-api-key: ${AI_VISION_API_KEY:}
   vision-model: ${AI_VISION_MODEL:mimo-v2-omni}

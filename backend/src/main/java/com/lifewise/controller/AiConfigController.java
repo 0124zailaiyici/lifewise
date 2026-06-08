@@ -22,6 +22,9 @@ public class AiConfigController {
     @Value("${ai.model:deepseek-v4-flash}")
     private String deepseekModel;
 
+    @Value("${ai.deepseek-enabled:false}")
+    private boolean deepseekEnabled;
+
     @Value("${ai.dashscope-api-url:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}")
     private String dashscopeApiUrl;
 
@@ -60,10 +63,11 @@ public class AiConfigController {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("defaultProvider", "qwen");
         data.put("autoFallbackToDeepSeek", false);
-        data.put("costGuard", "不会从 Qwen/Ollama 自动回退到 DeepSeek；只有手动选择 DeepSeek 且配置 Key 时才会调用。");
+        data.put("costGuard", "\u4e0d\u4f1a\u4ece Qwen/Ollama \u81ea\u52a8\u56de\u9000\u5230 DeepSeek\uff1bDeepSeek \u9ed8\u8ba4\u670d\u52a1\u7aef\u7981\u7528\uff0c\u5fc5\u987b\u663e\u5f0f\u5f00\u542f ai.deepseek-enabled=true \u624d\u4f1a\u8c03\u7528\u3002");
+        data.put("deepseekEnabled", deepseekEnabled);
 
         data.put("qwen", provider("千问 Qwen", true, hasText(dashscopeApiKey), dashscopeModel, dashscopeApiUrl));
-        data.put("deepseek", provider("DeepSeek", false, hasText(deepseekApiKey), deepseekModel, deepseekApiUrl));
+        data.put("deepseek", provider("DeepSeek", false, deepseekEnabled && hasText(deepseekApiKey), deepseekModel, deepseekApiUrl));
         data.put("ollama", provider("Ollama 本地", false, true, ollamaModel, ollamaUrl));
         data.put("vision", provider("图片识别", visionEnabled, hasText(visionApiKey), visionModel, visionApiUrl));
         data.put("foodImage", provider("菜品生图", false, hasText(imageApiKey), "gpt-image-2", imageApiUrl));
@@ -82,9 +86,14 @@ public class AiConfigController {
     }
 
     private String[] warnings() {
+        if (deepseekEnabled && hasText(deepseekApiKey)) {
+            return new String[]{
+                "\u68c0\u6d4b\u5230 DeepSeek \u5df2\u542f\u7528\u4e14 Key \u5df2\u914d\u7f6e\uff1a\u53ea\u6709\u5f53\u524d\u7aef\u624b\u52a8\u9009\u62e9 DeepSeek \u65f6\u624d\u4f1a\u8c03\u7528\uff0c\u4ecd\u5efa\u8bae\u4e0d\u7528\u65f6\u5173\u95ed ai.deepseek-enabled\u3002"
+            };
+        }
         if (hasText(deepseekApiKey)) {
             return new String[]{
-                "检测到 DeepSeek Key 已配置：只有当前端手动选择 DeepSeek 时才会调用，但仍建议不用时清空。"
+                "\u68c0\u6d4b\u5230 DeepSeek Key \u5b58\u5728\uff0c\u4f46\u670d\u52a1\u7aef\u5f00\u5173\u672a\u542f\u7528\uff1a\u5f53\u524d\u4e0d\u4f1a\u8c03\u7528 DeepSeek\u3002"
             };
         }
         if (!hasText(dashscopeApiKey)) {

@@ -1,35 +1,46 @@
 package com.lifewise.service;
 
+import com.lifewise.entity.AiCallAudit;
+import com.lifewise.repository.AiCallAuditRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class AiCallAuditService {
 
-    private static final int MAX_SIZE = 30;
-    private final LinkedList<Map<String, Object>> records = new LinkedList<>();
+    private final AiCallAuditRepository aiCallAuditRepository;
 
-    public synchronized void record(Long userId, String provider, String model, String scene, String status, String detail) {
-        records.addFirst(Map.of(
-            "time", LocalDateTime.now().toString(),
-            "userId", userId != null ? userId : 0,
-            "provider", provider != null ? provider : "",
-            "model", model != null ? model : "",
-            "scene", scene != null ? scene : "other",
-            "status", status != null ? status : "",
-            "detail", detail != null ? detail : ""
-        ));
-        while (records.size() > MAX_SIZE) {
-            records.removeLast();
-        }
+    public void record(Long userId, String provider, String model, String scene, String status, String detail) {
+        AiCallAudit audit = new AiCallAudit();
+        audit.setUserId(userId != null ? userId : 0);
+        audit.setProvider(safe(provider));
+        audit.setModel(safe(model));
+        audit.setScene(scene != null && !scene.isBlank() ? scene : "other");
+        audit.setStatus(safe(status));
+        audit.setDetail(safe(detail));
+        aiCallAuditRepository.save(audit);
     }
 
-    public synchronized List<Map<String, Object>> recent() {
-        return new ArrayList<>(records);
+    public List<Map<String, Object>> recent() {
+        return aiCallAuditRepository.findTop30ByOrderByCreatedAtDesc().stream()
+            .map(audit -> Map.<String, Object>of(
+                "time", audit.getCreatedAt() != null ? audit.getCreatedAt().toString() : "",
+                "userId", audit.getUserId() != null ? audit.getUserId() : 0,
+                "provider", safe(audit.getProvider()),
+                "model", safe(audit.getModel()),
+                "scene", safe(audit.getScene()),
+                "status", safe(audit.getStatus()),
+                "detail", safe(audit.getDetail())
+            ))
+            .collect(Collectors.toList());
+    }
+
+    private String safe(String value) {
+        return value != null ? value : "";
     }
 }

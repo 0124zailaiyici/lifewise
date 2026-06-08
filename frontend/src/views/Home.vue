@@ -184,7 +184,7 @@ function displayConversationTitle(conv) {
 function isBadTitle(title) {
   const questionMarks = (title.match(/\?/g) || []).length
   if (questionMarks >= 3) return true
-  if (/?|?/.test(title)) return true
+  if (title.includes(String.fromCharCode(0x951f)) || title.includes(String.fromCharCode(0xfffd))) return true
   return false
 }
 </script>

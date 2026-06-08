@@ -16,8 +16,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@DisplayName("知识库服务测试")
+@DisplayName("常识库服务测试")
 class KnowledgeBaseServiceTest {
+
+    private static final Long USER_ID = 1L;
+    private static final Long OTHER_USER_ID = 2L;
 
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
@@ -35,44 +38,70 @@ class KnowledgeBaseServiceTest {
     class SaveAnswer {
 
         @Test
-        @DisplayName("应该保存新问答到知识库")
+        @DisplayName("应该保存新问答到常识库")
         void shouldSaveNewAnswer() {
-            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "做法...", "cooking");
+            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "做法...", "cooking", USER_ID);
+
             List<KnowledgeBase> all = repository.findAll();
             assertEquals(1, all.size());
+            assertEquals(USER_ID, all.get(0).getUserId());
             assertEquals("西红柿炒鸡蛋怎么做", all.get(0).getQuestion());
             assertEquals("cooking", all.get(0).getScene());
         }
 
         @Test
-        @DisplayName("相同问题不应该重复保存")
-        void shouldNotDuplicateExactQuestion() {
-            knowledgeBaseService.saveAnswer("怎么挑西瓜", "看纹路...", "shopping");
-            knowledgeBaseService.saveAnswer("怎么挑西瓜", "看纹路...", "shopping");
+        @DisplayName("同用户相同问题不应该重复保存")
+        void shouldNotDuplicateExactQuestionForSameUser() {
+            knowledgeBaseService.saveAnswer("怎么挑西瓜", "看纹路...", "shopping", USER_ID);
+            knowledgeBaseService.saveAnswer("怎么挑西瓜", "看纹路...", "shopping", USER_ID);
+
             assertEquals(1, repository.findAll().size());
+        }
+
+        @Test
+        @DisplayName("不同用户相同问题应该分别保存")
+        void shouldAllowSameQuestionForDifferentUsers() {
+            knowledgeBaseService.saveAnswer("怎么挑西瓜", "用户1答案", "shopping", USER_ID);
+            knowledgeBaseService.saveAnswer("怎么挑西瓜", "用户2答案", "shopping", OTHER_USER_ID);
+
+            assertEquals(2, repository.findAll().size());
+            assertEquals(1, repository.findByUserId(USER_ID).size());
+            assertEquals(1, repository.findByUserId(OTHER_USER_ID).size());
         }
 
         @Test
         @DisplayName("相似问题（核心相同）不应该重复保存")
         void shouldNotDuplicateSimilarQuestion() {
-            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "做法...", "cooking");
-            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋如何做", "做法...", "cooking");
+            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "做法...", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋如何做", "做法...", "cooking", USER_ID);
+
             assertEquals(1, repository.findAll().size());
         }
 
         @Test
         @DisplayName("不同场景的相似问题可以分别保存")
         void shouldAllowSameCoreInDifferentScenes() {
-            knowledgeBaseService.saveAnswer("鱼怎么做", "清蒸...", "cooking");
-            knowledgeBaseService.saveAnswer("鱼怎么做", "水族箱...", "pet");
+            knowledgeBaseService.saveAnswer("鱼怎么做", "清蒸...", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("鱼怎么做", "水族箱...", "pet", USER_ID);
+
             assertEquals(2, repository.findAll().size());
         }
 
         @Test
         @DisplayName("空内容不应该保存")
         void shouldNotSaveEmptyContent() {
-            knowledgeBaseService.saveAnswer("", "答案", "cooking");
-            knowledgeBaseService.saveAnswer("问题", "", "cooking");
+            knowledgeBaseService.saveAnswer("", "答案", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("问题", "", "cooking", USER_ID);
+
+            assertEquals(0, repository.findAll().size());
+        }
+
+        @Test
+        @DisplayName("错误提示类回答不应该入库")
+        void shouldNotSaveInvalidAiResponse() {
+            knowledgeBaseService.saveAnswer("炖排骨", "API key not configured", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("炖排骨", "Mock response", "cooking", USER_ID);
+
             assertEquals(0, repository.findAll().size());
         }
     }
@@ -83,74 +112,95 @@ class KnowledgeBaseServiceTest {
 
         @BeforeEach
         void initData() {
-            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "{title:西红柿炒鸡蛋}", "cooking");
-            knowledgeBaseService.saveAnswer("怎么挑西瓜", "{品类:西瓜}", "shopping");
-            knowledgeBaseService.saveAnswer("水龙头滴水怎么办", "{problem:水龙头滴水}", "repair");
+            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "{title:西红柿炒鸡蛋}", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("怎么挑西瓜", "{品类:西瓜}", "shopping", USER_ID);
+            knowledgeBaseService.saveAnswer("水龙头漏水怎么办", "{problem:水龙头漏水}", "repair", USER_ID);
+            knowledgeBaseService.saveAnswer("西红柿炒鸡蛋怎么做", "{title:其他用户答案}", "cooking", OTHER_USER_ID);
         }
 
         @Test
         @DisplayName("精确匹配应该命中缓存")
         void shouldHitExactMatch() {
-            String r = knowledgeBaseService.findAnswer("西红柿炒鸡蛋怎么做", "cooking");
-            assertNotNull(r);
+            String result = knowledgeBaseService.findAnswer("西红柿炒鸡蛋怎么做", "cooking", USER_ID);
+
+            assertNotNull(result);
+            assertTrue(result.contains("西红柿炒鸡蛋"));
         }
 
         @Test
         @DisplayName("相同核心不同表述应该命中缓存")
         void shouldHitCoreMatch() {
-            String r = knowledgeBaseService.findAnswer("西红柿炒鸡蛋如何做", "cooking");
-            assertNotNull(r);
+            String result = knowledgeBaseService.findAnswer("西红柿炒鸡蛋如何做", "cooking", USER_ID);
+
+            assertNotNull(result);
         }
 
         @Test
         @DisplayName("相似问题应该命中缓存")
         void shouldHitSimilarMatch() {
-            String r = knowledgeBaseService.findAnswer("怎么挑选西瓜", "shopping");
-            assertNotNull(r);
+            String result = knowledgeBaseService.findAnswer("怎么挑西瓜？", "shopping", USER_ID);
+
+            assertNotNull(result);
         }
 
         @Test
         @DisplayName("不相关的问题应该返回 null")
         void shouldReturnNullForUnrelated() {
-            String r = knowledgeBaseService.findAnswer("空调不制冷怎么办", "repair");
-            assertNull(r);
+            String result = knowledgeBaseService.findAnswer("空调不制冷怎么办", "repair", USER_ID);
+
+            assertNull(result);
         }
 
         @Test
         @DisplayName("跨场景不匹配")
         void shouldNotMatchAcrossScenes() {
-            String r = knowledgeBaseService.findAnswer("西红柿炒鸡蛋怎么做", "shopping");
-            assertNull(r);
+            String result = knowledgeBaseService.findAnswer("西红柿炒鸡蛋怎么做", "shopping", USER_ID);
+
+            assertNull(result);
+        }
+
+        @Test
+        @DisplayName("不能命中其他用户的缓存")
+        void shouldNotHitOtherUsersCache() {
+            String result = knowledgeBaseService.findAnswer("水龙头漏水怎么办", "repair", OTHER_USER_ID);
+
+            assertNull(result);
         }
     }
 
     @Nested
-    @DisplayName("搜索知识库")
+    @DisplayName("搜索常识库")
     class Search {
 
         @BeforeEach
         void initData() {
-            knowledgeBaseService.saveAnswer("红烧排骨怎么做", "做法...", "cooking");
-            knowledgeBaseService.saveAnswer("番茄牛腩怎么做", "做法...", "cooking");
-            knowledgeBaseService.saveAnswer("怎么挑苹果", "看颜色...", "shopping");
+            knowledgeBaseService.saveAnswer("红烧排骨怎么做", "做法...", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("番茄牛腩怎么做", "做法...", "cooking", USER_ID);
+            knowledgeBaseService.saveAnswer("怎么挑苹果", "看颜色...", "shopping", USER_ID);
+            knowledgeBaseService.saveAnswer("红烧排骨怎么做", "其他用户做法...", "cooking", OTHER_USER_ID);
         }
 
         @Test
         void shouldSearchByKeyword() {
-            List<KnowledgeBase> r = knowledgeBaseService.search("排骨", null);
-            assertEquals(1, r.size());
+            List<KnowledgeBase> result = knowledgeBaseService.search("排骨", null, USER_ID);
+
+            assertEquals(1, result.size());
+            assertEquals(USER_ID, result.get(0).getUserId());
         }
 
         @Test
         void shouldFilterByScene() {
-            List<KnowledgeBase> r = knowledgeBaseService.search(null, "cooking");
-            assertEquals(2, r.size());
+            List<KnowledgeBase> result = knowledgeBaseService.search(null, "cooking", USER_ID);
+
+            assertEquals(2, result.size());
+            assertTrue(result.stream().allMatch(kb -> USER_ID.equals(kb.getUserId())));
         }
 
         @Test
         void shouldReturnEmptyForNoMatch() {
-            List<KnowledgeBase> r = knowledgeBaseService.search("xyzNotFound", null);
-            assertTrue(r.isEmpty());
+            List<KnowledgeBase> result = knowledgeBaseService.search("xyzNotFound", null, USER_ID);
+
+            assertTrue(result.isEmpty());
         }
     }
 
@@ -159,16 +209,28 @@ class KnowledgeBaseServiceTest {
     class MarkHelpful {
 
         @Test
-        void shouldIncrementHelpfulCount() {
-            knowledgeBaseService.saveAnswer("测试问题", "测试答案", "other");
+        void shouldIncrementHelpfulCountForOwner() {
+            knowledgeBaseService.saveAnswer("测试问题", "测试答案", "other", USER_ID);
             Long id = repository.findAll().get(0).getId();
-            knowledgeBaseService.markHelpful(id);
-            assertEquals(1, repository.findById(id).get().getHelpfulCount());
+
+            knowledgeBaseService.markHelpful(id, USER_ID);
+
+            assertEquals(1, repository.findById(id).orElseThrow().getHelpfulCount());
+        }
+
+        @Test
+        void shouldNotIncrementHelpfulCountForOtherUser() {
+            knowledgeBaseService.saveAnswer("测试问题", "测试答案", "other", USER_ID);
+            Long id = repository.findAll().get(0).getId();
+
+            knowledgeBaseService.markHelpful(id, OTHER_USER_ID);
+
+            assertEquals(0, repository.findById(id).orElseThrow().getHelpfulCount());
         }
 
         @Test
         void shouldNotThrowForNonExistentId() {
-            assertDoesNotThrow(() -> knowledgeBaseService.markHelpful(99999L));
+            assertDoesNotThrow(() -> knowledgeBaseService.markHelpful(99999L, USER_ID));
         }
     }
 }

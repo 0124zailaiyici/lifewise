@@ -25,6 +25,7 @@ Thumbs.db
 backend/data/
 backend.log
 frontend.log
+frontend-dev.err
 *.zip
 
 # Env

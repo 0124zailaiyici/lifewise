@@ -1,13 +1,14 @@
 ﻿import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import Chat from '../views/Chat.vue'
-import History from '../views/History.vue'
-import Favorites from '../views/Favorites.vue'
-import Profile from '../views/Profile.vue'
-import Search from '../views/Search.vue'
-import Login from '../views/Login.vue'
-import Dashboard from '../views/Dashboard.vue'
-import KnowledgeBase from '../views/KnowledgeBase.vue'
+
+const Home = () => import('../views/Home.vue')
+const Chat = () => import('../views/Chat.vue')
+const History = () => import('../views/History.vue')
+const Favorites = () => import('../views/Favorites.vue')
+const Profile = () => import('../views/Profile.vue')
+const Search = () => import('../views/Search.vue')
+const Login = () => import('../views/Login.vue')
+const Dashboard = () => import('../views/Dashboard.vue')
+const KnowledgeBase = () => import('../views/KnowledgeBase.vue')
 
 const routes = [
   { path: '/', redirect: '/home' },

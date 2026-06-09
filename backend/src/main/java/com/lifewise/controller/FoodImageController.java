@@ -11,6 +11,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -30,35 +34,114 @@ public class FoodImageController {
         this.cacheRepository = cacheRepository;
     }
 
-    @Value("${gl-image.api-key}")
+    @Value("${gl-image.api-key:}")
     private String glApiKey;
 
-    @Value("${gl-image.api-url}")
+    @Value("${gl-image.api-url:https://api.lk888.ai/api}")
     private String glApiUrl;
 
+    @Value("${app.upload-dir:./uploads}")
+    private String uploadDir;
+
+    /**
+     * Safe lookup: only checks browser/server/local prebuilt cache, never submits an external generation task.
+     */
+    @GetMapping("/lookup")
+    public ApiResponse<?> lookupFoodImage(@RequestParam String dishName) {
+        return lookupByDishName(dishName);
+    }
+
+    @PostMapping("/lookup")
+    public ApiResponse<?> lookupFoodImagePost(@RequestBody Map<String, String> request) {
+        return lookupByDishName(request.get("dishName"));
+    }
+
+    private ApiResponse<?> lookupByDishName(String dishName) {
+        if (dishName == null || dishName.trim().isEmpty()) {
+            return ApiResponse.error(400, "dishName is required");
+        }
+        String normalized = normalizeDishName(dishName);
+
+        Optional<FoodImageCache> cached = cacheRepository.findByDishName(normalized);
+        if (cached.isPresent()) {
+            FoodImageCache c = cached.get();
+            c.setHitCount((c.getHitCount() == null ? 0 : c.getHitCount()) + 1);
+            cacheRepository.save(c);
+            return ApiResponse.success(Map.of(
+                    "found", true,
+                    "cached", true,
+                    "source", sourceOf(c.getImageUrl()),
+                    "dishName", c.getDishName(),
+                    "imageUrl", c.getImageUrl()
+            ));
+        }
+
+        Optional<Map<String, Object>> local = findLocalPrebuiltImage(normalized);
+        if (local.isPresent()) {
+            Map<String, Object> item = local.get();
+            return ApiResponse.success(Map.of(
+                    "found", true,
+                    "cached", true,
+                    "source", "local-prebuilt",
+                    "dishName", String.valueOf(item.get("dishName")),
+                    "dishKey", String.valueOf(item.getOrDefault("dishKey", "")),
+                    "imageUrl", String.valueOf(item.get("imageUrl"))
+            ));
+        }
+
+        return ApiResponse.success(Map.of(
+                "found", false,
+                "cached", false,
+                "source", "none",
+                "dishName", normalized
+        ));
+    }
+
+    /**
+     * Compatible generate endpoint. It still checks DB/local prebuilt first; only then submits external generation.
+     */
     @PostMapping("/generate")
     public ApiResponse<?> generateFoodImage(@RequestBody Map<String, String> request) {
         String dishName = request.get("dishName");
         if (dishName == null || dishName.trim().isEmpty()) {
             return ApiResponse.error(400, "dishName is required");
         }
+        dishName = normalizeDishName(dishName);
 
-        // 1) 查缓存：是否已有这张菜的图片
-        Optional<FoodImageCache> cached = cacheRepository.findByDishName(dishName.trim());
+        Optional<FoodImageCache> cached = cacheRepository.findByDishName(dishName);
         if (cached.isPresent()) {
             FoodImageCache c = cached.get();
-            c.setHitCount(c.getHitCount() + 1);
+            c.setHitCount((c.getHitCount() == null ? 0 : c.getHitCount()) + 1);
             cacheRepository.save(c);
             log.info("Food image cache HIT: dishName={}, hitCount={}", dishName, c.getHitCount());
             return ApiResponse.success(Map.of(
-                "cached", true,
-                "imageUrl", c.getImageUrl()
+                    "cached", true,
+                    "found", true,
+                    "source", sourceOf(c.getImageUrl()),
+                    "imageUrl", c.getImageUrl()
             ));
         }
-        log.info("Food image cache MISS: dishName={}, submitting task", dishName);
 
-        // 2) 未命中：提交生图任务
+        Optional<Map<String, Object>> local = findLocalPrebuiltImage(dishName);
+        if (local.isPresent()) {
+            Map<String, Object> item = local.get();
+            String imageUrl = String.valueOf(item.get("imageUrl"));
+            log.info("Food image local prebuilt HIT: dishName={}, imageUrl={}", dishName, imageUrl);
+            return ApiResponse.success(Map.of(
+                    "cached", true,
+                    "found", true,
+                    "source", "local-prebuilt",
+                    "dishName", String.valueOf(item.get("dishName")),
+                    "dishKey", String.valueOf(item.getOrDefault("dishKey", "")),
+                    "imageUrl", imageUrl
+            ));
+        }
+
+        log.info("Food image cache MISS: dishName={}, submitting task", dishName);
         try {
+            if (glApiKey == null || glApiKey.isBlank()) {
+                return ApiResponse.error(503, "Image generation is not configured");
+            }
             String prompt = "A beautiful plate of " + dishName
                     + ", Chinese home cooking style, food photography,"
                     + " warm lighting, high quality, realistic, appetizing,"
@@ -86,7 +169,6 @@ public class FoodImageController {
                 return ApiResponse.error(502, "Image generation submission failed");
             }
 
-            // Check for business-level errors (e.g. insufficient balance)
             int bizCode = submitJson.path("code").asInt(200);
             if (bizCode != 200) {
                 String msg = submitJson.path("msg").asText("Unknown error");
@@ -104,13 +186,12 @@ public class FoodImageController {
             }
 
             log.info("Food image task submitted: task_id={}, dishName={}", taskId, dishName);
-
             return ApiResponse.success(Map.of(
-                "cached", false,
-                "taskId", taskId,
-                "dishName", dishName
+                    "cached", false,
+                    "found", false,
+                    "taskId", taskId,
+                    "dishName", dishName
             ));
-
         } catch (Exception e) {
             log.error("Food image submission error", e);
             return ApiResponse.error(500, "Internal error: " + e.getMessage());
@@ -121,7 +202,6 @@ public class FoodImageController {
     public ApiResponse<?> getStatus(@RequestParam long taskId) {
         try {
             String statusUrl = glApiUrl + "/v1/skills/task-status?task_id=" + taskId;
-
             HttpRequest statusReq = HttpRequest.newBuilder()
                     .uri(URI.create(statusUrl))
                     .header("Authorization", "Bearer " + glApiKey)
@@ -147,13 +227,11 @@ public class FoodImageController {
                     "state", state,
                     "progress", progress
             ));
-
         } catch (Exception e) {
             return ApiResponse.error(500, "Error: " + e.getMessage());
         }
     }
 
-    /** 前端拿到生图结果后回传保存到缓存 */
     @PostMapping("/cache")
     public ApiResponse<?> saveCache(@RequestBody Map<String, String> request) {
         String dishName = request.get("dishName");
@@ -161,9 +239,9 @@ public class FoodImageController {
         if (dishName == null || dishName.trim().isEmpty() || imageUrl == null || imageUrl.trim().isEmpty()) {
             return ApiResponse.error(400, "dishName and imageUrl are required");
         }
+        dishName = normalizeDishName(dishName);
         try {
-            // 去重：已有则更新 URL（可能链接变了）
-            Optional<FoodImageCache> existing = cacheRepository.findByDishName(dishName.trim());
+            Optional<FoodImageCache> existing = cacheRepository.findByDishName(dishName);
             if (existing.isPresent()) {
                 FoodImageCache c = existing.get();
                 c.setImageUrl(imageUrl);
@@ -171,7 +249,7 @@ public class FoodImageController {
                 log.info("Food image cache UPDATED: dishName={}", dishName);
             } else {
                 FoodImageCache c = new FoodImageCache();
-                c.setDishName(dishName.trim());
+                c.setDishName(dishName);
                 c.setImageUrl(imageUrl);
                 c.setHitCount(0);
                 cacheRepository.save(c);
@@ -181,6 +259,85 @@ public class FoodImageController {
         } catch (Exception e) {
             log.error("Food image cache save error", e);
             return ApiResponse.error(500, "Save failed: " + e.getMessage());
+        }
+    }
+
+    private String normalizeDishName(String dishName) {
+        if (dishName == null) return "";
+        dishName = repairMojibake(dishName);
+        String v = dishName.trim()
+                .replaceAll("[\\s　]+", "")
+                .replaceAll("[，。！？、：:；;,.!?]", "");
+        v = v.replaceFirst("^(家常|经典|正宗|简单|懒人|快手|下饭|好吃的)", "");
+        v = v.replaceFirst("(的做法|做法|教程|菜谱|怎么做|配方)$", "");
+        return v.trim();
+    }
+
+    private String repairMojibake(String value) {
+        if (value == null || value.isBlank()) return value;
+        boolean hasCjk = value.codePoints().anyMatch(cp -> cp >= 0x4E00 && cp <= 0x9FFF);
+        if (hasCjk) return value;
+        String repaired = tryDecodeSingleByteMojibake(value, StandardCharsets.ISO_8859_1);
+        if (hasCjk(repaired)) return repaired;
+        repaired = tryDecodeSingleByteMojibake(value, Charset.forName("windows-1252"));
+        return hasCjk(repaired) ? repaired : value;
+    }
+
+    private String tryDecodeSingleByteMojibake(String value, Charset singleByteCharset) {
+        try {
+            return new String(value.getBytes(singleByteCharset), StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            return value;
+        }
+    }
+
+    private boolean hasCjk(String value) {
+        return value != null && value.codePoints().anyMatch(cp -> cp >= 0x4E00 && cp <= 0x9FFF);
+    }
+
+    private String sourceOf(String imageUrl) {
+        if (imageUrl != null && imageUrl.startsWith("/uploads/food-images/")) return "local-prebuilt";
+        return "remote-cache";
+    }
+
+    @SuppressWarnings("unchecked")
+    private Optional<Map<String, Object>> findLocalPrebuiltImage(String dishName) {
+        try {
+            Path index = Path.of(uploadDir, "food-images", "v1", "index.json");
+            if (!Files.exists(index)) return Optional.empty();
+            var root = objectMapper.readTree(index.toFile());
+            if (!root.has("items") || !root.path("items").isArray()) return Optional.empty();
+            String target = normalizeDishName(dishName);
+            for (var item : root.path("items")) {
+                String name = normalizeDishName(item.path("dishName").asText(""));
+                if (matchesDishName(target, name)) return Optional.of(objectMapper.convertValue(item, Map.class));
+                if (item.has("aliases") && item.path("aliases").isArray()) {
+                    for (var alias : item.path("aliases")) {
+                        if (matchesDishName(target, normalizeDishName(alias.asText("")))) {
+                            return Optional.of(objectMapper.convertValue(item, Map.class));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Food image local manifest lookup failed: {}", e.getMessage());
+        }
+        return Optional.empty();
+    }
+
+    private boolean matchesDishName(String target, String candidate) {
+        if (target == null || candidate == null) return false;
+        if (target.equals(candidate)) return true;
+        try {
+            String mojibake = new String(candidate.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
+            if (target.equals(normalizeDishName(mojibake))) return true;
+        } catch (Exception ignored) {
+        }
+        try {
+            String mojibake = new String(candidate.getBytes(StandardCharsets.UTF_8), Charset.forName("windows-1252"));
+            return target.equals(normalizeDishName(mojibake));
+        } catch (Exception ignored) {
+            return false;
         }
     }
 }

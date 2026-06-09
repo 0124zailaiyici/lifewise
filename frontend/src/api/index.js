@@ -136,6 +136,9 @@ export function generateFoodImage(dishName) {
   return api.post('/food-image/generate', { dishName })
 }
 
+export function lookupFoodImage(dishName) {
+  return api.post('/food-image/lookup', { dishName })
+}
 
 export function getFoodImageStatus(taskId) {
   return api.get('/food-image/status', { params: { taskId } })

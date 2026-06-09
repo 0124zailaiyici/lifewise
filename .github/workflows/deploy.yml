@@ -74,13 +74,16 @@ jobs:
         run: ls -laR deploy/
       - name: Package deploy
         run: |
-          # 复制部署脚本
+          # Copy deploy scripts
           cp deploy/start.sh deploy/start.sh 2>/dev/null || true
           cp deploy/stop.sh deploy/stop.sh 2>/dev/null || true
           cp deploy/update.sh deploy/update.sh 2>/dev/null || true
-          # 确保前端文件有
+          # Verify frontend artifact
           ls deploy/frontend/index.html 2>/dev/null && echo 'Frontend OK' || echo 'Frontend not found'
-          # 创建完整包
+          # Include prebuilt food images for /uploads/food-images/... cache hits
+          mkdir -p deploy/uploads
+          cp -r uploads/food-images deploy/uploads/ 2>/dev/null || true
+          # Create deploy package
           cd deploy
           zip -r ../lifewise-full-deploy.zip ./
           cd ..

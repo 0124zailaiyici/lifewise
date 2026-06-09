@@ -44,11 +44,12 @@
             <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
             <div v-if="msg._foodImageLoading" class="food-image-loading">
               <span class="fil-spinner"></span>
-              <span class="fil-text">🖼️ 正在生成成品图…</span>
+              <span class="fil-text">🖼️ 正在查找本地成品图…</span>
               <el-button text size="small" type="info" @click="cancelFoodImage(msg)" style="margin-left:auto;flex-shrink:0">取消</el-button>
             </div>
             <div v-if="msg._foodImageUrl" class="food-image" @click="previewImage(msg._foodImageUrl)">
               <img :src="msg._foodImageUrl" alt="成品图" loading="lazy" />
+              <span v-if="msg._foodImageSource === 'local-prebuilt'" class="food-image-badge">本地缓存 · 不扣费</span>
             </div>
           </div>
         </div>
@@ -167,7 +168,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, addKnowledge, getAiConfigStatus } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -224,6 +225,15 @@ const favCategories = [
   { key: 'mealplan', icon: '📮', label: '食谱' },
   { key: 'writing', icon: '✍️', label: '写作' },
   { key: 'other', icon: '💬', label: '其他' }
+]
+
+const prebuiltFoodNames = [
+  '鱼香肉丝', '宫保鸡丁', '红烧肉', '糖醋里脊', '麻婆豆腐', '西红柿炒鸡蛋', '番茄炒蛋', '番茄炒鸡蛋',
+  '青椒肉丝', '土豆丝', '酸辣土豆丝', '回锅肉', '可乐鸡翅', '红烧排骨', '糖醋排骨', '蒜蓉西兰花',
+  '地三鲜', '鱼香茄子', '肉末茄子', '黄焖鸡', '辣子鸡', '清蒸鱼', '红烧鱼', '水煮鱼', '酸菜鱼',
+  '水煮肉片', '京酱肉丝', '蚂蚁上树', '干煸豆角', '蒜苔炒肉', '木须肉', '葱爆羊肉', '番茄牛腩',
+  '土豆炖牛肉', '小炒黄牛肉', '农家小炒肉', '香菇青菜', '炒青菜', '手撕包菜', '干锅花菜',
+  '韭菜炒鸡蛋', '虾仁炒蛋', '油焖大虾', '蒜蓉粉丝虾', '蛋炒饭', '扬州炒饭', '鸡蛋面'
 ]
 
 const writingModes = [
@@ -290,7 +300,7 @@ const costHint = computed(() => {
   return {
     type: 'normal',
     text: '当前模型：千问 Qwen',
-    sub: foodImageEnabled.value ? '聊天会消耗千问；菜品图已开启时可能额外消耗' : '聊天会消耗千问；命中常识库则不扣费'
+    sub: foodImageEnabled.value ? '聊天会消耗千问；菜品图只查本地缓存，不自动生图扣费' : '聊天会消耗千问；命中常识库则不扣费'
   }
 })
 
@@ -348,6 +358,7 @@ async function loadConversation(id) {
       _id: m.id || 'msg-' + i, role: m.role, content: m.content || '', imageUrl: m.imageUrl || '',
       _typing: false, _displayHtml: '', _faved: m.faved || false
     }))
+    hydrateFoodImagesForLoadedMessages()
     await nextTick(); scrollBottom()
   } catch(e) { ElMessage.error('加载消息失败') }
   finally { loading.value = false }
@@ -418,51 +429,27 @@ async function send() {
       m._sourceLabel = res.data?.sourceLabel || ''
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
-      // Auto-generate food image for recipe responses (async polling + localStorage cache)
+      // Recipe image: only lookup local/server cache automatically; never auto-submit paid generation.
       const foodImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
       if (foodImageEnabled) try {
-        const parsed = tryParseJsonSafe(fullContent)
-        if (parsed && parsed.title && parsed.steps) {
-          const dishName = parsed.title.trim()
+        const dishName = detectDishName(fullContent, msg)
+        if (dishName) {
           const dishKey = 'food_img_' + dishName
-          // 1) local cache first
           const cached = localStorage.getItem(dishKey)
           if (cached) {
             m._foodImageUrl = cached
+            m._foodImageSource = 'local-prebuilt'
           } else {
             m._foodImageLoading = true
-            // 2) check server cache, or submit task
-            generateFoodImage(dishName).then(submitRes => {
-              const data = submitRes.data || {}
-              // server cache hit
-              if (data.cached && data.imageUrl) {
+            lookupFoodImage(dishName).then(lookupRes => {
+              const data = lookupRes.data || {}
+              if (data.found && data.imageUrl) {
                 m._foodImageUrl = data.imageUrl
+                m._foodImageSource = data.source || 'local-prebuilt'
                 localStorage.setItem(dishKey, data.imageUrl)
-                m._foodImageLoading = false
-                return
+                nextTick(scrollBottom)
               }
-              // task submitted
-              const taskId = data.taskId
-              if (!taskId) { m._foodImageLoading = false; return }
-              m._foodImagePoll = setInterval(async () => {
-                try {
-                  const statusRes = await getFoodImageStatus(taskId)
-                  const st = statusRes.data
-                  if (st?.isFinal) {
-                    clearInterval(m._foodImagePoll); m._foodImagePoll = null
-                    const url = st?.resultUrl || ''
-                    if (url) {
-                      m._foodImageUrl = url
-                      localStorage.setItem(dishKey, url)
-                      // 3) save to server cache for future reuse
-                      saveFoodImageCache(dishName, url).catch(() => {})
-                    }
-                    m._foodImageLoading = false
-                  } else if (st?.state === 'failed') {
-                    clearInterval(m._foodImagePoll); m._foodImagePoll = null; m._foodImageLoading = false
-                  }
-                } catch { clearInterval(m._foodImagePoll); m._foodImagePoll = null; m._foodImageLoading = false }
-              }, 3000)
+              m._foodImageLoading = false
             }).catch(() => { m._foodImageLoading = false })
           }
         }
@@ -478,6 +465,39 @@ async function send() {
       m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px">' + errMsg + '</div>'; currentTyping.value = false
     }
   } finally { loading.value = false }
+}
+
+
+function attachLocalFoodImage(message, dishName) {
+  if (!message || !dishName || message._foodImageUrl || message._foodImageLoading) return
+  const dishKey = 'food_img_' + dishName
+  const cached = localStorage.getItem(dishKey)
+  if (cached) {
+    message._foodImageUrl = cached
+    message._foodImageSource = 'local-prebuilt'
+    return
+  }
+  message._foodImageLoading = true
+  lookupFoodImage(dishName).then(res => {
+    const data = res.data || {}
+    if (data.found && data.imageUrl) {
+      message._foodImageUrl = data.imageUrl
+      message._foodImageSource = data.source || 'local-prebuilt'
+      localStorage.setItem(dishKey, data.imageUrl)
+      nextTick(scrollBottom)
+    }
+    message._foodImageLoading = false
+  }).catch(() => { message._foodImageLoading = false })
+}
+
+function hydrateFoodImagesForLoadedMessages() {
+  if (localStorage.getItem('setting_foodImage') === 'off') return
+  messages.value.forEach((m, i) => {
+    if (m.role !== 'assistant') return
+    const prev = [...messages.value].slice(0, i).reverse().find(item => item.role === 'user')
+    const dishName = detectDishName(m.content, prev?.content || '')
+    attachLocalFoodImage(m, dishName)
+  })
 }
 
 function copyMsg(i) {
@@ -576,7 +596,7 @@ async function exportConversationAsImage() {
         div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🤖 AI</div>' + html
         // Show food image if available
         if (msg._foodImageUrl) {
-          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /></div>'
+          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /><div style="font-size:11px;color:#16a34a;margin-top:4px">本地缓存 · 不扣费</div></div>'
         }
       }
       wrapper.appendChild(div)
@@ -652,7 +672,7 @@ async function exportConversationAsPdf() {
         html = t.innerHTML
         div.innerHTML = '<div style="font-size:13px;color:#666;margin-bottom:4px">🤖 AI</div>' + html
         if (msg._foodImageUrl) {
-          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /></div>'
+          div.innerHTML += '<div style="margin-top:8px"><img src="' + msg._foodImageUrl + '" style="max-width:100%;border-radius:8px" /><div style="font-size:11px;color:#16a34a;margin-top:4px">本地缓存 · 不扣费</div></div>'
         }
       }
       wrapper.appendChild(div)
@@ -1073,6 +1093,16 @@ function renderContent(content) {
   if (data) return renderStructured(data)
   return renderMarkdown(content)
 }
+
+function detectDishName(aiContent, userQuestion = '') {
+  const parsed = tryParseJsonSafe(aiContent)
+  if (parsed && parsed.title && (parsed.steps || parsed.ingredients)) {
+    return String(parsed.title).trim()
+  }
+  const text = `${userQuestion || ''}\n${aiContent || ''}`
+  return prebuiltFoodNames.find(name => text.includes(name)) || ''
+}
+
 function renderMarkdown(text) {
   let html = (text || "");
   html = html.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -1626,7 +1656,22 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   cursor: pointer;
   border-radius: 12px;
   overflow: hidden;
+  position: relative;
 }
+.food-image-badge {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, .9);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, .22);
+  pointer-events: none;
+}
+
 .food-image img {
   width: 100%;
   border-radius: 12px;
@@ -1710,6 +1755,4 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .md-content a { color: #22c55e; text-decoration: underline; text-underline-offset: 2px; }
 .md-content a:hover { color: #16a34a; }
 </style>
-
-
 

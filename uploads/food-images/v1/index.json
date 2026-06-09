@@ -1,0 +1,505 @@
+{
+  "version": "v1",
+  "items": [
+    {
+      "dishName": "鱼香肉丝",
+      "dishKey": "yuxiang_rousi",
+      "aliases": [
+        "鱼香肉丝",
+        "鱼香肉丝做法"
+      ],
+      "imageUrl": "/uploads/food-images/v1/yuxiang-rousi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "宫保鸡丁",
+      "dishKey": "gongbao_jiding",
+      "aliases": [
+        "宫保鸡丁",
+        "宫爆鸡丁"
+      ],
+      "imageUrl": "/uploads/food-images/v1/gongbao-jiding.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "红烧肉",
+      "dishKey": "hongshao_rou",
+      "aliases": [
+        "红烧肉",
+        "家常红烧肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/hongshao-rou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "糖醋里脊",
+      "dishKey": "tangcu_liji",
+      "aliases": [
+        "糖醋里脊"
+      ],
+      "imageUrl": "/uploads/food-images/v1/tangcu-liji.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "麻婆豆腐",
+      "dishKey": "mapo_doufu",
+      "aliases": [
+        "麻婆豆腐",
+        "麻辣豆腐"
+      ],
+      "imageUrl": "/uploads/food-images/v1/mapo-doufu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "西红柿炒鸡蛋",
+      "dishKey": "xihongshi_chao_jidan",
+      "aliases": [
+        "西红柿炒鸡蛋",
+        "番茄炒蛋",
+        "番茄炒鸡蛋"
+      ],
+      "imageUrl": "/uploads/food-images/v1/xihongshi-chao-jidan.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "青椒肉丝",
+      "dishKey": "qingjiao_rousi",
+      "aliases": [
+        "青椒肉丝"
+      ],
+      "imageUrl": "/uploads/food-images/v1/qingjiao-rousi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "土豆丝",
+      "dishKey": "tudousi",
+      "aliases": [
+        "土豆丝",
+        "炒土豆丝"
+      ],
+      "imageUrl": "/uploads/food-images/v1/tudousi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "酸辣土豆丝",
+      "dishKey": "suanla_tudousi",
+      "aliases": [
+        "酸辣土豆丝"
+      ],
+      "imageUrl": "/uploads/food-images/v1/suanla-tudousi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "回锅肉",
+      "dishKey": "huiguo_rou",
+      "aliases": [
+        "回锅肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/huiguo-rou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "可乐鸡翅",
+      "dishKey": "kele_jichi",
+      "aliases": [
+        "可乐鸡翅"
+      ],
+      "imageUrl": "/uploads/food-images/v1/kele-jichi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "红烧排骨",
+      "dishKey": "hongshao_paigu",
+      "aliases": [
+        "红烧排骨",
+        "炖排骨"
+      ],
+      "imageUrl": "/uploads/food-images/v1/hongshao-paigu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "糖醋排骨",
+      "dishKey": "tangcu_paigu",
+      "aliases": [
+        "糖醋排骨"
+      ],
+      "imageUrl": "/uploads/food-images/v1/tangcu-paigu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "蒜蓉西兰花",
+      "dishKey": "suanrong_xilanhua",
+      "aliases": [
+        "蒜蓉西兰花"
+      ],
+      "imageUrl": "/uploads/food-images/v1/suanrong-xilanhua.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "地三鲜",
+      "dishKey": "disanxian",
+      "aliases": [
+        "地三鲜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/disanxian.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "鱼香茄子",
+      "dishKey": "yuxiang_qiezi",
+      "aliases": [
+        "鱼香茄子"
+      ],
+      "imageUrl": "/uploads/food-images/v1/yuxiang-qiezi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "肉末茄子",
+      "dishKey": "roumo_qiezi",
+      "aliases": [
+        "肉末茄子"
+      ],
+      "imageUrl": "/uploads/food-images/v1/roumo-qiezi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "黄焖鸡",
+      "dishKey": "huangmen_ji",
+      "aliases": [
+        "黄焖鸡",
+        "黄焖鸡米饭"
+      ],
+      "imageUrl": "/uploads/food-images/v1/huangmen-ji.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "辣子鸡",
+      "dishKey": "lazi_ji",
+      "aliases": [
+        "辣子鸡"
+      ],
+      "imageUrl": "/uploads/food-images/v1/lazi-ji.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "清蒸鱼",
+      "dishKey": "qingzheng_yu",
+      "aliases": [
+        "清蒸鱼"
+      ],
+      "imageUrl": "/uploads/food-images/v1/qingzheng-yu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "红烧鱼",
+      "dishKey": "hongshao_yu",
+      "aliases": [
+        "红烧鱼"
+      ],
+      "imageUrl": "/uploads/food-images/v1/hongshao-yu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "水煮鱼",
+      "dishKey": "shuizhu_yu",
+      "aliases": [
+        "水煮鱼"
+      ],
+      "imageUrl": "/uploads/food-images/v1/shuizhu-yu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "酸菜鱼",
+      "dishKey": "suancai_yu",
+      "aliases": [
+        "酸菜鱼"
+      ],
+      "imageUrl": "/uploads/food-images/v1/suancai-yu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "水煮肉片",
+      "dishKey": "shuizhu_roupian",
+      "aliases": [
+        "水煮肉片"
+      ],
+      "imageUrl": "/uploads/food-images/v1/shuizhu-roupian.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "京酱肉丝",
+      "dishKey": "jingjiang_rousi",
+      "aliases": [
+        "京酱肉丝"
+      ],
+      "imageUrl": "/uploads/food-images/v1/jingjiang-rousi.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "蚂蚁上树",
+      "dishKey": "mayi_shangshu",
+      "aliases": [
+        "蚂蚁上树"
+      ],
+      "imageUrl": "/uploads/food-images/v1/mayi-shangshu.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "干煸豆角",
+      "dishKey": "ganbian_doujiao",
+      "aliases": [
+        "干煸豆角",
+        "干煸四季豆"
+      ],
+      "imageUrl": "/uploads/food-images/v1/ganbian-doujiao.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "蒜苔炒肉",
+      "dishKey": "suantai_chaorou",
+      "aliases": [
+        "蒜苔炒肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/suantai-chaorou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "木须肉",
+      "dishKey": "muxu_rou",
+      "aliases": [
+        "木须肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/muxu-rou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "葱爆羊肉",
+      "dishKey": "congbao_yangrou",
+      "aliases": [
+        "葱爆羊肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/congbao-yangrou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "番茄牛腩",
+      "dishKey": "fanqie_niunan",
+      "aliases": [
+        "番茄牛腩",
+        "西红柿牛腩"
+      ],
+      "imageUrl": "/uploads/food-images/v1/fanqie-niunan.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "土豆炖牛肉",
+      "dishKey": "tudou_dun_niurou",
+      "aliases": [
+        "土豆炖牛肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/tudou-dun-niurou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "小炒黄牛肉",
+      "dishKey": "xiaochao_huangniurou",
+      "aliases": [
+        "小炒黄牛肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/xiaochao-huangniurou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "农家小炒肉",
+      "dishKey": "nongjia_xiaochao_rou",
+      "aliases": [
+        "农家小炒肉",
+        "小炒肉"
+      ],
+      "imageUrl": "/uploads/food-images/v1/nongjia-xiaochao-rou.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "香菇青菜",
+      "dishKey": "xianggu_qingcai",
+      "aliases": [
+        "香菇青菜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/xianggu-qingcai.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "炒青菜",
+      "dishKey": "chao_qingcai",
+      "aliases": [
+        "炒青菜",
+        "清炒青菜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/chao-qingcai.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "手撕包菜",
+      "dishKey": "shousi_baocai",
+      "aliases": [
+        "手撕包菜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/shousi-baocai.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "干锅花菜",
+      "dishKey": "ganguo_huacai",
+      "aliases": [
+        "干锅花菜",
+        "干锅菜花"
+      ],
+      "imageUrl": "/uploads/food-images/v1/ganguo-huacai.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "虾仁炒蛋",
+      "dishKey": "xiaren_chaodan",
+      "aliases": [
+        "虾仁炒蛋",
+        "虾仁炒鸡蛋"
+      ],
+      "imageUrl": "/uploads/food-images/v1/xiaren-chaodan.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "油焖大虾",
+      "dishKey": "youmen_daxia",
+      "aliases": [
+        "油焖大虾"
+      ],
+      "imageUrl": "/uploads/food-images/v1/youmen-daxia.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "蒜蓉粉丝虾",
+      "dishKey": "suanrong_fensi_xia",
+      "aliases": [
+        "蒜蓉粉丝虾"
+      ],
+      "imageUrl": "/uploads/food-images/v1/suanrong-fensi-xia.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "扬州炒饭",
+      "dishKey": "yangzhou_chaofan",
+      "aliases": [
+        "扬州炒饭"
+      ],
+      "imageUrl": "/uploads/food-images/v1/yangzhou-chaofan.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "蛋炒饭",
+      "dishKey": "dan_chaofan",
+      "aliases": [
+        "蛋炒饭"
+      ],
+      "imageUrl": "/uploads/food-images/v1/dan-chaofan.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "dishName": "鸡蛋面",
+      "dishKey": "jidan_mian",
+      "aliases": [
+        "鸡蛋面",
+        "西红柿鸡蛋面"
+      ],
+      "imageUrl": "/uploads/food-images/v1/jidan-mian.webp",
+      "source": "local-prebuilt",
+      "width": 512,
+      "height": 512
+    }
+  ]
+}

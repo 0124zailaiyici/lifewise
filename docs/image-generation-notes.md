@@ -36,3 +36,40 @@
 - 内置 image_gen 会先保存到 C:\Users\wx\.codex\generated_images\...。项目要用的图必须复制/转存到 uploads/food-images/v1/ 等项目目录。
 - 转存、更新 index.json、查看/校验无误后，删除 C 盘本次用过的源 PNG，避免堆积。
 
+
+## 2026-06-10 本轮变更记录
+
+### 提交 541148b `feat: add safe manual food image generation`
+- 修正设置页“菜品成品图”文案：自动流程只查本地/缓存图；手动生成才可能扣费。
+- 聊天页新增“手动生成（会扣费）”按钮：未命中本地/服务器缓存时才显示。
+- 点击手动生成前弹确认框，确认后才调用 `/api/food-image/generate`。
+- 增加生图任务轮询 `/api/food-image/status`，生成完成后写入缓存 `/api/food-image/cache`。
+- 新增 `韭菜炒鸡蛋` 项目图片：`uploads/food-images/v1/jiucai-chao-jidan.webp`。
+- 更新 `uploads/food-images/v1/index.json`，菜品图从 62 增至 63。
+- 新增 `.codexignore`，减少 Codex/AiMaMi 413 风险。
+- 新增本文档，记录图片链路和成本安全规则。
+
+### 提交 f6a1e28 `feat: add next batch of food images`
+- 新增 5 张本地菜品图：
+  - `辣椒炒肉` -> `uploads/food-images/v1/lajiao-chao-rou.webp`
+  - `红烧茄子` -> `uploads/food-images/v1/hongshao-qiezi.webp`
+  - `凉拌黄瓜` -> `uploads/food-images/v1/liangban-huanggua.webp`
+  - `紫菜蛋花汤` -> `uploads/food-images/v1/zicai-danhuatang.webp`
+  - `醋溜白菜` -> `uploads/food-images/v1/culiu-baicai.webp`
+- 更新 `index.json`，菜品图从 63 增至 67。
+- 更新 `Chat.vue` 的 `prebuiltFoodNames`，让前端能识别新增菜名和更多已有早餐/主食图。
+- 生成接触表用于人工检查：`docs/food-image-batch-20260609-next5-contact-sheet.jpg`。
+- 把“生图资产必须转存到项目目录，并清理 C 盘源图”的规则写入 `AGENTS.md` 和本文档。
+
+### 验证结果
+- `index.json` 校验：67 items，0 missing files，0 duplicate names，0 bad placeholder names。
+- `npm run build`：Exit 0，Vite 构建成功。
+- 仍有 Vite/Rolldown 第三方依赖 pure annotation warning 和 chunk size warning，非本次改动引起，不影响构建。
+
+### 清理结果
+- 已将本次 `image_gen` 源 PNG 转存为项目 WebP。
+- 已删除本次使用的 `C:\Users\wx\.codex\generated_images\019eace6-da73-7d33-9b7e-e8a0cc66193a` 源目录，避免 C 盘堆积。
+
+### 注意事项
+- Windows PowerShell 管道/控制台显示中文可能乱码；写入中文 JSON/源码时优先用 UTF-8 文件或 Unicode escape 脚本，不要依赖控制台直接传中文。
+- 删除 `C:\Users\wx\.codex\generated_images\...` 前必须先确认项目目录图片、`index.json`、前端识别表和构建都已通过。

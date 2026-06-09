@@ -44,12 +44,16 @@
             <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
             <div v-if="msg._foodImageLoading" class="food-image-loading">
               <span class="fil-spinner"></span>
-              <span class="fil-text">🖼️ 正在查找本地成品图…</span>
+              <span class="fil-text">{{ msg._foodImageLoadingText || '🖼️ 正在查找本地成品图…' }}</span>
               <el-button text size="small" type="info" @click="cancelFoodImage(msg)" style="margin-left:auto;flex-shrink:0">取消</el-button>
             </div>
             <div v-if="msg._foodImageUrl" class="food-image" @click="previewImage(msg._foodImageUrl)">
               <img :src="msg._foodImageUrl" alt="成品图" loading="lazy" />
-              <span v-if="msg._foodImageSource === 'local-prebuilt'" class="food-image-badge">本地缓存 · 不扣费</span>
+              <span v-if="msg._foodImageSource" class="food-image-badge" :class="{ paid: msg._foodImageSource === 'generated' }">{{ foodImageBadge(msg) }}</span>
+            </div>
+            <div v-if="msg.role === 'assistant' && msg._foodDishName && !msg._foodImageUrl && !msg._foodImageLoading" class="food-image-actions">
+              <span>未找到“{{ msg._foodDishName }}”本地成品图</span>
+              <el-button size="small" type="primary" plain @click="confirmGenerateFoodImage(msg)">手动生成（会扣费）</el-button>
             </div>
           </div>
         </div>
@@ -177,7 +181,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, addKnowledge, getAiConfigStatus } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -244,6 +248,8 @@ const prebuiltFoodNames = [
   '水煮肉片', '京酱肉丝', '蚂蚁上树', '干煸豆角', '蒜苔炒肉', '木须肉', '葱爆羊肉', '番茄牛腩',
   '土豆炖牛肉', '小炒黄牛肉', '农家小炒肉', '香菇青菜', '炒青菜', '手撕包菜', '干锅花菜',
   '韭菜炒鸡蛋', '虾仁炒蛋', '油焖大虾', '蒜蓉粉丝虾', '蛋炒饭', '扬州炒饭', '鸡蛋面'
+  , '米饭', '馒头', '包子', '饺子', '白粥', '汤面', '豆浆', '油条', '馄饨', '牛肉面',
+  '烧麦', '粽子', '小笼包', '煎饼果子', '皮蛋瘦肉粥', '炒面', '炸酱面', '酸辣粉'
 ]
 
 const writingModes = [
@@ -339,6 +345,12 @@ onUnmounted(() => {
   msgBox.value?.removeEventListener('click', handleFollowUpClick)
   window.removeEventListener('focus', refreshLocalSettings)
   window.removeEventListener('storage', refreshLocalSettings)
+  messages.value.forEach(m => {
+    if (m._foodImagePoll) {
+      clearInterval(m._foodImagePoll)
+      m._foodImagePoll = null
+    }
+  })
 })
 
 function refreshLocalSettings() {
@@ -445,26 +457,7 @@ async function send() {
       const foodImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
       if (foodImageEnabled) try {
         const dishName = detectDishName(fullContent, msg)
-        if (dishName) {
-          const dishKey = 'food_img_' + dishName
-          const cached = localStorage.getItem(dishKey)
-          if (cached) {
-            m._foodImageUrl = cached
-            m._foodImageSource = 'local-prebuilt'
-          } else {
-            m._foodImageLoading = true
-            lookupFoodImage(dishName).then(lookupRes => {
-              const data = lookupRes.data || {}
-              if (data.found && data.imageUrl) {
-                m._foodImageUrl = data.imageUrl
-                m._foodImageSource = data.source || 'local-prebuilt'
-                localStorage.setItem(dishKey, data.imageUrl)
-                nextTick(scrollBottom)
-              }
-              m._foodImageLoading = false
-            }).catch(() => { m._foodImageLoading = false })
-          }
-        }
+        attachLocalFoodImage(m, dishName)
       } catch {}
     }
   } catch(e) {
@@ -482,6 +475,7 @@ async function send() {
 
 function attachLocalFoodImage(message, dishName) {
   if (!message || !dishName || message._foodImageUrl || message._foodImageLoading) return
+  message._foodDishName = dishName
   const dishKey = 'food_img_' + dishName
   const cached = localStorage.getItem(dishKey)
   if (cached) {
@@ -490,6 +484,7 @@ function attachLocalFoodImage(message, dishName) {
     return
   }
   message._foodImageLoading = true
+  message._foodImageLoadingText = '🖼️ 正在查找本地/缓存成品图…'
   lookupFoodImage(dishName).then(res => {
     const data = res.data || {}
     if (data.found && data.imageUrl) {
@@ -499,7 +494,103 @@ function attachLocalFoodImage(message, dishName) {
       nextTick(scrollBottom)
     }
     message._foodImageLoading = false
-  }).catch(() => { message._foodImageLoading = false })
+    message._foodImageLoadingText = ''
+  }).catch(() => {
+    message._foodImageLoading = false
+    message._foodImageLoadingText = ''
+  })
+}
+
+function foodImageBadge(message) {
+  if (message._foodImageSource === 'generated') return 'AI生成 · 已扣费'
+  if (message._foodImageSource === 'remote-cache') return '服务器缓存 · 不重复扣费'
+  return '本地缓存 · 不扣费'
+}
+
+async function confirmGenerateFoodImage(message) {
+  const dishName = message?._foodDishName
+  if (!dishName || message._foodImageLoading) return
+  try {
+    await ElMessageBox.confirm(
+      `将为“${dishName}”调用外部生图接口，可能产生费用。是否继续？`,
+      '手动生成菜品图',
+      { confirmButtonText: '确认生成', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  await startFoodImageGeneration(message, dishName)
+}
+
+async function startFoodImageGeneration(message, dishName) {
+  try {
+    message._foodImageLoading = true
+    message._foodImageLoadingText = '🎨 正在提交生图任务…'
+    const res = await generateFoodImage(dishName)
+    if (res.code && res.code !== 200) throw new Error(res.message || '生图提交失败')
+    const data = res.data || {}
+    if (data.imageUrl) {
+      applyFoodImage(message, dishName, data.imageUrl, data.source || 'remote-cache')
+      return
+    }
+    if (!data.taskId) throw new Error('生图服务未返回任务 ID')
+    message._foodImageTaskId = data.taskId
+    pollFoodImageStatus(message, dishName, data.taskId)
+  } catch (e) {
+    message._foodImageLoading = false
+    message._foodImageLoadingText = ''
+    ElMessage.error(e?.message || '生图失败，请稍后再试')
+  }
+}
+
+function pollFoodImageStatus(message, dishName, taskId) {
+  let attempts = 0
+  if (message._foodImagePoll) clearInterval(message._foodImagePoll)
+  message._foodImageLoadingText = '🎨 正在生成成品图…'
+  message._foodImagePoll = setInterval(async () => {
+    attempts += 1
+    try {
+      const res = await getFoodImageStatus(taskId)
+      if (res.code && res.code !== 200) throw new Error(res.message || '查询生图状态失败')
+      const data = res.data || {}
+      if (data.progress) message._foodImageLoadingText = `🎨 正在生成成品图…${data.progress}`
+      if (data.isFinal) {
+        clearInterval(message._foodImagePoll)
+        message._foodImagePoll = null
+        if (data.resultUrl) {
+          applyFoodImage(message, dishName, data.resultUrl, 'generated')
+          saveFoodImageCache(dishName, data.resultUrl).catch(() => {})
+          ElMessage.success('成品图已生成')
+        } else {
+          message._foodImageLoading = false
+          message._foodImageLoadingText = ''
+          ElMessage.warning('生图已结束，但没有返回图片')
+        }
+      }
+      if (attempts >= 60) {
+        clearInterval(message._foodImagePoll)
+        message._foodImagePoll = null
+        message._foodImageLoading = false
+        message._foodImageLoadingText = ''
+        ElMessage.warning('生图时间较长，请稍后再试')
+      }
+    } catch (e) {
+      clearInterval(message._foodImagePoll)
+      message._foodImagePoll = null
+      message._foodImageLoading = false
+      message._foodImageLoadingText = ''
+      ElMessage.error(e?.message || '查询生图状态失败')
+    }
+  }, 2500)
+}
+
+function applyFoodImage(message, dishName, imageUrl, source) {
+  message._foodImageUrl = imageUrl
+  message._foodImageSource = source
+  message._foodImageLoading = false
+  message._foodImageLoadingText = ''
+  localStorage.setItem('food_img_' + dishName, imageUrl)
+  nextTick(scrollBottom)
 }
 
 function hydrateFoodImagesForLoadedMessages() {
@@ -1702,6 +1793,20 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   line-height: 1;
   box-shadow: 0 4px 12px rgba(22, 163, 74, .22);
   pointer-events: none;
+}
+.food-image-badge.paid { background: rgba(234, 88, 12, .92); }
+.food-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px dashed #fed7aa;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 13px;
 }
 
 .food-image img {

@@ -1,0 +1,86 @@
+# Codex/AiMaMi context hygiene: keep model-router payloads small.
+# Do not load dependencies, build artifacts, logs, archives, binaries, or generated media
+# into the automatic project context. Source files remain readable via explicit shell commands.
+
+# VCS / local agent metadata
+.git/
+.codex/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs and packaged artifacts
+dist/
+frontend/dist/
+deploy/frontend/
+target/
+backend/target/
+*.jar
+*.war
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Logs and temp files
+*.log
+*.err
+*.tmp
+*.bak
+backend-*.log
+frontend-*.log
+vite*.log
+lw_*.log
+new_backend*.log
+preview-server.log
+
+# Runtime data / uploads / generated media
+backend/uploads/
+uploads/food-images/v1/_backup*/
+docs/generated-images/
+docs/prototypes/
+
+# Binary/media assets that can balloon request payloads
+*.webp
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.ico
+*.svg
+*.mp4
+*.mov
+*.avi
+*.webm
+*.mp3
+*.wav
+*.pdf
+
+# Local DB / runtime data
+*.mv.db
+*.trace.db
+data/
+backend/data/
+
+# Scratch scripts and request dumps
+chat*.json
+login*.json
+reg*.json
+register.json
+token.json
+update.json
+rename.json
+writing.json
+test*.json
+*_script.js
+check_*.py
+fix_*.py
+edit_*.py
+run_fix.py
+show_context.py
+list_models.py
+find_8080.py
+deploy_nginx.py

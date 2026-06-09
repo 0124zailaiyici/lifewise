@@ -22,7 +22,7 @@
               <el-icon><Picture /></el-icon>
               <div class="si-text">
                 <div class="si-title">🖼️ 菜品成品图</div>
-                <div class="si-desc">对话时自动生成菜品图片（消耗 Token）</div>
+                <div class="si-desc">对话时只自动查找本地/缓存图；手动生成才扣费</div>
               </div>
             </div>
             <el-switch v-model="setting_foodImage" @change="saveFoodImageSetting" />
@@ -224,7 +224,7 @@ const todayStats = computed(() => aiStatus.value?.todayStats || {
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
-  ElMessage.success(val ? '菜品图已开启' : '菜品图已关闭')
+  ElMessage.success(val ? '菜品图查找已开启（不会自动扣费）' : '菜品图查找已关闭')
 }
 
 async function saveAiProvider(val) {

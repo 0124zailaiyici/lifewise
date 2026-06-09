@@ -1435,10 +1435,11 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 </script>
 
 <style scoped>
-.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; background: #fff; position: relative; }
+.chat-page { height: 100dvh; min-height: 0; max-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f0f0f0; background: #fff; position: relative; z-index: 30; flex-shrink: 0; box-shadow: 0 1px 0 rgba(15,23,42,.03); }
 .header-title { font-size: 16px; font-weight: 600; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; text-align: center; }
 .back-btn { font-size: 14px; }
-.messages { flex: 1; overflow-y: auto; padding: 20px 16px 8px; height: calc(100vh - 130px); }
+.messages { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 16px 14px; height: auto; }
 .welcome { text-align: center; padding: 60px 20px; }
 .welcome-icon { font-size: 56px; margin-bottom: 16px; }
 .welcome-text { font-size: 15px; color: #999; }
@@ -1462,7 +1463,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 @keyframes blink { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
 .cursor { animation: cursorBlink 0.8s infinite; color: #22c55e; font-weight: bold; }
 @keyframes cursorBlink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
-.input-area { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid #e0e0e0; background: #fff; position: sticky; bottom: 0; }
+.input-area { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 8px 16px 12px; border-top: 1px solid #e0e0e0; background: #fff; position: relative; z-index: 35; flex-shrink: 0; box-shadow: 0 -8px 22px rgba(15,23,42,.06); }
 .input-area :deep(.el-button.is-circle) { width: 40px; min-width: 40px; height: 40px; padding: 0; flex-shrink: 0; }
 .input-area :deep(.el-button--small.is-circle) { width: 36px; min-width: 36px; height: 36px; }
 .prefill-hint { grid-column: 1 / -1; padding: 7px 10px; border-radius: 10px; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; text-align: center; }
@@ -1486,7 +1487,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .ask-mode-chip:disabled { opacity: .55; cursor: not-allowed; }
 .ask-mode-tip { margin-left: auto; color: #94a3b8; font-size: 11px; font-weight: 700; }
 .upload-btn { flex-shrink: 0; }
-.image-preview-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+.image-preview-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; flex-shrink: 0; }
 .ipb-preview { position: relative; flex-shrink: 0; }
 .ipb-preview img { height: 40px; width: 40px; border-radius: 6px; border: 1px solid #e0e0e0; object-fit: cover; }
 .ipb-remove { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; background: #ef4444; color: #fff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -1565,7 +1566,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .ipb-chip { display: inline-flex; align-items: center; gap: 3px; background: #fff; color: #374151; font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: 1px solid #d1d5db; transition: .15s; white-space: nowrap; font-weight: 400; }
 .ipb-chip:hover { background: #f0fdf4; border-color: #22c55e; color: #16a34a; }
 /* 上传进度条 */
-.upload-progress-bar {
+.upload-progress-bar { flex-shrink: 0;
   height: 4px;
   background: #e5e7eb;
   border-radius: 2px;
@@ -1735,7 +1736,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 }
 .fil-text { font-size: 13px; color: #16a34a; font-weight: 500; }
 /* 上传进度条 */
-.upload-progress-bar {
+.upload-progress-bar { flex-shrink: 0;
   height: 4px;
   background: #e5e7eb;
   border-radius: 2px;

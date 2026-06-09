@@ -95,6 +95,16 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getConversations } from '../api'
 import { Search, User, ArrowRight, ChatDotSquare, HomeFilled, Timer, Star } from '@element-plus/icons-vue'
+import sceneCooking from '../assets/scenes/scene-cooking.webp'
+import sceneShopping from '../assets/scenes/scene-shopping.webp'
+import sceneRepair from '../assets/scenes/scene-repair.webp'
+import sceneHousework from '../assets/scenes/scene-housework.webp'
+import sceneHealth from '../assets/scenes/scene-health.webp'
+import sceneFashion from '../assets/scenes/scene-fashion.webp'
+import sceneEtiquette from '../assets/scenes/scene-etiquette.webp'
+import scenePet from '../assets/scenes/scene-pet.webp'
+import sceneWriting from '../assets/scenes/scene-writing.webp'
+import sceneMealplan from '../assets/scenes/scene-mealplan.webp'
 
 const router = useRouter()
 const conversations = ref([])
@@ -119,16 +129,16 @@ const quickPrompts = [
 ]
 
 const scenes = [
-  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#ef4444', photo: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=360&h=260&fit=crop&auto=format' },
-  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#22c55e', photo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=320&h=240&fit=crop&auto=format' },
-  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#3b82f6', photo: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=320&h=240&fit=crop&auto=format' },
-  { key: 'housework', icon: 'housework', label: '家务技巧', desc: '清洁、收纳、去渍', accent: '#a855f7', photo: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=320&h=240&fit=crop&auto=format' },
-  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#eab308', photo: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=320&h=240&fit=crop&auto=format' },
-  { key: 'fashion', icon: 'fashion', label: '穿搭指南', desc: '配色、场合、风格', accent: '#ec4899', photo: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=320&h=240&fit=crop&auto=format' },
-  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', desc: '表达、送礼、沟通', accent: '#14b8a6', photo: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=320&h=240&fit=crop&auto=format' },
-  { key: 'pet', icon: 'pet', label: '宠物照顾', desc: '喂养、习惯、护理', accent: '#f59e0b', photo: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=320&h=240&fit=crop&auto=format' },
-  { key: 'writing', icon: 'writing', label: '写作助手', desc: '文案、润色、回复', accent: '#0ea5e9', photo: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=320&h=240&fit=crop&auto=format' },
-  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', desc: '一周菜单、营养搭配', accent: '#fb923c', photo: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=320&h=240&fit=crop&auto=format' }
+  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#ef4444', photo: sceneCooking },
+  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#22c55e', photo: sceneShopping },
+  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#3b82f6', photo: sceneRepair },
+  { key: 'housework', icon: 'housework', label: '家务技巧', desc: '清洁、收纳、去渍', accent: '#a855f7', photo: sceneHousework },
+  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#eab308', photo: sceneHealth },
+  { key: 'fashion', icon: 'fashion', label: '穿搭指南', desc: '配色、场合、风格', accent: '#ec4899', photo: sceneFashion },
+  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', desc: '表达、送礼、沟通', accent: '#14b8a6', photo: sceneEtiquette },
+  { key: 'pet', icon: 'pet', label: '宠物照顾', desc: '喂养、习惯、护理', accent: '#f59e0b', photo: scenePet },
+  { key: 'writing', icon: 'writing', label: '写作助手', desc: '文案、润色、回复', accent: '#0ea5e9', photo: sceneWriting },
+  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', desc: '一周菜单、营养搭配', accent: '#fb923c', photo: sceneMealplan }
 ]
 
 onMounted(async () => {

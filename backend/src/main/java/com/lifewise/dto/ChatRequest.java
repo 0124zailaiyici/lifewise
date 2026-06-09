@@ -12,4 +12,5 @@ public class ChatRequest {
     private String imageUrl;
     private String provider = "qwen";
     private String model;
+    private Boolean followUp = false;
 }

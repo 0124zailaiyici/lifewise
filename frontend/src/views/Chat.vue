@@ -155,11 +155,20 @@
         <span class="cost-hint-main">{{ costHint.text }}</span>
         <span class="cost-hint-sub">{{ costHint.sub }}</span>
       </div>
+      <div v-if="currentConvId" class="ask-mode-row">
+        <button type="button" class="ask-mode-chip" :class="{ active: !pendingFollowUp }" @click="setAskMode(false)" :disabled="loading">
+          正常提问
+        </button>
+        <button type="button" class="ask-mode-chip follow" :class="{ active: pendingFollowUp }" @click="setAskMode(true)" :disabled="loading">
+          作为追问
+        </button>
+        <span class="ask-mode-tip">{{ pendingFollowUp ? '会结合上文口语化补充' : '会按新问题正常回答' }}</span>
+      </div>
       <el-button :icon="Microphone" circle size="small" @click="startVoice" :type="isListening ? 'danger' : 'default'" :class="{ 'mic-listening': isListening }" :disabled="loading" />
       <el-button class="upload-btn" :icon="Picture" circle size="small" @click="triggerUpload" :disabled="loading" />
       <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="handleFileSelect" />
       <el-input v-model="inputText" ref="inputRef" placeholder="输入你的问题..." size="large"
-                @keyup.enter="send" :disabled="loading" clearable @input="promptPrefilled = false" />
+                @keyup.enter="send" :disabled="loading" clearable @input="onUserInput" />
       <el-button type="success" :icon="Promotion" circle @click="send" :class="{ 'send-ready': inputText.trim() || pendingFile }" :disabled="loading || !inputText.trim() && !pendingFile" />
     </div>
   </div>
@@ -183,6 +192,7 @@ const pendingImage = ref(null)
 const loading = ref(false)
 const messages = ref([])
 const promptPrefilled = ref(false)
+const pendingFollowUp = ref(false)
 const currentTyping = ref(false)
 const previewImg = ref(null)
 const uploadProgress = ref(0)
@@ -367,6 +377,8 @@ async function loadConversation(id) {
 async function send() {
   const msg = inputText.value.trim()
   if (!msg && !pendingFile.value) return
+  const isFollowUp = pendingFollowUp.value
+  pendingFollowUp.value = false
 
   refreshLocalSettings()
   if (currentAiProvider.value === 'deepseek') {
@@ -417,7 +429,7 @@ async function send() {
   messages.value.push({ _id: 'ai-' + Date.now(), role: 'assistant', content: '', imageUrl: '', _typing: true, _displayHtml: '', _faved: false })
 
   try {
-    const res = await sendChat(msg, scene, convId, imageUrl)
+    const res = await sendChat(msg, scene, convId, imageUrl, { followUp: isFollowUp })
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
     if (res.data?.conversationId) currentConvId.value = res.data.conversationId
@@ -948,9 +960,21 @@ async function fillImagePrompt(prompt, scene) {
   await fillPrompt(prompt)
 }
 
+function onUserInput() {
+  promptPrefilled.value = false
+}
+
+function setAskMode(isFollowUp) {
+  pendingFollowUp.value = isFollowUp
+}
+
 function handleFollowUpClick(e) {
   const chip = e.target.closest('.rc-followup-chip')
-  if (chip) { inputText.value = chip.textContent; send() }
+  if (chip) {
+    pendingFollowUp.value = true
+    inputText.value = chip.textContent
+    send()
+  }
 }
 
 function triggerUpload() { fileInput.value?.click() }
@@ -1454,6 +1478,13 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .cost-hint.warn .cost-hint-sub { color: #ea580c; }
 .cost-hint.danger { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
 .cost-hint.danger .cost-hint-sub { color: #dc2626; }
+.ask-mode-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 1px 0 2px; }
+.ask-mode-chip { border: 1px solid #e5e7eb; background: #fff; color: #64748b; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer; transition: all .16s ease; }
+.ask-mode-chip:hover { border-color: #86efac; color: #15803d; }
+.ask-mode-chip.active { border-color: #22c55e; background: #ecfdf5; color: #15803d; box-shadow: 0 2px 8px rgba(34,197,94,.12); }
+.ask-mode-chip.follow.active { border-color: #60a5fa; background: #eff6ff; color: #1d4ed8; box-shadow: 0 2px 8px rgba(96,165,250,.13); }
+.ask-mode-chip:disabled { opacity: .55; cursor: not-allowed; }
+.ask-mode-tip { margin-left: auto; color: #94a3b8; font-size: 11px; font-weight: 700; }
 .upload-btn { flex-shrink: 0; }
 .image-preview-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #fff; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
 .ipb-preview { position: relative; flex-shrink: 0; }

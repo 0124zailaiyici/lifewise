@@ -106,9 +106,10 @@ public class AiServiceImpl implements AiService {
         Long conversationId = request.getConversationId();
         String imageUrl = request.getImageUrl();
         String provider = request.getProvider() != null ? request.getProvider() : "qwen";
+        boolean followUp = Boolean.TRUE.equals(request.getFollowUp());
 
-        // Skip cache when there is conversation history (follow-up) or image present
-        if (conversationId == null && (imageUrl == null || imageUrl.isEmpty())) {
+        // Skip cache for explicit follow-up chips or image questions.
+        if (!followUp && (imageUrl == null || imageUrl.isEmpty())) {
             String cached = knowledgeBaseService.findAnswer(message, scene, userId);
             if (cached != null) {
                 log.info("cache hit: {}", message);
@@ -116,13 +117,13 @@ public class AiServiceImpl implements AiService {
                 return new AiReply(cached, "knowledge-base", false, "来自常识库，未调用 AI");
             }
         } else {
-            log.debug("skip cache (follow-up or image): {}", message);
+            log.debug("skip cache (explicit follow-up or image): {}", message);
         }
 
-        String answer = callAI(message, scene, conversationId, imageUrl, provider, userId);
+        String answer = callAI(message, scene, conversationId, imageUrl, provider, userId, followUp);
 
-        // Only cache first questions (no history), skip caching follow-ups
-        if (conversationId == null && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
+        // Cache normal text questions, but skip explicit follow-up chips.
+        if (!followUp && !hasText(imageUrl) && answer != null && !answer.contains("Mock response") && !answer.contains("configure API key")) {
             knowledgeBaseService.saveAnswer(message, answer, scene, userId);
         } else {
             log.debug("Skipping cache for mock/error response");
@@ -157,7 +158,7 @@ public class AiServiceImpl implements AiService {
         return "来自 AI";
     }
 
-    private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId) {
+    private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId, boolean followUp) {
         if ("deepseek".equals(provider) && !deepseekEnabled) {
             log.warn("DeepSeek is disabled by server cost guard");
             aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek disabled by server cost guard; no external API call");
@@ -183,7 +184,7 @@ public class AiServiceImpl implements AiService {
         Exception lastEx = null;
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
-                return callLLMApi(message, scene, conversationId, imageUrl, provider, userId);
+                return callLLMApi(message, scene, conversationId, imageUrl, provider, userId, followUp);
             } catch (Exception e) {
                 lastEx = e;
                 log.warn("AI call failed (attempt {}/3): {}", attempt, e.getMessage());
@@ -197,15 +198,12 @@ public class AiServiceImpl implements AiService {
     }
 
     @SuppressWarnings("unchecked")
-    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId) throws Exception {
+    private String callLLMApi(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId, boolean followUp) throws Exception {
         List<Map<String, Object>> messages = new ArrayList<>();
         boolean hasImage = imageUrl != null && !imageUrl.isEmpty();
-        boolean hasHistory = conversationId != null &&
-            !messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId).isEmpty();
-
         Map<String, Object> systemMsg = new LinkedHashMap<>();
         systemMsg.put("role", "system");
-        systemMsg.put("content", buildSystemPrompt(scene, hasImage, hasHistory));
+        systemMsg.put("content", buildSystemPrompt(scene, hasImage, followUp));
         messages.add(systemMsg);
 
         if (conversationId != null) {
@@ -391,9 +389,9 @@ public class AiServiceImpl implements AiService {
         }
     }
 
-    private String buildSystemPrompt(String scene, boolean hasImage, boolean hasHistory) {
-        // Follow-up mode: use natural language with scene context
-        if (hasHistory) {
+    private String buildSystemPrompt(String scene, boolean hasImage, boolean followUp) {
+        // Follow-up mode: only use natural language when frontend explicitly marks a clicked follow-up chip.
+        if (followUp) {
             String scenePrompt;
             switch (scene != null ? scene : "other") {
                 case "cooking":

@@ -44,10 +44,11 @@ export function resetPassword(phone, code, newPassword) {
   return api.post('/users/reset-password', { phone, code, newPassword })
 }
 
-export function sendChat(message, scene, conversationId, imageUrl) {
+export function sendChat(message, scene, conversationId, imageUrl, options = {}) {
   const body = { message, scene, conversationId }
   if (imageUrl) body.imageUrl = imageUrl
-  // 从 localStorage 读取 AI provider 设置
+  if (options.followUp) body.followUp = true
+  // Read AI provider setting from localStorage
   body.provider = localStorage.getItem('setting_aiProvider') || 'qwen'
   return api.post('/chat/send', body)
 }

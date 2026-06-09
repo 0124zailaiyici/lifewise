@@ -48,7 +48,8 @@
           <span class="section-hint">选择后会带入对应场景</span>
         </div>
         <div class="scene-grid">
-          <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ '--accent': s.accent }" @click="startChat(s.key, s.label)">
+          <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ '--accent': s.accent, '--photo': `url(${s.photo})` }" @click="startChat(s.key, s.label)">
+            <span class="scene-photo" aria-hidden="true"></span>
             <div class="scene-icon" v-html="svgIcon(s.icon)"></div>
             <div class="scene-info">
               <span class="scene-label">{{ s.label }}</span>
@@ -117,16 +118,16 @@ const quickPrompts = [
 ]
 
 const scenes = [
-  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#ef4444' },
-  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#22c55e' },
-  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#3b82f6' },
-  { key: 'housework', icon: 'housework', label: '家务技巧', desc: '清洁、收纳、去渍', accent: '#a855f7' },
-  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#eab308' },
-  { key: 'fashion', icon: 'fashion', label: '穿搭指南', desc: '配色、场合、风格', accent: '#ec4899' },
-  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', desc: '表达、送礼、沟通', accent: '#14b8a6' },
-  { key: 'pet', icon: 'pet', label: '宠物照顾', desc: '喂养、习惯、护理', accent: '#f59e0b' },
-  { key: 'writing', icon: 'writing', label: '写作助手', desc: '文案、润色、回复', accent: '#0ea5e9' },
-  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', desc: '一周菜单、营养搭配', accent: '#fb923c' }
+  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#ef4444', photo: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=360&h=260&fit=crop&auto=format' },
+  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#22c55e', photo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=320&h=240&fit=crop&auto=format' },
+  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#3b82f6', photo: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=320&h=240&fit=crop&auto=format' },
+  { key: 'housework', icon: 'housework', label: '家务技巧', desc: '清洁、收纳、去渍', accent: '#a855f7', photo: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=320&h=240&fit=crop&auto=format' },
+  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#eab308', photo: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=320&h=240&fit=crop&auto=format' },
+  { key: 'fashion', icon: 'fashion', label: '穿搭指南', desc: '配色、场合、风格', accent: '#ec4899', photo: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=320&h=240&fit=crop&auto=format' },
+  { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', desc: '表达、送礼、沟通', accent: '#14b8a6', photo: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=320&h=240&fit=crop&auto=format' },
+  { key: 'pet', icon: 'pet', label: '宠物照顾', desc: '喂养、习惯、护理', accent: '#f59e0b', photo: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=320&h=240&fit=crop&auto=format' },
+  { key: 'writing', icon: 'writing', label: '写作助手', desc: '文案、润色、回复', accent: '#0ea5e9', photo: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=320&h=240&fit=crop&auto=format' },
+  { key: 'mealplan', icon: 'mealplan', label: '食谱推荐', desc: '一周菜单、营养搭配', accent: '#fb923c', photo: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=320&h=240&fit=crop&auto=format' }
 ]
 
 onMounted(async () => {
@@ -214,11 +215,14 @@ function isBadTitle(title) {
 .prompt-chip { flex: 1 1 calc(50% - 4px); min-width: 0; border: 1px solid #e5f4e9; background: #fbfefc; color: #334155; border-radius: 999px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .prompt-chip:active { transform: scale(.97); background: #ecfdf5; }
 .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
-.scene-card { min-height: 82px; border-radius: 17px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, #fff), #fff); border: 1px solid color-mix(in srgb, var(--accent) 22%, #e5e7eb); padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 18px rgba(15,23,42,.035); }
+.scene-card { position: relative; overflow: hidden; min-height: 82px; border-radius: 17px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, #fff), #fff); border: 1px solid color-mix(in srgb, var(--accent) 22%, #e5e7eb); padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 18px rgba(15,23,42,.035); }
 .scene-card:active { transform: scale(.97); }
-.scene-icon { width: 38px; height: 38px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 12%, #fff); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.scene-photo { position: absolute; right: 0; bottom: 0; width: 92px; height: 78px; background: var(--photo) center/cover no-repeat; opacity: .30; filter: saturate(.9) contrast(.96); pointer-events: none; z-index: 0; }
+.scene-photo::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.72) 42%, rgba(255,255,255,.12) 100%); }
+.scene-card::after { content: ""; position: absolute; right: -22px; bottom: -34px; width: 110px; height: 110px; border-radius: 50%; background: var(--accent); opacity: .045; pointer-events: none; z-index: 0; }
+.scene-icon { position: relative; z-index: 1; width: 38px; height: 38px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 12%, #fff); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .scene-icon :deep(svg) { width: 22px; height: 22px; }
-.scene-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.scene-info { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .scene-label { font-size: 14px; font-weight: 900; color: #111827; }
 .scene-info small { color: #8a94a6; font-size: 10px; line-height: 1.3; }
 .recent-section { margin-top: 2px; }

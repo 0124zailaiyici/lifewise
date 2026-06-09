@@ -167,7 +167,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus } from '../api'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -188,6 +188,7 @@ const uploadProgress = ref(0)
 const currentConvId = ref(null)
 const currentAiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
 const foodImageEnabled = ref(localStorage.getItem('setting_foodImage') !== 'off')
+const aiConfigStatus = ref(null)
 function previewImage(url) { previewImg.value = url }
 function onImgError(e) {
   e.target.style.display = "none"
@@ -258,10 +259,18 @@ const welcomePrompts = computed(() => {
 })
 const costHint = computed(() => {
   if (pendingFile.value) {
+    const vision = aiConfigStatus.value?.vision
+    if (vision?.configured) {
+      return {
+        type: 'warn',
+        text: '图片识别：将调用小米 MiMo 视觉模型',
+        sub: '图片会跳过常识库缓存，发送前请确认问题'
+      }
+    }
     return {
-      type: 'warn',
-      text: '图片识别：可能调用视觉模型',
-      sub: '图片会跳过常识库缓存'
+      type: 'danger',
+      text: '图片识别未配置完整',
+      sub: '请检查 ai.vision-api-url / ai.vision-api-key'
     }
   }
   if (currentAiProvider.value === 'ollama') {
@@ -289,6 +298,7 @@ onMounted(async () => {
 
   msgBox.value?.addEventListener('click', handleFollowUpClick)
   refreshLocalSettings()
+  loadAiConfigStatus()
   window.addEventListener('focus', refreshLocalSettings)
   window.addEventListener('storage', refreshLocalSettings)
   await nextTick()
@@ -314,6 +324,15 @@ onUnmounted(() => {
 function refreshLocalSettings() {
   currentAiProvider.value = localStorage.getItem('setting_aiProvider') || 'qwen'
   foodImageEnabled.value = localStorage.getItem('setting_foodImage') !== 'off'
+}
+
+async function loadAiConfigStatus() {
+  try {
+    const res = await getAiConfigStatus()
+    aiConfigStatus.value = res.data || null
+  } catch {
+    aiConfigStatus.value = null
+  }
 }
 
 async function loadConversation(id) {

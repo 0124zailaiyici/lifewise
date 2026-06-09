@@ -49,7 +49,7 @@
         </div>
         <div class="scene-grid">
           <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ '--accent': s.accent, '--photo': `url(${s.photo})` }" @click="startChat(s.key, s.label)">
-            <span class="scene-photo" aria-hidden="true"></span>
+            <span v-if="!brokenScenePhotos[s.key]" class="scene-photo" aria-hidden="true"></span>
             <div class="scene-icon" v-html="svgIcon(s.icon)"></div>
             <div class="scene-info">
               <span class="scene-label">{{ s.label }}</span>
@@ -98,6 +98,7 @@ import { Search, User, ArrowRight, ChatDotSquare, HomeFilled, Timer, Star } from
 
 const router = useRouter()
 const conversations = ref([])
+const brokenScenePhotos = ref({})
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -131,6 +132,7 @@ const scenes = [
 ]
 
 onMounted(async () => {
+  preloadScenePhotos()
   try {
     const res = await getConversations()
     conversations.value = (res.data || []).slice(0, 5)
@@ -138,6 +140,17 @@ onMounted(async () => {
     console.error(e)
   }
 })
+
+function preloadScenePhotos() {
+  scenes.forEach(scene => {
+    if (!scene.photo) return
+    const img = new Image()
+    img.onerror = () => {
+      brokenScenePhotos.value = { ...brokenScenePhotos.value, [scene.key]: true }
+    }
+    img.src = scene.photo
+  })
+}
 
 function startChat(scene, label) {
   localStorage.setItem('currentScene', scene)

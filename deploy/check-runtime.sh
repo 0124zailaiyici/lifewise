@@ -124,6 +124,22 @@ else
   warning "ss command not available; skipped port check"
 fi
 
+
+
+echo ">>> Nginx upload limit check"
+if command -v nginx >/dev/null 2>&1; then
+  nginx_conf="$(nginx -T 2>/dev/null || true)"
+  if echo "$nginx_conf" | grep -Eq 'client_max_body_size[[:space:]]+20[mM]'; then
+    ok "nginx client_max_body_size allows 20m uploads"
+  elif echo "$nginx_conf" | grep -q 'client_max_body_size'; then
+    warning "nginx has client_max_body_size configured, but not 20m. Check it is >= Spring max-request-size."
+  else
+    error "nginx client_max_body_size is missing; uploads over nginx default (~1MB) may fail with 413"
+  fi
+else
+  warning "nginx command not available; skipped upload limit check"
+fi
+
 echo "================================================"
 if [ "$fail" -gt 0 ]; then
   echo "Result: FAILED ($fail error(s), $warn warning(s))"

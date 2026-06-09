@@ -1,4 +1,4 @@
-﻿# LifeWise 开发记录 & 注意事项
+# LifeWise 开发记录 & 注意事项
 
 ## ⚠️ 教训与注意事项
 
@@ -175,3 +175,25 @@ etstat -ano | findstr :8080 看 PID，再用 wmic process where "processid=PID" 
 - 修改认证过滤器后必须至少测一次登录态接口
 - 看到 `Missing request attribute 'userId'`，优先检查 JWT 过滤器是否提前放行
 - 常识库、收藏、历史记录这类用户私有数据接口必须始终走认证
+
+### 18. Nginx 413 上传限制要和后端 multipart 同步 (2026-06-09)
+**现象**：上传图片时页面返回 `413 Request Entity Too Large`，错误页显示 `nginx`。
+
+**根本原因**：
+- Spring Boot 后端允许 `max-file-size=10MB`、`max-request-size=20MB`
+- 前端也允许选择 10MB 内图片
+- 但实际生效的 Nginx 配置没有设置 `client_max_body_size`，Nginx 默认通常约 1MB
+- 请求在进入后端前就被 Nginx 拦截，所以后端日志里可能完全看不到请求
+
+**教训**：
+- 上传大小限制必须三层一致：前端限制、Spring multipart、Nginx `client_max_body_size`
+- 看到错误页明确写 `nginx`，先查 Nginx 配置，不要只改后端
+- 改仓库模板不等于服务器已生效，必须确认 `/etc/nginx/sites-enabled/lifewise` 或 `nginx -T` 输出
+- 修改 Nginx 后必须执行 `nginx -t && systemctl reload nginx`
+- 避免用递归搜索扫 `node_modules`、`dist`、数据库和大日志，否则也可能触发工具/代理层 413
+
+**验证方法**：
+1. `nginx -T | grep -n "client_max_body_size"` 确认生效配置包含 `20m` 或更高
+2. `bash /opt/lifewise/check-runtime.sh` 检查运行时配置
+3. 实际上传 1MB+ 图片确认不再返回 413
+

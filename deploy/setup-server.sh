@@ -22,7 +22,10 @@ cat > /etc/nginx/conf.d/lifewise.conf << 'NGINX'
 server {
     listen 8081;
     server_name _;
-    client_max_body_size 20M;
+    # Keep nginx in sync with Spring Boot multipart limits:
+    # spring.servlet.multipart.max-file-size=10MB
+    # spring.servlet.multipart.max-request-size=20MB
+    client_max_body_size 20m;
 
     location / {
         root /opt/lifewise/frontend;
@@ -37,6 +40,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 120s;
+        proxy_send_timeout 120s;
     }
 
     location /uploads/ {

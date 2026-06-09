@@ -330,11 +330,11 @@ async function loadConversation(id) {
       _typing: false, _displayHtml: '', _faved: m.faved || false
     }))
     await nextTick(); scrollBottom()
-  } catch(e) { console.error('[IMG] load err:',e); ElMessage.error('加载消息失败') }
+  } catch(e) { ElMessage.error('加载消息失败') }
   finally { loading.value = false }
 }
 
-async function send() { console.log("[IMG] called, file=", !!pendingFile.value, "txt=", inputText.value)
+async function send() {
   const msg = inputText.value.trim()
   if (!msg && !pendingFile.value) return
 
@@ -358,10 +358,9 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
   if (pendingFile.value) {
     try {
       const uploadRes = await uploadImage(pendingFile.value, (e) => { uploadProgress.value = Math.round((e.loaded / e.total) * 100) })
-      imageUrl = uploadRes.data?.url || ""; console.log("[IMG] upload url:", imageUrl); ''
+      imageUrl = uploadRes.data?.url || ""
       pendingFile.value = null; pendingImage.value = null
     } catch(e) {
-      console.error('[IMG] upload err:',e)
       uploadProgress.value = 0
       if (e?.response?.status === 401) {
         ElMessage.error('登录已过期，请重新登录后再上传图片')
@@ -392,7 +391,7 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
     if (res.data?.conversationId) currentConvId.value = res.data.conversationId
-    const _ct = res.data?.content||""; const _ctStr = typeof _ct === "string" ? _ct : JSON.stringify(_ct); console.log("[IMG] chat res keys:", Object.keys(res||{}), "data_keys:", Object.keys(res.data||{}), "content_len:", _ctStr.length, "typeof:", typeof _ct, "first:", _ctStr.charCodeAt(0), _ctStr.charCodeAt(1), "json_parse_ok:", (()=>{try{JSON.parse(_ctStr);return true}catch(e){console.warn("[JSON] parse error:",e.message);return false}})()); const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
+    const fullContent = typeof res.data === "string" ? res.data : (res.data?.content || res.data?.answer || JSON.stringify(res.data))
     if (m) {
       m._typing = false; m.content = fullContent
       m._source = res.data?.source || ''

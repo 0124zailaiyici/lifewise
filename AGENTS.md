@@ -38,8 +38,12 @@
 - Chat.vue encoding corruption (`��`, broken identifiers) can break Vite; build locally before commit.
 - Scene SVGs must match scenario (cooking/outfit/repair/etc.).
 
+## Image generation asset hygiene
+- 生图资产必须复制/转存到当前项目对应目录（如 `uploads/food-images/v1/`），更新索引并验证后，删除 `C:\Users\wx\.codex\generated_images\...` 中本次用过的源图，避免 C 盘堆积。
+
 ## Upload 413 runbook
 - App upload 413 with nginx page: align frontend max, Spring multipart (`10MB` file / `20MB` request), and Nginx `client_max_body_size 20m`+.
 - Verify server: `nginx -T | grep -n "client_max_body_size"`, `nginx -t && systemctl reload nginx`, then upload >1MB.
 - Codex/AiMaMi 413 to `127.0.0.1:*/codex/router/v1/responses` is model-router payload too large, not LifeWise app upload. Reduce prompt/context: compress AGENTS.md, ignore large files, avoid pasting logs/binaries.
+
 

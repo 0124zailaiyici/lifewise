@@ -736,14 +736,65 @@
       "height": 512
     },
     {
-      "dishName": "?????",
-      "dishKey": "jiucai_chao_jidan",
+      "dishName": "辣椒炒肉",
+      "dishKey": "lajiao_chao_rou",
       "aliases": [
-        "????",
-        "????",
-        "????"
+        "辣椒小炒肉",
+        "青椒炒肉",
+        "辣椒肉片"
       ],
-      "imageUrl": "/uploads/food-images/v1/jiucai-chao-jidan.webp"
+      "imageUrl": "/uploads/food-images/v1/lajiao-chao-rou.webp",
+      "source": "local-prebuilt",
+      "width": 768,
+      "height": 768
+    },
+    {
+      "dishName": "红烧茄子",
+      "dishKey": "hongshao_qiezi",
+      "aliases": [
+        "烧茄子",
+        "家常烧茄子"
+      ],
+      "imageUrl": "/uploads/food-images/v1/hongshao-qiezi.webp",
+      "source": "local-prebuilt",
+      "width": 768,
+      "height": 768
+    },
+    {
+      "dishName": "凉拌黄瓜",
+      "dishKey": "liangban_huanggua",
+      "aliases": [
+        "拍黄瓜",
+        "拌黄瓜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/liangban-huanggua.webp",
+      "source": "local-prebuilt",
+      "width": 768,
+      "height": 768
+    },
+    {
+      "dishName": "紫菜蛋花汤",
+      "dishKey": "zicai_danhuatang",
+      "aliases": [
+        "紫菜鸡蛋汤",
+        "蛋花汤"
+      ],
+      "imageUrl": "/uploads/food-images/v1/zicai-danhuatang.webp",
+      "source": "local-prebuilt",
+      "width": 768,
+      "height": 768
+    },
+    {
+      "dishName": "醋溜白菜",
+      "dishKey": "culiu_baicai",
+      "aliases": [
+        "醋溜大白菜",
+        "酸辣白菜"
+      ],
+      "imageUrl": "/uploads/food-images/v1/culiu-baicai.webp",
+      "source": "local-prebuilt",
+      "width": 768,
+      "height": 768
     }
   ]
 }

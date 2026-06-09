@@ -31,3 +31,8 @@
 ## 413 区分
 - App 上传 413：页面/接口是 LifeWise 域名，HTML 写 nginx；查服务器 Nginx `client_max_body_size`。
 - Codex/AiMaMi 413：URL 是 `127.0.0.1:*/codex/router/v1/responses`；这是上下文太大，不是项目上传问题。
+
+## 生成源图清理
+- 内置 image_gen 会先保存到 C:\Users\wx\.codex\generated_images\...。项目要用的图必须复制/转存到 uploads/food-images/v1/ 等项目目录。
+- 转存、更新 index.json、查看/校验无误后，删除 C 盘本次用过的源 PNG，避免堆积。
+

@@ -78,7 +78,7 @@ public class AiConfigController {
         data.put("qwen", provider("千问 Qwen", true, hasText(dashscopeApiKey), dashscopeModel, dashscopeApiUrl));
         data.put("deepseek", provider("DeepSeek", false, deepseekEnabled && hasText(deepseekApiKey), deepseekModel, deepseekApiUrl));
         data.put("ollama", provider("Ollama 本地", false, true, ollamaModel, ollamaUrl));
-        data.put("vision", provider("图片识别", visionEnabled, hasText(visionApiKey), visionModel, visionApiUrl));
+        data.put("vision", provider("图片识别", visionEnabled, visionEnabled && hasText(visionApiKey) && hasText(visionApiUrl), visionModel, visionApiUrl));
         data.put("foodImage", provider("菜品生图", false, hasText(imageApiKey), "gpt-image-2", imageApiUrl));
         data.put("warnings", warnings());
         data.put("recentCalls", aiCallAuditService.recent(userId));

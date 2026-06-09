@@ -15,6 +15,15 @@ ai:
   api-url: https://api.deepseek.com/v1/chat/completions
   api-key: ""
   model: deepseek-chat
+  deepseek-enabled: false
+  dashscope-api-key: ""
+  dashscope-model: qwen-plus
+  vision-api-url: ""
+  vision-api-key: ""
+  vision-model: mimo-v2-omni
+
+app:
+  vision-enabled: false
 
 logging:
   level:

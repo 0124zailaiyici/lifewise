@@ -12,6 +12,7 @@ if [ -f application-cloud.properties ]; then
             ai.model) export AI_MODEL="$value" ;;
             ai.api-url) export AI_API_URL="$value" ;;
             ai.deepseek-enabled) export AI_DEEPSEEK_ENABLED="$value" ;;
+            ai.vision-api-url) export AI_VISION_API_URL="$value" ;;
             ai.vision-api-key) export AI_VISION_API_KEY="$value" ;;
             ai.vision-model) export AI_VISION_MODEL="$value" ;;
             app.vision-enabled) export APP_VISION_ENABLED="$value" ;;

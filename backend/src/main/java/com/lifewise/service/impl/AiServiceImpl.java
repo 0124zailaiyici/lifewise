@@ -127,8 +127,9 @@ public class AiServiceImpl implements AiService {
         } else {
             log.debug("Skipping cache for mock/error response");
         }
-        boolean externalCall = isExternalProviderCall(provider, answer);
-        return new AiReply(answer, provider, externalCall, sourceLabel(provider, externalCall));
+        String source = hasText(imageUrl) ? "vision" : provider;
+        boolean externalCall = isExternalProviderCall(source, answer);
+        return new AiReply(answer, source, externalCall, sourceLabel(source, externalCall));
     }
 
     private boolean isExternalProviderCall(String provider, String answer) {
@@ -138,13 +139,20 @@ public class AiServiceImpl implements AiService {
         return !lower.contains("api key is not configured")
             && !lower.contains("api key is missing")
             && !lower.contains("disabled by server cost guard")
-            && !lower.contains("mock response");
+            && !lower.contains("mock response")
+            && !answer.contains("未配置")
+            && !answer.contains("未调用");
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
     }
 
     private String sourceLabel(String provider, boolean externalCall) {
         if ("ollama".equals(provider)) return "来自 Ollama 本地模型，未调用外部 AI";
         if (!externalCall) return "未调用外部 AI";
         if ("qwen".equals(provider)) return "来自千问 Qwen";
+        if ("vision".equals(provider)) return "来自图片识别模型";
         if ("deepseek".equals(provider)) return "来自 DeepSeek";
         return "来自 AI";
     }
@@ -159,6 +167,11 @@ public class AiServiceImpl implements AiService {
             log.warn("DeepSeek API key not configured");
             aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek API key missing; no external API call");
             return disabledProviderResponse("DeepSeek API key is missing. Use Qwen or Ollama.");
+        }
+        if (hasText(imageUrl) && (!visionEnabled || !hasText(visionApiUrl) || !hasText(visionApiKey))) {
+            log.warn("Vision API not configured for image chat");
+            aiCallAuditService.record(userId, "vision", visionModel, scene, "blocked", "Vision API key/url missing; no external API call");
+            return "{\"answer\":\"图片识别未配置。请在服务器配置 ai.vision-api-url、ai.vision-api-key，并确认 app.vision-enabled=true。\",\"tips\":[\"图片已上传，但当前后端不能识别图片内容\",\"配置完成后重启后端再试\"]}";
         }
         if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
             log.warn("DashScope API key not configured for Qwen, please check server config");
@@ -245,6 +258,12 @@ public class AiServiceImpl implements AiService {
             userMsg.put("content", message);
         }
         messages.add(userMsg);
+
+        // Image questions must use the configured vision model; text-only provider selection stays unchanged.
+        if (hasImage) {
+            aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "Calling vision API for image chat");
+            return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
+        }
 
         // 根据 provider 路由到不同的 API
         if ("ollama".equals(provider)) {

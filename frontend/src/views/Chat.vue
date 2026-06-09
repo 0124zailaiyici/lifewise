@@ -360,7 +360,22 @@ async function send() { console.log("[IMG] called, file=", !!pendingFile.value, 
       const uploadRes = await uploadImage(pendingFile.value, (e) => { uploadProgress.value = Math.round((e.loaded / e.total) * 100) })
       imageUrl = uploadRes.data?.url || ""; console.log("[IMG] upload url:", imageUrl); ''
       pendingFile.value = null; pendingImage.value = null
-    } catch(e) { console.error('[IMG] upload err:',e); uploadProgress.value = 0; ElMessage.error('图片上传失败'); return }
+    } catch(e) {
+      console.error('[IMG] upload err:',e)
+      uploadProgress.value = 0
+      if (e?.response?.status === 401) {
+        ElMessage.error('登录已过期，请重新登录后再上传图片')
+      } else if (e?.response?.status === 413) {
+        ElMessage.error('图片太大，请压缩到 10MB 以内')
+      } else if (e?.response?.data?.message) {
+        ElMessage.error(e.response.data.message)
+      } else if (e?.message?.includes('Network')) {
+        ElMessage.error('无法连接服务器，请检查后端是否启动')
+      } else {
+        ElMessage.error('图片上传失败，请换一张图片重试')
+      }
+      return
+    }
   }
 
   messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
@@ -903,9 +918,28 @@ function handleFollowUpClick(e) {
 function triggerUpload() { fileInput.value?.click() }
 function handleFileSelect(e) {
   const file = e.target.files?.[0]; if (!file) return
+  const maxSize = 10 * 1024 * 1024
+  if (!file.type?.startsWith('image/')) {
+    ElMessage.warning('只能上传图片文件')
+    e.target.value = ''
+    return
+  }
+  if (file.size > maxSize) {
+    ElMessage.warning('图片不能超过 10MB，请压缩后再上传')
+    e.target.value = ''
+    return
+  }
   pendingFile.value = file
+  if (!inputText.value.trim()) {
+    inputText.value = '请分析这张图片'
+  }
   const reader = new FileReader()
   reader.onload = (ev) => { pendingImage.value = ev.target.result }
+  reader.onerror = () => {
+    pendingFile.value = null
+    pendingImage.value = null
+    ElMessage.error('图片读取失败，请换一张图片')
+  }
   reader.readAsDataURL(file); e.target.value = ''
 }
 function imgUrl(url) {

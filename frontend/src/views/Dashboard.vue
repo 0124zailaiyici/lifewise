@@ -85,16 +85,37 @@
         </div>
         <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
         <template v-else>
-          <div class="week-list">
-            <div v-for="(week, wi) in weeklyData" :key="wi" class="week-row">
-              <div class="week-label">{{ week.label }}</div>
-              <div class="week-bar-wrap">
-                <div class="week-bar" :style="{ width: weekBarWidth(week.count) }"></div>
+          <div class="act-stats">
+            <div class="act-stat-item">
+              <span class="act-stat-icon">📊</span>
+              <div class="act-stat-body">
+                <span class="act-stat-num">{{ totalActivity }}</span>
+                <span class="act-stat-label">总活跃次数</span>
               </div>
-              <span class="week-count">{{ week.count }}次</span>
+            </div>
+            <div class="act-stat-item">
+              <span class="act-stat-icon">📅</span>
+              <div class="act-stat-body">
+                <span class="act-stat-num">{{ avgDaily }}</span>
+                <span class="act-stat-label">日均</span>
+              </div>
+            </div>
+            <div class="act-stat-item">
+              <span class="act-stat-icon">🔥</span>
+              <div class="act-stat-body">
+                <span class="act-stat-num">{{ maxActivity }}</span>
+                <span class="act-stat-label">最高单日</span>
+              </div>
+            </div>
+            <div class="act-stat-item" v-if="weekCompare !== null">
+              <span class="act-stat-icon">{{ weekCompare >= 0 ? '📈' : '📉' }}</span>
+              <div class="act-stat-body">
+                <span class="act-stat-num" :style="{ color: weekCompare >= 0 ? 'var(--sage)' : '#e8796f' }">{{ weekCompare >= 0 ? '+' : '' }}{{ weekCompare }}</span>
+                <span class="act-stat-label">本周对比</span>
+              </div>
             </div>
           </div>
-          <div class="week-foot">近{{ activityData.length }}天共计{{ totalActivity }}次活动</div>
+          <div class="act-foot">近{{ activityData.length }}天 · {{ dateRange }}</div>
         </template>
       </div>
     </div>
@@ -116,8 +137,10 @@ const stats = ref({ total: {}, today: {}, thisWeek: {} })
 const sceneDistribution = ref([])
 const activityData = ref([])
 const maxActivity = ref(1)
-const weeklyData = ref([])
 const totalActivity = ref(0)
+const avgDaily = ref('0')
+const weekCompare = ref(null)
+const dateRange = ref('')
 
 const sceneColors = {
   cooking: '#f97316', shopping: 'var(--accent)', repair: '#3b82f6',
@@ -135,7 +158,18 @@ onMounted(async () => {
     activityData.value = data.activityData || []
     const counts = activityData.value.map(d => d.count || 0)
     maxActivity.value = Math.max(...counts, 1)
-    computeWeeklyData()
+    totalActivity.value = counts.reduce((a, b) => a + b, 0)
+    avgDaily.value = activityData.value.length > 0 ? (totalActivity.value / activityData.value.length).toFixed(1) : '0'
+    // Compute week-over-week comparison
+    const today = new Date()
+    const weekAgo = new Date(today)
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const twoWeeksAgo = new Date(today)
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+    const thisWeekCount = activityData.value.filter(d => new Date(d.date) >= weekAgo).reduce((s, d) => s + (d.count || 0), 0)
+    const lastWeekCount = activityData.value.filter(d => new Date(d.date) >= twoWeeksAgo && new Date(d.date) < weekAgo).reduce((s, d) => s + (d.count || 0), 0)
+    weekCompare.value = lastWeekCount > 0 ? thisWeekCount - lastWeekCount : null
+    dateRange.value = (activityData.value[0]?.date?.substring(5) || '') + ' ~ ' + (activityData.value[activityData.value.length-1]?.date?.substring(5) || '')
   } catch (e) { console.error(e) }
 })
 
@@ -148,39 +182,6 @@ function chartHeight(count) {
 }
 function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
-function computeWeeklyData() {
-  const data = activityData.value
-  if (!data.length) { weeklyData.value = []; totalActivity.value = 0; return }
-  // Group into weeks (Mon-Sun)
-  const weeks = []
-  let weekStart = new Date(data[0].date)
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1) // Monday
-  let currentWeek = { start: new Date(weekStart), count: 0 }
-  totalActivity.value = 0
-  data.forEach(item => {
-    const d = new Date(item.date)
-    totalActivity.value += item.count || 0
-    if (d >= new Date(currentWeek.start.getTime() + 7*86400000)) {
-      weeks.push(currentWeek)
-      currentWeek = { start: new Date(d.getTime() - (d.getDay() - 1)*86400000 || d.getTime()), count: 0 }
-    }
-    currentWeek.count += item.count || 0
-  })
-  if (currentWeek.count > 0 || weeks.length === 0) weeks.push(currentWeek)
-  weeklyData.value = weeks.map(w => {
-    const end = new Date(w.start)
-    end.setDate(end.getDate() + 6)
-    const now = new Date()
-    const label = (w.start <= now && end >= now) ? '本周' : 
-                  (w.start.getMonth()+1) + '.' + w.start.getDate() + '-' + (end.getMonth()+1) + '.' + end.getDate()
-    return { label, count: w.count }
-  })
-}
-
-function weekBarWidth(count) {
-  const max = Math.max(...weeklyData.value.map(w => w.count || 0), 1)
-  return Math.max(count / max * 100, 2) + '%'
-}
 </script>
 
 <style scoped>
@@ -255,14 +256,14 @@ function weekBarWidth(count) {
 .scene-num { font-size: 14px; font-weight: 500; color: var(--ink); min-width: 28px; text-align: right; }
 .scene-label-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-/* Weekly summary */
-.week-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
-.week-row { display: flex; align-items: center; gap: 10px; }
-.week-label { font-size: 12px; color: var(--ink); font-weight: 500; min-width: 60px; }
-.week-bar-wrap { flex: 1; height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; }
-.week-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-deep)); border-radius: 5px; transition: width .5s ease; min-width: 4px; }
-.week-count { font-size: 13px; color: var(--accent-deep); font-weight: 600; min-width: 36px; text-align: right; }
-.week-foot { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+/* Activity stats */
+.act-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.act-stat-item { display: flex; align-items: center; gap: 10px; background: var(--paper); border-radius: 14px; padding: 12px; }
+.act-stat-icon { font-size: 22px; }
+.act-stat-body { display: flex; flex-direction: column; }
+.act-stat-num { font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+.act-stat-label { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.act-foot { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; padding-top: 8px; }
 
 /* Empty */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }

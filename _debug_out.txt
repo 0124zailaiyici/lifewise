@@ -1,0 +1,34 @@
+PostMapping("/lookup")
+    public ApiResponse<?> lookupFoodImagePost(@RequestBody Map<String, String> request) {
+        return lookupByDishName(request.get("dishName"));
+    }
+
+    private ApiResponse<?> lookupByDishName(String dishName) {
+        if (dishName == null || dishName.trim().isEmpty()) {
+            return ApiResponse.error(400, "dishName is required");
+        }
+        String normalized = normalizeDishName(dishName);
+
+        Optional<FoodImageCache> cached = cacheRepository.findByDishName(normalized);
+        if (cached.isPresent()) {
+            FoodImageCache c = cached.get();
+            c.setHitCount((c.getHitCount() == null ? 0 : c.getHitCount()) + 1);
+            cacheRepository.save(c);
+            return ApiResponse.success(Map.of(
+                    "found", true,
+                    "cached", true,
+                    "source", sourceOf(c.getImageUrl()),
+                    "dishName", c.getDishName(),
+                    "imageUrl", c.getImageUrl()
+            ));
+        }
+
+        Optional<Map<String, Object>> local = findLocalPrebuiltImage(normalized);
+        if (local.isPresent()) {
+            Map<String, Object> item = local.get();
+            return ApiResponse.success(Map.of(
+                    "found", true,
+                    "cached", true,
+                    "source", "local-prebuilt",
+                    "dishName", String.valueOf(item.get("dishName")),
+                    "dishKey", String.valueOf(

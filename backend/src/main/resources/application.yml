@@ -39,6 +39,9 @@ ai:
   vision-api-key: ${AI_VISION_API_KEY:}
   vision-model: ${AI_VISION_MODEL:mimo-v2-omni}
 
+  api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+  api-key: ${AI_DASHSCOPE_KEY:}
+  model: ${API_MODEL:qwen-plus}
 app:
   vision-enabled: ${APP_VISION_ENABLED:true}
   upload-dir: ./uploads
@@ -51,5 +54,4 @@ gl-image:
   api-key: ${GL_IMAGE_API_KEY:}
   api-url: ${GL_IMAGE_API_URL:https://api.lk888.ai/api}
 
-
-
+# Old-style AI config (used by AiServiceImpl)

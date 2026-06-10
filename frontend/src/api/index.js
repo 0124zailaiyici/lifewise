@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
@@ -133,8 +133,10 @@ export function uploadImage(file, onProgress) {
   })
 }
 
-export function generateFoodImage(dishName) {
-  return api.post('/food-image/generate', { dishName })
+export function generateFoodImage(dishName, scene) {
+  const body = { dishName }
+  if (scene) body.scene = scene
+  return api.post('/food-image/generate', body)
 }
 
 export function lookupFoodImage(dishName) {

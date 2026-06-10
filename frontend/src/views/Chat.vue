@@ -1,4 +1,4 @@
-﻿<!-- VERSION: 20260610-1 Claude Style -->
+<!-- VERSION: 20260610-1 Claude Style -->
 <template>
   <div class="page-container chat-page">
     <!-- 顶部栏 -->
@@ -1564,7 +1564,7 @@ function attachSceneImage(message, prompt, scene) {
   if (!prompt || message._sceneImageUrl || message._sceneImageLoading) return
   message._sceneImageLoading = true
   message._sceneImageText = "\u{1f3a8} \u6b63\u5728\u751f\u6210\u573a\u666f\u914d\u56fe\u2026"
-  generateFoodImage(prompt).then(function(res) {
+          generateFoodImage(prompt, scene).then(function(res) {
     var d = res.data
     if (d && d.code === 0 && d.data && d.data.imageUrl) {
       message._sceneImageUrl = d.data.imageUrl

@@ -1,4 +1,4 @@
-package com.lifewise.controller;
+﻿package com.lifewise.controller;
 
 import com.lifewise.common.ApiResponse;
 import com.lifewise.entity.FoodImageCache;
@@ -101,42 +101,37 @@ public class FoodImageController {
 
     // ---------- generate ----------
 
-    @PostMapping("/generate")
+        @PostMapping("/generate")
     public ApiResponse<?> generateFoodImage(@RequestBody Map<String, String> request) {
         String dishName = request.get("dishName");
         if (dishName == null || dishName.trim().isEmpty()) {
             return ApiResponse.error(400, "dishName is required");
         }
-        dishName = normalizeDishName(dishName);
-
-        // 1) Check DB cache
-        Optional<FoodImageCache> cached = cacheRepository.findByDishName(dishName);
-        if (cached.isPresent()) {
-            FoodImageCache c = cached.get();
-            c.setHitCount((c.getHitCount() == null ? 0 : c.getHitCount()) + 1);
-            cacheRepository.save(c);
-            log.info("Food image HIT: dishName={}", dishName);
-            return ApiResponse.success(Map.of(
-                    "cached", true, "found", true,
-                    "source", sourceOf(c.getImageUrl()),
-                    "imageUrl", c.getImageUrl()
-            ));
+        String scene = request.get("scene");
+        boolean isScene = scene != null && ("fashion".equals(scene) || "shopping".equals(scene));
+        if (!isScene) {
+            dishName = normalizeDishName(dishName);
         }
 
-        // 2) Check local prebuilt
-        Optional<Map<String, Object>> local = findLocalPrebuiltImage(dishName);
-        if (local.isPresent()) {
-            Map<String, Object> item = local.get();
-            log.info("Food image local HIT: dishName={}", dishName);
-            return ApiResponse.success(Map.of(
-                    "cached", true, "found", true,
-                    "source", "local-prebuilt",
-                    "imageUrl", String.valueOf(item.get("imageUrl"))
-            ));
+        if (!isScene) {
+            Optional<FoodImageCache> cached = cacheRepository.findByDishName(dishName);
+            if (cached.isPresent()) {
+                FoodImageCache c = cached.get();
+                c.setHitCount((c.getHitCount() == null ? 0 : c.getHitCount()) + 1);
+                cacheRepository.save(c);
+                log.info("Food image HIT: dishName={}", dishName);
+                return ApiResponse.success(Map.of("cached", true, "found", true, "source", sourceOf(c.getImageUrl()), "imageUrl", c.getImageUrl()));
+            }
+
+            Optional<Map<String, Object>> local = findLocalPrebuiltImage(dishName);
+            if (local.isPresent()) {
+                Map<String, Object> item = local.get();
+                log.info("Food image local HIT: dishName={}", dishName);
+                return ApiResponse.success(Map.of("cached", true, "found", true, "source", "local-prebuilt", "imageUrl", String.valueOf(item.get("imageUrl"))));
+            }
         }
 
-        // 3) Submit to external image generation
-        log.info("Food image MISS: dishName={}, submitting task", dishName);
+        log.info("Image gen: dishName={}, scene={}", dishName, scene);
 
         if (glApiKey != null && !glApiKey.isBlank()) {
             return submitToRelay(dishName);
@@ -146,7 +141,6 @@ public class FoodImageController {
         }
         return ApiResponse.error(503, "Image generation is not configured");
     }
-
     // ---------- relay (lk888) ----------
 
     private ApiResponse<?> submitToRelay(String dishName) {
@@ -383,11 +377,12 @@ public class FoodImageController {
 
     // ---------- helpers ----------
 
-    private String buildPrompt(String dishName) {
-        return "美味的" + dishName + "，中式家常菜风格，美食摄影，暖色调光线，"
-                + "高质量，写实，诱人，点缀葱花和芝麻，瓷盘装盘，专业美食摄影，8K，细节丰富";
+        private String buildPrompt(String dishName) {
+        // For scene images (fashion/shopping), dishName already contains the English prompt
+        return dishName;
     }
 
+    private
     private String normalizeDishName(String dishName) {
         if (dishName == null) return "";
         dishName = repairMojibake(dishName);

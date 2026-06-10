@@ -55,13 +55,7 @@
         <!-- 助手消息 — Claude 卡片风格 -->
         <template v-if="msg.role === 'assistant'">
           <article class="assistant-card">
-            <div class="card-head">
-              <div class="card-title">
-                <span class="avatar">✦</span>
-                <span>{{ currentLabel }}</span>
-              </div>
-              <span class="confidence" v-if="!msg._typing && (msg._source === 'knowledge-base' || msg._externalCall === false)">✅ 常识库</span>
-            </div>
+            <span class="confidence kb-badge" v-if="!msg._typing && (msg._source === 'knowledge-base' || msg._externalCall === false) && !isJsonContent(msg.content)">✅ 常识库</span>
 
             <div class="card-body">
               <div v-if="msg._typing">
@@ -1210,6 +1204,8 @@ function detectDishName(aiContent, userQuestion = '') {
 }
 
 function renderMarkdown(text) {
+  const sceneLabel = localStorage.getItem("sceneLabel") || ""
+  let header = sceneLabel ? '<div class="md-scene-label">✦ ' + esc(sceneLabel) + '</div>' : ''
   let html = (text || "");
   html = html.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
   // Code blocks (must be before inline code)
@@ -1247,8 +1243,9 @@ function renderMarkdown(text) {
     .replace(/<(h[2345]|ul|ol|blockquote|table|pre)><br>/g, "<$1>")
     .replace(/<\/li><br>/g, "</li>")
     .replace(/<br><li>/g, "<li>")
-  return '<div class="md-content writing-content">' + html + "</div>"
+  return header + '<div class="md-content writing-content">' + html + "</div>"
 }
+
 function tryParseJsonSafe(text) {
   if (!text) return null
   // Helper: try parse with trailing comma fix
@@ -1270,187 +1267,204 @@ function tryParseJsonSafe(text) {
   }
   return null
 }
+function isJsonContent(text) {
+  return text && (text.trim().startsWith("{")
+  || text.trim().startsWith("["))
+}
 
 
 function renderStructured(data) {
   const parts = []
-  if (data.title) {
-    parts.push(`<h4 class="rc-card-title">${esc(data.title)}</h4>`)
-    let tags = ''
-    if (data.difficulty) tags += `📊 ${esc(data.difficulty)}`
-    if (data.time) tags += ` · ⏱️ ${esc(data.time)}`
-    if (data.servings) tags += ` · ${esc(data.servings)}`
-    if (tags) parts.push(`<div class="rc-tags">${tags}</div>`)
-  } else if (data.品类) parts.push(`<h4 class="rc-card-title">🛒 ${esc(data.品类)}</h4>`)
-  else if (data.problem) parts.push(`<h4 class="rc-card-title">🔧 ${esc(data.problem)}</h4>`)
-  else if (data.question) parts.push(`<h4 class="rc-card-title">💬 ${esc(data.question)}</h4>`)
-  else if (data.occasion) parts.push(`<h4 class="rc-card-title">📍 ${esc(data.occasion)}</h4>`)
-
-  if (data.ingredients) {
-    parts.push('<div class="rc-sec">🥘 食材</div>')
+  // ===== 1. Detect scene =====
+  let scene = "general", sceneIcon = "\u{1f4ac}", sceneLabel = "\u751f\u6d3b\u5e38\u8bc6"
+  let title = data.title || ""
+  if (data.ingredients && data.steps) { scene = "cooking"; sceneIcon = "\u{1f373}"; sceneLabel = "\u505a\u996d\u52a9\u624b" }
+  else if (data.occasion || data.outfits || data.color_palette) { scene = "fashion"; sceneIcon = "\u{1f454}"; sceneLabel = "\u7a7f\u642d\u6307\u5357" }
+  else if (data.selection_steps || data.category || data.\u54c1\u7c7b) { scene = "shopping"; sceneIcon = "\u{1f6d2}"; sceneLabel = "\u8d2d\u7269\u6311\u9009" }
+  else if (data.problem && (data.tools || (data.steps && data.severity))) { scene = "repair"; sceneIcon = "\u{1f527}"; sceneLabel = "\u4fee\u7406\u6307\u5357" }
+  else if (data.problem && (data.materials || data.difficulty)) { scene = "housework"; sceneIcon = "\u{1f9f9}"; sceneLabel = "\u5bb6\u52a1\u6280\u5de7" }
+  if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || data.occasion || ""
+  // ===== 2. Card header =====
+  let iconGrad = "s-icon-" + scene
+  parts.push(`<div class="s-hd"><div class="s-hd-icon ${iconGrad}">${sceneIcon}</div><div class="s-hd-meta"><div class="s-hd-label">${sceneLabel}</div><div class="s-hd-title">${esc(title)}</div></div></div>`)
+  parts.push('<div class="s-bd">')
+  // ===== 3. Tags row =====
+  if (data.difficulty || data.time || data.servings) {
+    let tags = ""
+    if (data.difficulty) tags += `<span class="s-tag">\u{1f4ca} ${esc(data.difficulty)}</span>`
+    if (data.time) tags += `<span class="s-tag s-tag-time">\u23f1\ufe0f ${esc(data.time)}</span>`
+    if (data.servings) tags += `<span class="s-tag">\u{1f465} ${esc(data.servings)}</span>`
+    if (tags) parts.push(`<div class="s-tags">${tags}</div>`)
+  }
+  // ===== 4. Scene sections =====
+  if (data.ingredients && data.ingredients.length) {
+    parts.push('<div class="s-sec">\u{1f958} \u98df\u6750</div><div class="s-ing-list">')
     data.ingredients.forEach(item => {
-      const note = item.note ? `<span class="rc-note">💡 ${esc(item.note)}</span>` : ''
-      parts.push(`<div class="rc-item">· ${esc(item.name)}${item.amount ? ' ' + esc(item.amount) : ''}${note}</div>`)
+      const note = item.note ? ` <span class="s-ing-note">\u{1f4a1} ${esc(item.note)}</span>` : ""
+      const alt = item.alternative ? ` <span class="s-ing-note">\uff08\u53ef\u7528${esc(item.alternative)}\u66ff\u4ee3\uff09</span>` : ""
+      parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(item.name)}</span>${item.amount ? `<span class="s-ing-amt">${esc(item.amount)}</span>` : ""}${note}${alt}</div>`)
     })
+    parts.push("</div>")
   }
-  if (data.steps) {
-    parts.push('<div class="rc-sec">👨‍🍳 步骤</div>')
+  if (data.materials && data.materials.length) {
+    parts.push('<div class="s-sec">\u{1f4e6} \u6240\u9700\u6750\u6599</div><div class="s-ing-list">')
+    data.materials.forEach(m => {
+      if (typeof m === "string") parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(m)}</span></div>`)
+      else {
+        const alt = m.alternative ? ` <span class="s-ing-note">\uff08\u53ef\u7528${esc(m.alternative)}\u66ff\u4ee3\uff09</span>` : ""
+        parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(m.name)}</span>${alt}</div>`)
+      }
+    })
+    parts.push("</div>")
+  }
+  if (data.steps && data.steps.length) {
+    const stepIcon = scene === "cooking" ? "\u{1f468}\u200d\u{1f373}" : scene === "repair" ? "\u{1f527}" : "\u{1f4cb}"
+    parts.push(`<div class="s-sec">${stepIcon} \u6b65\u9aa4</div><div class="s-step-list">`)
     data.steps.forEach(s => {
-      const stepKw = s.step_image || (s.action || "").substring(0, 30)
-      const stepImg = makeStepImg(stepKw)
-      const tip = s.tip ? `<span class="rc-note">💡 ${esc(s.tip)}</span>` : ''
-      const warning = s.warning ? `<span class="rc-warning">⚠️ ${esc(s.warning)}</span>` : ''
-      parts.push(`<div class="rc-step"><div class="rc-step-badge">${s.step || ''}</div><div class="rc-step-body">${stepImg}<div class="rc-step-text">${esc(s.action || s)}${tip}${warning}</div></div></div>`)
+      const stepNum = s.step || ""
+      const stepAction = esc(s.action || s || "")
+      const stepTime = s.time ? `<span class="s-step-time">\u23f1 ${esc(s.time)}</span>` : ""
+      const stepTip = s.tip ? `<span class="s-step-tip">\u{1f4a1} ${esc(s.tip)}</span>` : ""
+      const stepWarn = s.warning ? `<span class="s-step-warn">\u26a0\ufe0f ${esc(s.warning)}</span>` : ""
+      parts.push(`<div class="s-step-item"><div class="s-step-num">${stepNum}</div><div class="s-step-body">${stepAction}${stepTime}${stepTip}${stepWarn}</div></div>`)
     })
+    parts.push("</div>")
   }
-  if (data.selection_steps) {
-    parts.push('<div class="rc-sec">🔍 挑选步骤</div>')
+  if (data.selection_steps && data.selection_steps.length) {
+    parts.push('<div class="s-sec">\u{1f50d} \u6311\u9009\u6b65\u9aa4</div><div class="s-step-list">')
     data.selection_steps.forEach(s => {
-      const stepKw = s.step_image || (s.action || "").substring(0, 30)
-      const stepImg = makeStepImg(stepKw)
-      parts.push('<div class="rc-step"><div class="rc-step-badge"></div><div class="rc-step-body">' + stepImg + '<div class="rc-step-text"><strong>' + esc(s.step_name) + '</strong>：' + esc(s.action) + '</div></div></div>')
+      const fc = s.step_name ? s.step_name.trim().charAt(0) : "\u00b7"
+      const nm = s.step_name ? `<strong>${esc(s.step_name)}</strong> \u2014 ` : ""
+      parts.push(`<div class="s-select-item"><div class="s-select-num">${fc}</div><div class="s-step-body">${nm}${esc(s.action)}</div></div>`)
     })
+    parts.push("</div>")
   }
-  if (data.tools) {
-    parts.push('<div class="rc-sec">🔧 所需工具</div>')
-    data.tools.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
+  if (data.tools && data.tools.length) {
+    parts.push('<div class="s-sec">\u{1f527} \u6240\u9700\u5de5\u5177</div><div class="s-tool-list">')
+    data.tools.forEach(t => parts.push(`<span class="s-tool-tag">${esc(t)}</span>`))
+    parts.push("</div>")
   }
-  if (data.key_point) parts.push(`<div class="rc-tip">🔥 ${esc(data.key_point)}</div>`)
-  if (data.safety_tip) parts.push(`<div class="rc-tip" style="color:#dc2626">⚠️ ${esc(data.safety_tip)}</div>`)
-  if (data.answer) parts.push(`<div class="rc-item" style="margin-top:8px">${esc(data.answer).replace(/\n/g, '<br>')}</div>`)
+  if (data.style) parts.push(`<div class="s-sec">\u{1f3a8} \u98ce\u683c\u5b9a\u4f4d</div><div class="s-fashion-style">${esc(data.style)}</div>`)
+  if (data.color_palette && data.color_palette.length) {
+    parts.push('<div class="s-sec">\u{1f3a8} \u914d\u8272\u65b9\u6848</div><div class="s-color-list">')
+    data.color_palette.forEach(c => {
+      const cn = c.name || c.color || (typeof c === "string" ? c : "")
+      const cd = c.description || c.detail || (typeof c === "string" ? "" : c.note || "")
+      const ch = nameToHex(cn)
+      parts.push(`<div class="s-color-item"><span class="s-color-dot" style="background:${ch}"></span><span>${esc(cn)}</span>${cd ? `<span class="s-color-desc">${esc(cd)}</span>` : ""}</div>`)
+    })
+    parts.push("</div>")
+  }
+  if (data.outfits && data.outfits.length) {
+    parts.push('<div class="s-sec">\u{1f454} \u63a8\u8350\u7a7f\u642d</div><div class="s-outfit-list">')
+    data.outfits.forEach(o => {
+      const on = o.piece || o.name || ""
+      const od = o.description || o.detail || ""
+      const oc = o.color ? `<span class="s-outfit-color">${esc(o.color)}</span>` : ""
+      const oi = outfitIcon(on)
+      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">${oi}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(on)}</span>${od ? `<span class="s-outfit-desc">${esc(od)}</span>` : ""}</div>${oc}</div>`)
+    })
+    parts.push("</div>")
+  }
+  if (data.items && data.items.length) {
+    parts.push('<div class="s-sec">\u{1f9e5} \u5355\u54c1\u63a8\u8350</div><div class="s-outfit-list">')
+    data.items.forEach(it => {
+      const in_ = it.name || it.item || ""
+      const id = it.description || it.recommendation || it.detail || it.note || ""
+      const ii = outfitIcon(in_)
+      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">${ii}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(in_)}</span>${id ? `<span class="s-outfit-desc">${esc(id)}</span>` : ""}</div></div>`)
+    })
+    parts.push("</div>")
+  }
+  if (data.accessories && data.accessories.length) {
+    parts.push('<div class="s-sec">\u{1f48d} \u914d\u9970\u63a8\u8350</div><div class="s-outfit-list">')
+    data.accessories.forEach(a => {
+      const an = a.name || a.item || ""
+      const ad = a.description || a.recommendation || a.note || ""
+      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">\u{1f48d}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(an)}</span>${ad ? `<span class="s-outfit-desc">${esc(ad)}</span>` : ""}</div></div>`)
+    })
+    parts.push("</div>")
+  }
+  if (data.common_mistakes && data.common_mistakes.length) {
+    parts.push('<div class="s-sec">\u26a0\ufe0f \u5e38\u89c1\u8bef\u533a</div><div class="s-mistake-list">')
+    data.common_mistakes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
+    parts.push("</div>")
+  }
+  if (data.season) parts.push(`<span class="s-season-tag">\u{1f33f} ${esc(data.season)}</span>`)
+  if (data.storage_tip) parts.push(`<div class="s-sec">\u{1f4e6} \u4fdd\u5b58\u65b9\u6cd5</div><div class="s-text">${esc(data.storage_tip)}</div>`)
+  if (data.summary_slogan) parts.push(`<div class="s-slogan">${esc(data.summary_slogan)}</div>`)
+  if (data.severity) {
+    const sv = data.severity.includes("\u8f7b\u5fae") ? "s-sev-low" : data.severity.includes("\u4e25\u91cd") ? "s-sev-high" : "s-sev-med"
+    parts.push(`<div class="s-sec">\u26a1 \u4e25\u91cd\u7a0b\u5ea6</div><span class="${sv}">${esc(data.severity)}</span>`)
+  }
+  if (data.professional_advice) parts.push(`<div class="s-sec">\u{1f3e5} \u9700\u8981\u627e\u4e13\u4e1a\u4eba\u5458\u7684\u60c5\u51b5</div><div class="s-text">${esc(data.professional_advice)}</div>`)
+  if (data.prevention) parts.push(`<div class="s-sec">\u{1f6e1}\ufe0f \u5982\u4f55\u9884\u9632</div><div class="s-text">${esc(data.prevention)}</div>`)
+  if (data.key_point) parts.push(`<div class="s-key">\u{1f525} ${esc(data.key_point)}</div>`)
+  if (data.safety_tip) parts.push(`<div class="s-safety">\u26a0\ufe0f ${esc(data.safety_tip)}</div>`)
+  if (data.answer) parts.push(`<div class="s-answer">${esc(data.answer).replace(/\n/g, "<br>")}</div>`)
   if (data.suggestions) {
-    parts.push('<div class="rc-sec">💡 建议</div>')
+    parts.push('<div class="s-sec">\u{1f4a1} \u5efa\u8bae</div>')
     const sa = Array.isArray(data.suggestions) ? data.suggestions : [data.suggestions]
     sa.forEach(s => {
-      if (typeof s === 'string') { parts.push('<div class="rc-item">· ' + esc(s) + '</div>'); return }
-      const sImg = s.step_image ? '<div class="rc-step-img" style="margin:2px 0">' + makeStepImg(s.step_image) + '</div>' : ''
-      parts.push('<div class="rc-item">' + sImg + '<strong>' + esc(s.item) + '</strong>：' + esc(s.detail) + '</div>')
-    })
-  }
-  // === extra field handlers ===
-  if (data.style) {
-    parts.push('<div class="rc-sec">🎨 风格定位</div>')
-    parts.push('<div class="rc-item" style="font-size:15px;font-weight:500;color:#111">' + esc(data.style) + '</div>')
-  }
-  if (data.items && Array.isArray(data.items)) {
-    parts.push('<div class="rc-sec">🧥 单品推荐</div>')
-    data.items.forEach(function(it) {
-      var name = it.name || it.item || ""
-      var desc = it.description || it.recommendation || it.detail || it.note || ""
-      parts.push('<div class="rc-item">\u00b7 <strong>' + esc(name) + '</strong>' + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
-    })
-  }
-  if (data.outfits && Array.isArray(data.outfits)) {
-    parts.push('<div class="rc-sec">👔 搭配方案</div>')
-    data.outfits.forEach(function(o) {
-      var name = o.piece || o.name || o.occasion || ""
-      var desc = o.description || o.detail || ""
-      if (Array.isArray(o.items)) desc = o.items.join(", ")
-      const pImg = o.step_image ? '<div class="rc-step-img" style="margin:2px 0">' + makeStepImg(o.step_image) + '</div>' : ''
-      parts.push('<div class="rc-item">' + pImg + '<strong>' + esc(name) + '</strong>' + (desc ? "：" + desc : "") + (o.color ? '  ·  <span style="color:#666">' + esc(o.color) + '</span>' : "") + '</div>')
-    })
-  }
-  if (data.color_palette && Array.isArray(data.color_palette)) {
-    parts.push('<div class="rc-sec">🎨 配色方案</div>')
-    data.color_palette.forEach(function(c) {
-      var name = c.name || c.color || (typeof c === "string" ? c : "")
-      var desc = c.description || c.detail || (typeof c === "string" ? "" : c.note || "")
-      parts.push('<div class="rc-item">🎨 ' + esc(name) + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
-    })
-  }
-  if (data.accessories && Array.isArray(data.accessories)) {
-    parts.push('<div class="rc-sec">💍 配饰推荐</div>')
-    data.accessories.forEach(function(a) {
-      var name = a.name || a.item || ""
-      var desc = a.description || a.recommendation || a.note || ""
-      parts.push('<div class="rc-item">\u00b7 <strong>' + esc(name) + '</strong>' + (desc ? " \u2014 " + esc(desc) : "") + '</div>')
-    })
-  }
-  if (data.materials && Array.isArray(data.materials)) {
-    parts.push('<div class="rc-sec">📦 所需材料</div>')
-    data.materials.forEach(function(m) {
-      if (typeof m === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(m) + '</div>')
-      else {
-        var mn = esc(m.name || "")
-        var ma = m.amount ? " " + esc(m.amount) : ""
-        var mn1 = m.note ? ' <span class="rc-note">' + esc(m.note) + '</span>' : ""
-        parts.push('<div class="rc-item">\u00b7 <strong>' + mn + '</strong>' + ma + mn1 + '</div>')
-      }
-    })
-  }
-  if (data.recommendations && Array.isArray(data.recommendations)) {
-    parts.push('<div class="rc-sec">💡 推荐</div>')
-    data.recommendations.forEach(function(r) {
-      if (typeof r === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(r) + '</div>')
-      else {
-        var rn = esc(r.name || r.item || "")
-        var rd = r.reason || r.description || r.detail
-        parts.push('<div class="rc-item">\u00b7 <strong>' + rn + '</strong>' + (rd ? " \u2014 " + esc(rd) : "") + '</div>')
-      }
+      if (typeof s === "string") parts.push(`<div class="s-text-line">\u00b7 ${esc(s)}</div>`)
+      else parts.push(`<div class="s-text-line">\u00b7 <strong>${esc(s.item || s.name || "")}</strong>${(s.detail || s.description) ? "\uff1a" + esc(s.detail || s.description) : ""}</div>`)
     })
   }
   if (data.tips) {
-    parts.push('<div class="rc-sec">💡 小贴士</div>')
+    parts.push('<div class="s-sec">\u{1f4a1} \u5c0f\u8d34\u58eb</div>')
     const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
-    ta.forEach(t => parts.push(`<div class="rc-item">· ${esc(t)}</div>`))
+    ta.forEach(t => parts.push(`<div class="s-text-line">\u00b7 ${esc(t)}</div>`))
   }
-  // === fallback for unknown fields ===
-  var allKeys = Object.keys(data)
-  var knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags"]
-  for (var ki = 0; ki < allKeys.length; ki++) {
-    var k = allKeys[ki]
-    if (knownKeys.indexOf(k) >= 0) continue
-    var v = data[k]
-    if (v === null || v === undefined) continue
-    if (typeof v === "string" && v.trim()) {
-      parts.push('<div class="rc-sec">📌 ' + k + '</div>')
-      parts.push('<div class="rc-item">' + esc(v).replace(/\n/g, "<br>") + '</div>')
-    } else if (Array.isArray(v) && v.length) {
-      parts.push('<div class="rc-sec">📌 ' + k + '</div>')
-      for (var vi = 0; vi < v.length; vi++) {
-        var item = v[vi]
-        if (typeof item === "string") parts.push('<div class="rc-item">\u00b7 ' + esc(item) + '</div>')
-        else if (typeof item === "object" && item) {
-          var ikeys = Object.keys(item)
-          var texts = []
-          for (var ti = 0; ti < ikeys.length; ti++) {
-            var iv = item[ikeys[ti]]
-            if (iv) texts.push(esc(iv))
-          }
-          parts.push('<div class="rc-item">\u00b7 ' + texts.join(" \u2014 ") + '</div>')
+  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b"]
+  Object.keys(data).forEach(k => {
+    if (knownKeys.includes(k)) return
+    const v = data[k]
+    if (v == null) return
+    if (typeof v === "string" && v.trim()) parts.push(`<div class="s-sec s-fb">\u{1f4cc} ${k}</div><div class="s-text-line">${esc(v).replace(/\n/g, "<br>")}</div>`)
+    else if (Array.isArray(v) && v.length) {
+      parts.push(`<div class="s-sec s-fb">\u{1f4cc} ${k}</div>`)
+      v.forEach(item => {
+        if (typeof item === "string") parts.push(`<div class="s-text-line">\u00b7 ${esc(item)}</div>`)
+        else if (item) {
+          const txts = Object.keys(item).filter(kk => item[kk]).map(kk => esc(item[kk]))
+          if (txts.length) parts.push(`<div class="s-text-line">\u00b7 ${txts.join(" \u2014 ")}</div>`)
         }
-      }
+      })
     }
-  }
-
+  })
+  parts.push("</div>")
   let recQ = data.followUps || []
   if (!recQ.length) {
-    const kw = (data.title || data.question || data.problem || data.品类 || '').replace(/[、，。]/g, ' ').trim()
+    const kw = (data.title || data.question || data.problem || data.\u54c1\u7c7b || "").replace(/[\u3001\uff0c\u3002]/g, " ").trim()
     if (kw && kw.length > 1) {
-      // Detect scene from data fields
-      if (data.steps && data.ingredients) {
-        // Cooking scene
-        recQ = [`${kw}没有某种食材用什么代替`, `${kw}有什么技巧`, `${kw}可以加什么配菜`]
-      } else if (data.outfits || data.color_palette || data.occasion) {
-        // Fashion scene
-        recQ = [`${kw}适合什么场合穿`, `${kw}怎么搭配更好看`, `${kw}推荐什么颜色`]
-      } else if (data.selection_steps || data.category) {
-        // Shopping scene
-        recQ = [`${kw}怎么保存`, `${kw}什么季节最好`, `${kw}有什么注意事项`]
-      } else if (data.tools || data.problem) {
-        // Repair scene
-        recQ = [`${kw}需要什么工具`, `${kw}有什么注意事项`, `${kw}什么情况要找专业人员`]
-      } else if (data.suggestions || data.品类) {
-        recQ = [`${kw}有什么技巧`, `${kw}要注意什么`, `${kw}推荐什么`]
-      } else {
-        recQ = [`${kw}怎么做`, `${kw}需要什么`, `${kw}有什么技巧`]
-      }
+      if (scene === "cooking") recQ = [`${kw}\u6ca1\u6709\u67d0\u98df\u6750\u7528\u4ec0\u4e48\u4ee3\u66ff`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u53ef\u4ee5\u52a0\u4ec0\u4e48\u914d\u83dc`]
+      else if (scene === "fashion") recQ = [`${kw}\u9002\u5408\u4ec0\u4e48\u573a\u5408\u7a7f`, `${kw}\u600e\u4e48\u642d\u914d\u66f4\u597d\u770b`, `${kw}\u63a8\u8350\u4ec0\u4e48\u989c\u8272`]
+      else if (scene === "shopping") recQ = [`${kw}\u600e\u4e48\u4fdd\u5b58`, `${kw}\u4ec0\u4e48\u5b63\u8282\u6700\u597d`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`]
+      else if (scene === "repair") recQ = [`${kw}\u9700\u8981\u4ec0\u4e48\u5de5\u5177`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`, `${kw}\u4ec0\u4e48\u60c5\u51b5\u8981\u627e\u4e13\u4e1a\u4eba\u5458`]
+      else if (scene === "housework") recQ = [`${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u9700\u8981\u6ce8\u610f\u4ec0\u4e48`, `${kw}\u7528\u4ec0\u4e48\u6e05\u6d01\u5242\u597d`]
+      else recQ = [`${kw}\u600e\u4e48\u505a`, `${kw}\u9700\u8981\u4ec0\u4e48`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`]
     }
   }
-  if (recQ.length) {
-    parts.push(`<div class="rc-followups"><div class="rc-followup-title">💡 你可能还想问</div>${recQ.map(q => `<span class="rc-followup-chip">${esc(q)}</span>`).join(' ')}</div>`)
+  if (recQ.length) parts.push(`<div class="s-followups"><div class="s-followup-title">\u{1f4a1} \u4f60\u53ef\u80fd\u8fd8\u60f3\u95ee</div>${recQ.map(q => `<span class="s-followup-chip">${esc(q)}</span>`).join(" ")}</div>`)
+  return '<div class="s-card">' + parts.join("") + "</div>"
+}
+const COLOR_MAP = {"\u7ea2":"#e74c3c","\u9152\u7ea2":"#8e1b1b","\u6697\u7ea2":"#8b0000","\u7c89":"#f0a8c4","\u73ab\u7ea2":"#d81b60","\u6a59":"#f39c12","\u6a58":"#f39c12","\u674f":"#f7cba0","\u6a59\u7ea2":"#e67e22","\u9ec4":"#f1c40f","\u7c73":"#f5f0e1","\u7c73\u767d":"#f5f0e1","\u5976\u6cb9":"#fff8dc","\u8c61\u7259":"#fffff0","\u6d45\u9ec4":"#fff9c4","\u7eff":"#27ae60","\u58a8\u7eff":"#1e5631","\u519b\u7eff":"#4a5d23","\u8349\u7eff":"#7cb342","\u6d45\u7eff":"#a5d6a7","\u7fe0\u7eff":"#00a86b","\u84dd":"#2980b9","\u6df1\u84dd":"#1a237e","\u6d45\u84dd":"#bbdefb","\u85cf\u84dd":"#13264d","\u7070\u84dd":"#5b7b9a","\u5929\u84dd":"#87ceeb","\u7d2b":"#8e44ad","\u6de1\u7d2b":"#d1b3e0","\u6df1\u7d2b":"#4a148c","\u68d5":"#8d6e63","\u5496\u5561":"#6d4c2e","\u9a7c":"#c49a6c","\u5361\u5176":"#c3a66b","\u68d5\u8910":"#5d4037","\u7070":"#9e9e9e","\u6d45\u7070":"#cfd8dc","\u6df1\u7070":"#424242","\u94f6":"#bdc3c7","\u70ad\u7070":"#36454f","\u9ed1":"#2c2c2c","\u767d":"#ffffff","\u7c73\u8272":"#f5f0e1","\u88f8\u8272":"#e8c4a0","\u91d1":"#d4a017","\u53e4\u94dc":"#cd7f32"}
+function nameToHex(name) {
+  if (!name || typeof name !== "string") return "#ccc"
+  const n = name.trim()
+  for (const [kw, hex] of Object.entries(COLOR_MAP)) {
+    if (n.includes(kw)) return hex
   }
-  return '<div class="rc-card">' + parts.join('') + '</div>'
+  return "#ccc"
+}
+const OUTFIT_ICONS = {"\u897f\u88dd":"\u{1f454}","\u897f\u88c5":"\u{1f454}","\u5916\u5957":"\u{1f9e5}","\u5927\u8863":"\u{1f9e5}","\u5939\u514b":"\u{1f9e5}","jacket":"\u{1f9e5}","coat":"\u{1f9e5}","blazer":"\u{1f9e5}","\u886c\u886b":"\u{1f454}","shirt":"\u{1f454}","blouse":"\u{1f454}","\u886c\u8863":"\u{1f454}","T\u6064":"\u{1f455}","t\u6064":"\u{1f455}","tee":"\u{1f455}","tshirt":"\u{1f455}","polo":"\u{1f455}","\u88e4\u5b50":"\u{1f456}","\u88e4":"\u{1f456}","pants":"\u{1f456}","jeans":"\u{1f456}","\u725b\u4ed4\u88e4":"\u{1f456}","\u897f\u88e4":"\u{1f456}","\u77ed\u88e4":"\u{1f973}","\u88d9\u5b50":"\u{1f457}","\u88d9":"\u{1f457}","dress":"\u{1f457}","skirt":"\u{1f457}","\u978b":"\u{1f45f}","sneaker":"\u{1f45f}","\u8fd0\u52a8\u978b":"\u{1f45f}","\u9774":"\u{1f97e}","boots":"\u{1f97e}","\u9ad8\u8ddf\u978b":"\u{1f460}","heels":"\u{1f460}","\u5305":"\u{1f45c}","bag":"\u{1f45c}","\u624b\u63d0\u5305":"\u{1f45c}","\u80cc\u5305":"\u{1f390}","\u5e3d\u5b50":"\u{1f9e2}","hat":"\u{1f9e2}","cap":"\u{1f9e2}","\u56f4\u5dfe":"\u{1f9e3}","scarf":"\u{1f9e3}","\u4e1d\u5dfe":"\u{1f9e3}","\u624b\u8868":"\u231a","watch":"\u231a","\u624b\u9336":"\u231a","\u9879\u94fe":"\u{1f4ff}","necklace":"\u{1f4ff}","\u6212\u6307":"\u{1f48d}","ring":"\u{1f48d}","\u8033\u73af":"\u{1f48e}","earring":"\u{1f48e}","\u76ae\u5e26":"\u{1f517}","belt":"\u{1f517}","\u8170\u5e26":"\u{1f517}","\u5185\u8863":"\u{1f971}","\u5185\u88e4":"\u{1f971}","\u889c\u5b50":"\u{1f9e6}","socks":"\u{1f9e6}","\u7761\u8863":"\u{1f6cc}","pajama":"\u{1f6cc}","\u6cf3\u8863":"\u{1f971}","swimsuit":"\u{1f971}","\u6bdb\u8863":"\u{1f9f6}","sweater":"\u{1f9f6}","knit":"\u{1f9f6}","\u9488\u7ec7":"\u{1f9f6}","cardigan":"\u{1f9f6}","\u8fde\u8863":"\u{1f457}","\u5957\u88c5":"\u{1f454}","suit":"\u{1f454}"}
+function outfitIcon(name) {
+  if (!name || typeof name !== "string") return "\u{1f454}"
+  const n = name.trim().toLowerCase()
+  for (const [kw, icon] of Object.entries(OUTFIT_ICONS)) {
+    if (n.includes(kw.toLowerCase())) return icon
+  }
+  return "\u{1f454}"
 }
 
 function makeStepImg(kw) {
@@ -1918,4 +1932,79 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   50% { box-shadow: 0 0 0 8px rgba(104,67,43,0); }
 }
 .mic-btn { color: var(--accent-deep); background: #efe3d3; border: 1px solid rgba(104,67,43,.10); font-size: 16px; }
+/* ===== Scene Cards Redesign ===== */
+.s-card { border:none; padding:0; margin:0; background:none; }
+.s-hd { display:flex; align-items:center; gap:10px; padding:14px 18px 10px; border-bottom:1px solid var(--line); }
+.s-hd-icon { width:34px; height:34px; border-radius:12px; display:grid; place-items:center; font-size:20px; flex-shrink:0; }
+.s-icon-cooking { background:linear-gradient(145deg,#fce4d6,#f5cba7); }
+.s-icon-fashion { background:linear-gradient(145deg,#e8d5f5,#d4b5e8); }
+.s-icon-shopping { background:linear-gradient(145deg,#d5f5e3,#a9dfbf); }
+.s-icon-repair { background:linear-gradient(145deg,#fdebd0,#f0d5a0); }
+.s-icon-housework { background:linear-gradient(145deg,#d6eaf8,#aed6f1); }
+.s-icon-general { background:linear-gradient(145deg,#fdebd0,#fadbd8); }
+.s-hd-label { font-size:11px; color:var(--muted); line-height:1.2; }
+.s-hd-title { font-size:15px; font-weight:700; color:var(--ink); line-height:1.3; }
+.s-bd { padding:14px 18px 12px; }
+.s-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.s-tag { font-size:11px; padding:3px 10px; border-radius:999px; background:rgba(141,95,63,0.08); color:var(--accent-deep); border:1px solid rgba(141,95,63,0.14); }
+.s-tag-time { background:rgba(125,139,111,0.10); color:var(--sage); border-color:rgba(125,139,111,0.18); }
+.s-sec { font-size:13px; font-weight:600; color:var(--accent-deep); margin:14px 0 8px; }
+.s-sec:first-child { margin-top:0; }
+.s-sec.s-fb { color:var(--muted); font-weight:500; }
+.s-ing-list { display:flex; flex-direction:column; gap:5px; margin-bottom:2px; }
+.s-ing-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px; background:rgba(255,255,255,0.4); border:1px solid var(--line); font-size:13px; }
+.s-ing-cb { width:16px; height:16px; border:2px solid var(--accent); border-radius:5px; flex-shrink:0; }
+.s-ing-amt { color:var(--muted); font-size:12px; margin-left:auto; }
+.s-ing-note { font-size:11px; color:var(--soft); font-style:italic; }
+.s-step-list { display:flex; flex-direction:column; gap:7px; margin-bottom:2px; }
+.s-step-item { display:flex; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,0.3); border:1px solid var(--line); }
+.s-step-num { width:22px; height:22px; border-radius:50%; background:var(--accent); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
+.s-step-body { flex:1; font-size:13px; line-height:1.5; color:var(--ink); }
+.s-step-time { display:inline-block; font-size:11px; color:var(--sage); background:rgba(125,139,111,0.10); padding:1px 7px; border-radius:999px; margin-left:5px; border:1px solid rgba(125,139,111,0.14); }
+.s-step-tip { display:block; margin-top:3px; font-size:12px; color:var(--soft); font-style:italic; }
+.s-step-warn { display:block; margin-top:3px; font-size:12px; color:#b91c1c; }
+.s-select-item { display:flex; gap:10px; padding:8px 12px; border-radius:10px; background:rgba(255,255,255,0.3); border:1px solid var(--line); font-size:13px; align-items:flex-start; }
+.s-select-num { width:22px; height:22px; border-radius:50%; background:var(--sage); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
+.s-tool-list { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px; }
+.s-tool-tag { font-size:11px; padding:3px 10px; border-radius:999px; background:var(--paper-deep); color:var(--ink); border:1px solid var(--line); }
+.s-fashion-style { font-size:14px; font-weight:500; color:var(--ink); padding:2px 0 4px; }
+.s-color-list { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px; }
+.s-color-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); }
+.s-color-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.8); box-shadow:0 1px 4px rgba(0,0,0,0.12); flex-shrink:0; }
+.s-color-desc { color:var(--muted); font-size:11px; }
+.s-outfit-list { display:flex; flex-direction:column; gap:6px; margin-bottom:2px; }
+.s-outfit-item { display:flex; gap:8px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.3); border:1px solid var(--line); font-size:13px; align-items:center; }
+.s-outfit-ico { font-size:16px; flex-shrink:0; width:22px; text-align:center; }
+.s-outfit-body { flex:1; }
+.s-outfit-name { font-weight:600; color:var(--ink); }
+.s-outfit-desc { color:var(--muted); font-size:12px; margin-left:4px; }
+.s-outfit-color { margin-left:auto; font-size:11px; padding:1px 8px; border-radius:999px; background:rgba(141,95,63,0.08); color:var(--accent-deep); border:1px solid rgba(141,95,63,0.12); flex-shrink:0; }
+.s-mistake-list { display:flex; flex-direction:column; gap:3px; margin-bottom:4px; }
+.s-mistake-item { font-size:12px; color:#92400e; padding:5px 10px; background:rgba(217,119,6,0.06); border-radius:8px; border-left:3px solid #d97706; }
+.s-season-tag { display:inline-block; font-size:11px; padding:2px 10px; border-radius:999px; background:rgba(125,139,111,0.10); color:var(--sage); border:1px solid rgba(125,139,111,0.16); margin-bottom:10px; }
+.s-slogan { margin-top:10px; padding:9px 14px; background:rgba(141,95,63,0.08); border-radius:10px; border:1px solid rgba(141,95,63,0.14); font-size:13px; font-weight:500; color:var(--accent-deep); text-align:center; }
+.s-sev-low { display:inline-block; font-size:11px; padding:2px 10px; border-radius:999px; background:rgba(125,139,111,0.10); color:var(--sage); border:1px solid rgba(125,139,111,0.16); margin-bottom:8px; }
+.s-sev-med { display:inline-block; font-size:11px; padding:2px 10px; border-radius:999px; background:rgba(217,119,6,0.08); color:#92400e; border:1px solid rgba(217,119,6,0.16); margin-bottom:8px; }
+.s-sev-high { display:inline-block; font-size:11px; padding:2px 10px; border-radius:999px; background:rgba(185,28,28,0.06); color:#b91c1c; border:1px solid rgba(185,28,28,0.12); margin-bottom:8px; }
+.s-key { margin-top:12px; padding:8px 12px; border-radius:10px; background:linear-gradient(135deg,rgba(226,204,170,0.50),rgba(255,250,241,0.42)); border:1px solid var(--line); font-size:13px; color:#5f513f; display:flex; align-items:center; gap:6px; }
+.s-safety { margin-top:10px; padding:8px 12px; border-radius:10px; background:rgba(185,28,28,0.05); border:1px solid rgba(185,28,28,0.10); font-size:12px; color:#b91c1c; display:flex; align-items:center; gap:6px; }
+.s-text { font-size:13px; color:var(--muted); line-height:1.6; margin-bottom:4px; }
+.s-text-line { font-size:13px; color:var(--ink); line-height:1.6; padding:2px 0; }
+.s-answer { font-size:14px; line-height:1.7; color:var(--ink); }
+.s-followups { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+.s-followup-title { width:100%; font-size:12px; color:var(--muted); margin-bottom:2px; }
+.s-followup-chip { font-size:12px; padding:4px 12px; border-radius:999px; background:rgba(141,95,63,0.08); color:var(--accent-deep); border:1px solid rgba(141,95,63,0.14); cursor:pointer; transition:all 0.12s; }
+.s-followup-chip:hover { background:rgba(141,95,63,0.15); }
+.s-followup-chip:active { transform:scale(.96); }
+.md-scene-label { font-size:12px; color:var(--muted); padding:0 0 8px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+.kb-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(125,139,111,0.10); color:var(--sage); border:1px solid rgba(125,139,111,0.16); margin:10px 18px 0; }
+/* deep compat with card-body */
+.card-body :deep(.s-card) { border:none; padding:0; margin:0; background:none; }
+.card-body :deep(.s-hd-title) { font-size:15px; font-weight:700; color:var(--ink); }
+.card-body :deep(.s-sec) { font-size:13px; font-weight:600; color:var(--accent-deep); margin:14px 0 8px; }
+.card-body :deep(.s-key) { margin-top:12px; padding:8px 12px; border-radius:10px; background:linear-gradient(135deg,rgba(226,204,170,0.50),rgba(255,250,241,0.42)); border:1px solid var(--line); font-size:13px; color:#5f513f; }
+.card-body :deep(.s-safety) { margin-top:10px; padding:8px 12px; border-radius:10px; background:rgba(185,28,28,0.05); border:1px solid rgba(185,28,28,0.10); font-size:12px; color:#b91c1c; }
+.card-body :deep(.s-followup-chip) { font-size:12px; padding:4px 12px; border-radius:999px; background:rgba(141,95,63,0.08); color:var(--accent-deep); border:1px solid rgba(141,95,63,0.14); cursor:pointer; }
+.card-body :deep(.s-followup-chip:hover) { background:rgba(141,95,63,0.15); }
+.card-body :deep(.md-scene-label) { font-size:12px; color:var(--muted); padding:0 0 8px; border-bottom:1px solid var(--line); margin-bottom:10px; }
 </style>

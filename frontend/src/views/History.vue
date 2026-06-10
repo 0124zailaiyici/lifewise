@@ -309,7 +309,7 @@ function formatTime(t) {
 
 /* History list */
 .history-list { padding: 0 18px; }
-.date-label { font-size: 12px; color: var(--ink-light); margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
+.date-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 600; padding-top: 4px; }
 .history-item {
   display: flex; align-items: center; padding: 14px 16px;
   background: var(--card); border-radius: 20px;
@@ -318,16 +318,20 @@ function formatTime(t) {
 }
 .history-item:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(141,95,63,0.1); }
 .history-item.selected { background: var(--paper); border-color: var(--accent); }
+.group { margin-bottom: 4px; }
 .icon { font-size: 26px; margin-right: 14px; flex-shrink: 0; }
-.history-content { flex: 1; min-width: 0; }
+.info { flex: 1; min-width: 0; }
 .title { font-size: 14px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .title :deep(mark) { background: #fde68a; color: var(--ink); padding: 0 2px; border-radius: 2px; }
-.meta { font-size: 12px; color: var(--ink-light); margin-top: 3px; }
+.meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
 .del-btn { flex-shrink: 0; margin-left: 4px; min-width: 36px; }
 
 /* Batch checkbox */
 .batch-check { margin-right: 12px; }
-.empty-state { text-align: center; padding: 60px 20px; color: var(--ink-light); font-size: 14px; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+.loading-state { text-align: center; padding: 40px; color: var(--muted); }
+.loading-icon { font-size: 32px; margin-bottom: 8px; }
+.loading-text { font-size: 14px; color: var(--muted); }
 .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
 /* Transition */

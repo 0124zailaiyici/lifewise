@@ -183,51 +183,46 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-/* ===== Claude warm theme for KnowledgeBase ===== */
 .page-container { background: var(--paper); min-height: 100vh; padding-bottom: 80px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; }
+.page-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; position: relative; }
 .page-header h3 { font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
 /* Search */
-.search-bar { padding: 0 18px 12px; }
+.search-bar { padding: 0 18px 8px; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 24px; box-shadow: 0 1px 4px rgba(80,58,38,0.08); }
 
-/* Knowledge list */
-.kb-list { padding: 0 18px; }
+/* Stats */
+.stats-row { display: flex; align-items: center; gap: 8px; padding: 0 18px 10px; }
+.hit-badge { font-size: 12px; color: var(--accent-deep); }
+
+/* Content */
+.content { padding: 0 18px; }
+.loading-state { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+/* Knowledge items */
 .kb-item {
   background: var(--card); border-radius: 20px;
-  border: 1px solid var(--line); margin-bottom: 10px;
-  padding: 16px; cursor: pointer; transition: .15s;
+  border: 1px solid var(--line); padding: 16px; margin-bottom: 10px;
+  transition: .15s;
 }
 .kb-item:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(141,95,63,0.1); }
-.kb-item-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.kb-item-title { font-size: 15px; font-weight: 600; color: var(--ink); flex: 1; line-height: 1.4; }
-.kb-item-title :deep(mark) { background: #fde68a; color: var(--ink); padding: 0 2px; border-radius: 2px; }
-.kb-item-desc { font-size: 13px; color: var(--ink-light); margin-top: 6px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.kb-item-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-light); }
-.kb-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
-
-/* Add dialog */
-.add-btn-wrap { padding: 12px 18px; }
-
-/* Categories */
-.kb-categories { display: flex; gap: 6px; padding: 0 18px 12px; overflow-x: auto; }
-.kb-cat-tag {
-  padding: 6px 14px; border-radius: 20px; font-size: 12px;
-  background: var(--paper); border: 1px solid var(--line);
-  color: var(--ink); cursor: pointer; white-space: nowrap; transition: .15s;
+.kb-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.kb-scene-tag {
+  padding: 2px 8px; border-radius: 12px; font-size: 11px;
+  background: var(--paper); color: var(--accent-deep); flex-shrink: 0;
 }
-.kb-cat-tag.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.kb-cat-tag:hover:not(.active) { border-color: var(--accent); }
+.kb-q { font-size: 14px; font-weight: 600; color: var(--ink); flex: 1; }
+.kb-answer { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.kb-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.kb-helpful { font-size: 12px; color: var(--muted); }
+.kb-date { font-size: 12px; color: var(--muted); }
 
 /* Empty */
-.empty-state { text-align: center; padding: 60px 20px; color: var(--ink-light); font-size: 14px; }
-.empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
-
-/* Dialog overrides */
-.kb-dialog :deep(.el-dialog__body) { padding: 20px; }
-.kb-dialog :deep(.el-form-item__label) { font-weight: 600; color: var(--ink); }
+.empty-state { text-align: center; padding: 60px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; color: var(--muted); }
+.empty-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 /* Bottom tabs */
 .bottom-tabs {
@@ -240,7 +235,6 @@ onMounted(fetchData)
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); cursor: pointer; gap: 2px; }
 .tab.active { color: var(--accent); }
 .tab .el-icon { font-size: 20px; }
-
 </style>
 
 

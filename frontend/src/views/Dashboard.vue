@@ -83,9 +83,11 @@
           <span class="section-icon">📆</span>
           <span class="section-title">最近30天</span>
         </div>
-        <div class="chart-container">
+        <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
+        <template v-else>
+          <div class="chart-container">
           <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
-            <div class="chart-bar" :style="{ height: chartHeight(item.count) }"></div>
+            <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
           </div>
         </div>
         <div class="chart-foot">
@@ -212,10 +214,20 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .scene-bar-wrap { flex: 1; }
 .scene-bar-bg { height: 8px; background: var(--paper); border-radius: 4px; overflow: hidden; }
 .scene-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s; }
-.scene-count { font-size: 13px; font-weight: 600; color: var(--ink); min-width: 30px; text-align: right; }
+.scene-num { font-size: 14px; font-weight: 500; color: var(--ink); min-width: 28px; text-align: right; }
+.scene-label-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 /* Empty */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+
+/* 30-day chart */
+.chart-container { display: flex; align-items: flex-end; gap: 2px; height: 100px; padding: 12px 2px; }
+.chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.chart-bar { width: 100%; max-width: 12px; background: var(--line); border-radius: 3px 3px 0 0; min-height: 3px; transition: height .4s ease; }
+.chart-bar.active { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); }
+.chart-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding-top: 2px; }
+.chart-foot-high { font-weight: 600; color: var(--accent-deep); }
 
 /* Bottom tabs */
 .bottom-tabs {

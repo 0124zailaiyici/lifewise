@@ -85,17 +85,16 @@
         </div>
         <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
         <template v-else>
-          <div class="chart-container">
-            <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
-              <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
-              <span v-if="i % 5 === 0 || i === activityData.length - 1" class="chart-date-label">{{ item.date.substring(5) }}</span>
+          <div class="week-list">
+            <div v-for="(week, wi) in weeklyData" :key="wi" class="week-row">
+              <div class="week-label">{{ week.label }}</div>
+              <div class="week-bar-wrap">
+                <div class="week-bar" :style="{ width: weekBarWidth(week.count) }"></div>
+              </div>
+              <span class="week-count">{{ week.count }}次</span>
             </div>
           </div>
-          <div class="chart-foot">
-            <span>{{ activityData[0]?.date?.substring(5) || '' }}</span>
-            <span class="chart-foot-high">最高 {{ maxActivity }} 次</span>
-            <span>{{ activityData[activityData.length-1]?.date?.substring(5) || '' }}</span>
-          </div>
+          <div class="week-foot">近{{ activityData.length }}天共计{{ totalActivity }}次活动</div>
         </template>
       </div>
     </div>

@@ -25,7 +25,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+html, body { width: 100%; max-width: 100%; overflow-x: clip; }
 body {
   font-family: "Avenir Next", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--paper);
@@ -34,7 +34,7 @@ body {
 .page-container {
   width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh;
   background: var(--paper);
-  position: relative; overflow-x: hidden;
+  position: relative; overflow-x: clip;
 }
 
 /* 移动端安全区域 */
@@ -59,8 +59,8 @@ body {
 
 /* 移动端优化 */
 html { -webkit-text-size-adjust: 100%; }
-body { -webkit-overflow-scrolling: touch; overscroll-behavior: none; }
-.page-container { overscroll-behavior: contain; }
+body {   }
+.page-container {  }
 /* 触摸目标最小尺寸 */
 button, .el-button, .chip, .scene-card, .conv-item, .tab { min-height: 44px; }
 /* Element Plus 覆盖 — 暖色主题 */

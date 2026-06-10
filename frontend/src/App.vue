@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <router-view />
 </template>
 
@@ -57,6 +57,12 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--soft); border-radius: 4px; }
 
+/* 移动端优化 */
+html { -webkit-text-size-adjust: 100%; }
+body { -webkit-overflow-scrolling: touch; overscroll-behavior: none; }
+.page-container { overscroll-behavior: contain; }
+/* 触摸目标最小尺寸 */
+button, .el-button, .chip, .scene-card, .conv-item, .tab { min-height: 44px; }
 /* Element Plus 覆盖 — 暖色主题 */
 .el-button--success {
   --el-button-success-bg-color: var(--accent);

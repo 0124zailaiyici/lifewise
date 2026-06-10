@@ -88,6 +88,7 @@
           <div class="chart-container">
             <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
               <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
+              <span v-if="i % 5 === 0 || i === activityData.length - 1" class="chart-date-label">{{ item.date.substring(5) }}</span>
             </div>
           </div>
           <div class="chart-foot">
@@ -158,7 +159,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .header-top h2 { margin: 0; font-size: 20px; font-weight: 700; }
 
 /* Content area */
-.content { padding: 0 18px; margin-top: -16px; position: relative; z-index: 1; }
+.content { padding: 0 18px; margin-top: -8px; position: relative; z-index: 1; }
 
 /* Hero card */
 .hero-card {
@@ -219,10 +220,11 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .scene-label-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 /* 30-day chart */
-.chart-container { display: flex; align-items: flex-end; gap: 2px; height: 100px; padding: 12px 2px; }
-.chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.chart-container { display: flex; align-items: flex-end; gap: 3px; height: 100px; padding: 12px 2px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.chart-bar-wrap { flex: 0 0 16px; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
 .chart-bar { width: 100%; max-width: 12px; background: var(--line); border-radius: 3px 3px 0 0; min-height: 3px; transition: height .4s ease; }
 .chart-bar.active { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); }
+.chart-date-label { font-size: 9px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
 .chart-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding-top: 2px; }
 .chart-foot-high { font-weight: 600; color: var(--accent-deep); }
 

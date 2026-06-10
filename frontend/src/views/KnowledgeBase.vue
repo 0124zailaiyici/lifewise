@@ -83,6 +83,7 @@ import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, update
 
 const keyword = ref("")
 const sceneFilter = ref("")
+const showScenePanel = ref(false)
 const list = ref([])
 const total = ref(0)
 const loading = ref(true)
@@ -112,6 +113,10 @@ const scenes = [
 ]
 
 function sceneLabel(s) { return scenes.find(x => x.key === s)?.label || s || "其他" }
+function sceneIconLabel(key) {
+  const s = scenes.find(x => x.key === key)
+  return s ? s.icon + ' ' + s.label : ''
+}
 
 async function fetchData() {
   loading.value = true
@@ -190,9 +195,40 @@ onMounted(fetchData)
 
 /* Search */
 .search-bar { padding: 0 18px 8px; }
+.search-row { display: flex; gap: 8px; align-items: center; }
+.search-row .el-input { flex: 1; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 24px; box-shadow: 0 1px 4px rgba(80,58,38,0.08); }
+.inline-filter .fab-dropdown { right: 0; left: auto; }
 
 /* Stats */
+.fab-wrap { position: relative; }
+.fab-filter {
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 14px; height: 36px; border-radius: 20px;
+  background: var(--paper); border: 1px solid var(--line); color: var(--accent-deep);
+  cursor: pointer; transition: .15s; white-space: nowrap;
+}
+.fab-filter:hover { background: var(--paper-deep); }
+.fab-filter:active { transform: scale(.95); }
+.fab-filter-icon { font-size: 13px; }
+.fab-filter-active { font-size: 11px; color: var(--accent-deep); font-weight: 600; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fab-filter-placeholder { font-size: 12px; color: var(--accent-deep); font-weight: 600; }
+.fab-dropdown {
+  position: absolute; top: 44px; right: 0; z-index: 50;
+  background: rgba(255,252,246,0.97); backdrop-filter: blur(12px);
+  border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(80,58,38,0.14); padding: 6px;
+}
+.fab-drop-item {
+  padding: 7px 12px; border-radius: 10px;
+  cursor: pointer; font-size: 13px; color: var(--ink); white-space: nowrap; transition: .1s;
+}
+.fab-drop-item:hover { background: var(--paper); }
+.fab-drop-item.active { background: var(--paper); color: var(--accent-deep); font-weight: 600; }
+.fd-icon { font-size: 16px; }
+.fab-drop-enter-active, .fab-drop-leave-active { transition: .15s ease; }
+.fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-6px); }
+
 .stats-row { display: flex; align-items: center; gap: 8px; padding: 0 18px 10px; }
 .hit-badge { font-size: 12px; color: var(--accent-deep); }
 

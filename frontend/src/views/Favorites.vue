@@ -167,7 +167,7 @@ onMounted(fetchData)
 .page-header h3 { font-size: 17px; font-weight: 600; color: var(--ink); margin: 0; }
 
 /* Filter bar */
-.fab-wrap { position: relative; padding: 0 18px 10px; }
+.fab-wrap { position: relative; padding: 0 18px 10px; display: flex; justify-content: flex-end; }
 .fab-filter {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 6px 14px; border-radius: 20px; font-size: 12px;

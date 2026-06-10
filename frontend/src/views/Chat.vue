@@ -1,4 +1,4 @@
-<!-- VERSION: 20260610-1 Claude Style -->
+﻿<!-- VERSION: 20260610-1 Claude Style -->
 <template>
   <div class="page-container chat-page">
     <!-- 顶部栏 -->
@@ -1565,8 +1565,8 @@ function attachSceneImage(message, prompt, scene) {
   message._sceneImageLoading = true
   message._sceneImageText = "\u{1f3a8} \u6b63\u5728\u751f\u6210\u573a\u666f\u914d\u56fe\u2026"
           generateFoodImage(prompt, scene).then(function(res) {
-    var d = res.data
-    if (d && d.code === 0 && d.data && d.data.imageUrl) {
+    var d = res
+    if (d && d.code === 200 && d.data && d.data.imageUrl) {
       message._sceneImageUrl = d.data.imageUrl
       message._sceneImageLoading = false
       message._sceneImageText = ""
@@ -1585,14 +1585,14 @@ function pollSceneImage(message, prompt, taskId, provider) {
   if (message._sceneImagePoll) clearInterval(message._sceneImagePoll)
   message._sceneImagePoll = setInterval(function() {
     getFoodImageStatus(taskId, provider).then(function(res) {
-      var d = res.data ? res.data.data : null
-      if (d && d.resultUrl) {
+      var d = res
+      if (d && d.code === 200 && d.data && d.data.resultUrl) {
         clearInterval(message._sceneImagePoll)
         message._sceneImagePoll = null
-        message._sceneImageUrl = d.resultUrl
+        message._sceneImageUrl = d.data.resultUrl
         message._sceneImageLoading = false
         message._sceneImageText = ""
-      } else if (d && d.error) {
+      } else if (d && d.code !== 200) {
         clearInterval(message._sceneImagePoll)
         message._sceneImagePoll = null
         message._sceneImageLoading = false

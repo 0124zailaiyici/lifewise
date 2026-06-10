@@ -1,0 +1,829 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LifeWise · 场景卡片预览</title>
+<style>
+:root {
+  --paper: #f7f1e8;
+  --paper-deep: #eee4d6;
+  --card: rgba(255,252,246,0.86);
+  --card-solid: #fffaf1;
+  --ink: #2d2924;
+  --muted: #7b7064;
+  --soft: #a69380;
+  --accent: #8d5f3f;
+  --accent-deep: #68432b;
+  --accent-light: rgba(141,95,63,0.10);
+  --sage: #7d8b6f;
+  --warm-shadow: 0 18px 55px rgba(80,58,38,0.14);
+  --small-shadow: 0 8px 24px rgba(80,58,38,0.10);
+  --line: rgba(87,68,49,0.12);
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  padding: 32px 20px;
+  font-family: "Avenir Next","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  color: var(--ink);
+}
+.page-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-deep);
+  margin-bottom: 6px;
+}
+.page-sub {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 32px;
+}
+.card-grid {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ===== Base Card ===== */
+.scene-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--warm-shadow), inset 0 1px 0 rgba(255,255,255,0.86);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.card-icon {
+  width: 36px; height: 36px; border-radius: 12px;
+  display: grid; place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.card-icon.cooking { background: linear-gradient(145deg,#fce4d6,#f5cba7); }
+.card-icon.fashion { background: linear-gradient(145deg,#e8d5f5,#d4b5e8); }
+.card-icon.shopping { background: linear-gradient(145deg,#d5f5e3,#a9dfbf); }
+.card-icon.repair { background: linear-gradient(145deg,#fdebd0,#f0d5a0); }
+.card-icon.housework { background: linear-gradient(145deg,#d6eaf8,#aed6f1); }
+.card-icon.general { background: linear-gradient(145deg,#fdebd0,#fadbd8); }
+
+.card-meta { flex: 1; }
+.card-scene-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.card-scene-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ===== Card Body ===== */
+.card-body {
+  padding: 16px 20px 18px;
+}
+
+/* Scene-specific styling */
+
+/* --- COOKING --- */
+.cooking-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.cooking-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent-deep);
+  border: 1px solid rgba(141,95,63,0.15);
+}
+.cooking-tag.time { background: rgba(125,139,111,0.12); color: var(--sage); border-color: rgba(125,139,111,0.18); }
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  margin: 16px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-title:first-child { margin-top: 0; }
+
+/* Ingredient checklist */
+.ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ingredient-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.4);
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.ingredient-check {
+  width: 18px; height: 18px;
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ingredient-check:hover { background: var(--accent-light); }
+.ingredient-check.checked { background: var(--accent); }
+.ingredient-check.checked::after { content: "✓"; color: #fff; font-size: 11px; font-weight: 700; }
+.ingredient-amount {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+.ingredient-note {
+  font-size: 11px;
+  color: var(--soft);
+  font-style: italic;
+}
+
+/* Steps */
+.step-list { display: flex; flex-direction: column; gap: 10px; }
+.step-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.3);
+  border: 1px solid var(--line);
+}
+.step-badge {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-content { flex: 1; font-size: 13px; line-height: 1.5; }
+.step-time {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--sage);
+  background: rgba(125,139,111,0.10);
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  border: 1px solid rgba(125,139,111,0.15);
+}
+.step-tip {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--soft);
+  font-style: italic;
+}
+
+/* Key point highlight */
+.key-point {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(226,204,170,0.50), rgba(255,250,241,0.42));
+  border: 1px solid var(--line);
+  font-size: 13px;
+  color: #5f513f;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --- FASHION --- */
+.fashion-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.fashion-occasion {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.fashion-style-tag {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent-deep);
+  border: 1px solid rgba(141,95,63,0.15);
+}
+
+.color-palette {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 14px;
+  flex-wrap: wrap;
+}
+.color-swatch {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+  position: relative;
+  cursor: default;
+}
+.color-swatch:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.outfit-list { display: flex; flex-direction: column; gap: 8px; }
+.outfit-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.3);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  align-items: center;
+}
+.outfit-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.outfit-name { font-weight: 600; }
+.outfit-desc { color: var(--muted); font-size: 12px; }
+.outfit-color {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(141,95,63,0.08);
+  color: var(--accent-deep);
+  border: 1px solid rgba(141,95,63,0.12);
+}
+
+/* --- SHOPPING --- */
+.shopping-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.season-badge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(125,139,111,0.12);
+  color: var(--sage);
+  border: 1px solid rgba(125,139,111,0.18);
+}
+
+.select-step {
+  display: flex;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.3);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  align-items: flex-start;
+}
+.select-step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mistake-list { display: flex; flex-direction: column; gap: 4px; }
+.mistake-item {
+  font-size: 12px;
+  color: #92400e;
+  padding: 4px 10px;
+  background: rgba(217,119,6,0.06);
+  border-radius: 8px;
+  border-left: 3px solid #d97706;
+}
+
+.slogan-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--accent-light);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(141,95,63,0.15);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-deep);
+  text-align: center;
+}
+
+/* --- REPAIR --- */
+.severity-badge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.severity-badge.low { background: rgba(125,139,111,0.12); color: var(--sage); border: 1px solid rgba(125,139,111,0.18); }
+.severity-badge.medium { background: rgba(217,119,6,0.10); color: #92400e; border: 1px solid rgba(217,119,6,0.18); }
+.severity-badge.high { background: rgba(185,28,28,0.08); color: #b91c1c; border: 1px solid rgba(185,28,28,0.14); }
+
+.tool-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.tool-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--paper-deep);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.repair-step {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.3);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  align-items: flex-start;
+}
+.repair-step-badge {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: #92400e;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: grid; place-items: center;
+  flex-shrink: 0;
+}
+.repair-step-body { flex: 1; line-height: 1.5; }
+.warning-text {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+/* --- HOUSEWORK --- */
+.housework-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.difficulty-badge {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.difficulty-badge.easy { background: rgba(125,139,111,0.12); color: var(--sage); border: 1px solid rgba(125,139,111,0.18); }
+.difficulty-badge.medium { background: rgba(217,119,6,0.10); color: #92400e; border: 1px solid rgba(217,119,6,0.18); }
+.difficulty-badge.hard { background: rgba(185,28,28,0.08); color: #b91c1c; border: 1px solid rgba(185,28,28,0.14); }
+
+.material-item {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.material-alt {
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.safety-box {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(185,28,28,0.06);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(185,28,28,0.12);
+  font-size: 12px;
+  color: #b91c1c;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- GENERAL --- */
+.general-answer {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+/* Follow-up chips */
+.followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.followup-title {
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.followup-chip {
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent-deep);
+  border: 1px solid rgba(141,95,63,0.15);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.followup-chip:hover { background: rgba(141,95,63,0.16); }
+
+/* scrollbar nice */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="page-title">🧪 LifeWise · 场景卡片设计预览</div>
+<div class="page-sub">Claude 温暖风格 · 6 大场景结构化卡片</div>
+
+<div class="card-grid">
+
+  <!-- ==================== COOKING ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon cooking">🍳</div>
+      <div class="card-meta">
+        <div class="card-scene-label">做饭助手</div>
+        <div class="card-scene-title">西红柿炒鸡蛋</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="cooking-tags">
+        <span class="cooking-tag">📊 入门</span>
+        <span class="cooking-tag time">⏱️ 15分钟</span>
+        <span class="cooking-tag">👥 2人份</span>
+      </div>
+
+      <div class="section-title">🥘 食材</div>
+      <div class="ingredient-list">
+        <div class="ingredient-item">
+          <div class="ingredient-check"></div>
+          <span>西红柿</span>
+          <span class="ingredient-amount">2个</span>
+          <span class="ingredient-note">选熟透的</span>
+        </div>
+        <div class="ingredient-item">
+          <div class="ingredient-check"></div>
+          <span>鸡蛋</span>
+          <span class="ingredient-amount">3个</span>
+        </div>
+        <div class="ingredient-item">
+          <div class="ingredient-check"></div>
+          <span>葱</span>
+          <span class="ingredient-amount">适量</span>
+          <span class="ingredient-note">点缀用</span>
+        </div>
+      </div>
+
+      <div class="section-title">👨‍🍳 步骤</div>
+      <div class="step-list">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            西红柿切块，鸡蛋打散加少许盐
+            <span class="step-time">⏱ 3分钟</span>
+            <span class="step-tip">💡 西红柿切小块更容易炒出汁</span>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            热锅倒油，倒入蛋液炒至凝固盛出
+            <span class="step-time">⏱ 2分钟</span>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            锅中加油炒西红柿出汁，倒回鸡蛋翻炒均匀
+            <span class="step-time">⏱ 3分钟</span>
+            <span class="step-tip">💡 用锅铲按压西红柿帮助出汁</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="key-point">🔥 <strong>关键</strong>：西红柿要炒出红油再和鸡蛋混合，味道更浓郁</div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">没有西红柿用什么代替</span>
+      <span class="followup-chip">可以加什么配菜</span>
+      <span class="followup-chip">怎么让鸡蛋更嫩</span>
+    </div>
+  </div>
+
+  <!-- ==================== FASHION ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon fashion">👔</div>
+      <div class="card-meta">
+        <div class="card-scene-label">穿搭指南</div>
+        <div class="card-scene-title">职场通勤穿搭</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="fashion-header">
+        <span class="fashion-occasion">📍 办公室通勤</span>
+        <span class="fashion-style-tag">简约干练</span>
+      </div>
+
+      <div class="section-title">🎨 配色方案</div>
+      <div class="color-palette">
+        <div class="color-swatch" style="background:#2c3e50" data-label="深灰蓝"></div>
+        <div class="color-swatch" style="background:#f5f5f0" data-label="米白"></div>
+        <div class="color-swatch" style="background:#c0392b" data-label="酒红"></div>
+        <div class="color-swatch" style="background:#7f8c8d" data-label="浅灰"></div>
+        <div class="color-swatch" style="background:#d4a574" data-label="驼色"></div>
+      </div>
+
+      <div class="section-title">🧥 推荐单品</div>
+      <div class="outfit-list">
+        <div class="outfit-item">
+          <span class="outfit-icon">👔</span>
+          <span><span class="outfit-name">西装外套</span> <span class="outfit-desc">修身剪裁，单排扣</span></span>
+          <span class="outfit-color">深灰蓝</span>
+        </div>
+        <div class="outfit-item">
+          <span class="outfit-icon">👕</span>
+          <span><span class="outfit-name">真丝衬衫</span> <span class="outfit-desc">V领简约款</span></span>
+          <span class="outfit-color">米白</span>
+        </div>
+        <div class="outfit-item">
+          <span class="outfit-icon">👖</span>
+          <span><span class="outfit-name">直筒西裤</span> <span class="outfit-desc">高腰垂感面料</span></span>
+          <span class="outfit-color">深灰蓝</span>
+        </div>
+        <div class="outfit-item">
+          <span class="outfit-icon">👠</span>
+          <span><span class="outfit-name">尖头低跟鞋</span> <span class="outfit-desc">3cm舒适跟</span></span>
+          <span class="outfit-color">驼色</span>
+        </div>
+      </div>
+
+      <div class="section-title">💡 搭配技巧</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        · 全身不超过3个主色，用米白衬衫提亮整体<br>
+        · 用酒红包包或丝巾作为点睛配饰<br>
+        · 可备一件驼色开衫应对空调房
+      </div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">适合什么鞋子</span>
+      <span class="followup-chip">冬天怎么搭配</span>
+      <span class="followup-chip">推荐什么配饰</span>
+    </div>
+  </div>
+
+  <!-- ==================== SHOPPING ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon shopping">🛒</div>
+      <div class="card-meta">
+        <div class="card-scene-label">购物挑选</div>
+        <div class="card-scene-title">西瓜挑选指南</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="shopping-meta">
+        <span class="season-badge">🌿 夏季应季</span>
+      </div>
+
+      <div class="section-title">🔍 挑选步骤</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="select-step">
+          <div class="select-step-num">1</div>
+          <div><strong>看外观</strong> — 选深绿带光泽、纹路清晰均匀的；瓜底部凹陷深、圆圈小的皮薄肉甜</div>
+        </div>
+        <div class="select-step">
+          <div class="select-step-num">2</div>
+          <div><strong>听声音</strong> — 指关节轻敲，声音低沉浑厚像敲鼓为好</div>
+        </div>
+        <div class="select-step">
+          <div class="select-step-num">3</div>
+          <div><strong>看瓜藤</strong> — 瓜藤新鲜翠绿、略微弯曲的是刚摘不久的</div>
+        </div>
+      </div>
+
+      <div class="section-title">⚠️ 常见误区</div>
+      <div class="mistake-list">
+        <div class="mistake-item">不要只看瓜藤是否弯曲，关键是颜色和鲜活性</div>
+        <div class="mistake-item">不是越大越好，大小均匀、形状圆润的更好</div>
+      </div>
+
+      <div class="section-title">📦 保存方法</div>
+      <div style="font-size:13px;color:var(--muted)">常温阴凉处保存，切开后冷藏</div>
+
+      <div class="slogan-box">一看二摸三听四掂，凹陷深、藤新鲜就是好瓜 🍉</div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">怎么知道熟不熟</span>
+      <span class="followup-chip">红肉和黄肉有什么区别</span>
+    </div>
+  </div>
+
+  <!-- ==================== REPAIR ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon repair">🔧</div>
+      <div class="card-meta">
+        <div class="card-scene-label">修理指南</div>
+        <div class="card-scene-title">水龙头漏水</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="severity-badge medium">⚡ 中等</div>
+
+      <div class="section-title">🔧 所需工具</div>
+      <div class="tool-tags">
+        <span class="tool-tag">扳手</span>
+        <span class="tool-tag">螺丝刀</span>
+        <span class="tool-tag">生料带</span>
+        <span class="tool-tag">替换垫圈</span>
+      </div>
+
+      <div class="section-title">📋 修理步骤</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="repair-step">
+          <div class="repair-step-badge">1</div>
+          <div class="repair-step-body">
+            <strong>关闭角阀</strong> — 找到水龙头下方的角阀，顺时针拧紧关闭
+            <span class="warning-text">⚠️ 确认水流完全停止再操作</span>
+          </div>
+        </div>
+        <div class="repair-step">
+          <div class="repair-step-badge">2</div>
+          <div class="repair-step-body">
+            <strong>拆卸把手</strong> — 用螺丝刀拧下把手上的螺丝，取下手柄
+          </div>
+        </div>
+        <div class="repair-step">
+          <div class="repair-step-badge">3</div>
+          <div class="repair-step-body">
+            <strong>更换垫圈</strong> — 取下旧垫圈，换上相同规格的新垫圈
+          </div>
+        </div>
+        <div class="repair-step">
+          <div class="repair-step-badge">4</div>
+          <div class="repair-step-body">
+            <strong>重新组装</strong> — 按拆卸的逆序装回，用扳手适度拧紧
+            <span class="warning-text">⚠️ 不要拧太紧，以免损坏螺纹</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">🏥 需要找专业人员的情况</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6">
+        · 更换垫圈后仍然漏水<br>
+        · 水龙头本身老化严重或出现裂纹<br>
+        · 角阀锈死无法关闭
+      </div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">没有生料带怎么办</span>
+      <span class="followup-chip">龙头关不紧怎么办</span>
+    </div>
+  </div>
+
+  <!-- ==================== HOUSEWORK ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon housework">🧹</div>
+      <div class="card-meta">
+        <div class="card-scene-label">家务技巧</div>
+        <div class="card-scene-title">去除油污</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="housework-meta">
+        <span class="difficulty-badge easy">简单</span>
+      </div>
+
+      <div class="section-title">📦 所需材料</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:4px">
+        <div class="material-item">🧴 洗洁精 <span class="material-alt">（可用小苏打替代）</span></div>
+        <div class="material-item">🧽 百洁布</div>
+        <div class="material-item">🌡️ 温水</div>
+        <div class="material-item">🧪 白醋 <span class="material-alt">（可选，去顽固油渍）</span></div>
+      </div>
+
+      <div class="section-title">📋 操作步骤</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">用百洁布蘸取洗洁精，在油污处打圈擦拭</div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">静置2分钟让洗洁精分解油污 <span class="step-time">⏱ 2分钟</span></div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">用温水冲洗干净，用干布擦干</div>
+        </div>
+      </div>
+
+      <div class="safety-box">⚠️ 清洁剂避免接触眼睛，操作后彻底洗手</div>
+
+      <div class="section-title">🛡️ 如何预防</div>
+      <div style="font-size:13px;color:var(--muted)">每次做完饭趁热擦拭灶台，油污不易积累</div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">油烟机怎么清洗</span>
+      <span class="followup-chip">灶台烧焦怎么处理</span>
+    </div>
+  </div>
+
+  <!-- ==================== GENERAL ==================== -->
+  <div class="scene-card">
+    <div class="card-header">
+      <div class="card-icon general">💬</div>
+      <div class="card-meta">
+        <div class="card-scene-label">生活常识</div>
+        <div class="card-scene-title">如何去除冰箱异味</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="general-answer">
+        冰箱有异味通常是因为食物串味或存放太久。以下是几个简单有效的方法：
+      </div>
+      <div style="margin-top:10px;font-size:13px;line-height:1.7;color:var(--ink)">
+        <strong>1. 小苏打除味</strong> — 把小苏打装在敞口容器中放入冰箱，每月更换一次<br><br>
+        <strong>2. 咖啡渣</strong> — 晒干的咖啡渣有很好的吸附异味效果<br><br>
+        <strong>3. 柠檬片</strong> — 切几片柠檬放冰箱，清新又除味<br><br>
+        <strong>4. 定期清理</strong> — 每周检查一次，及时丢弃过期食物
+      </div>
+      <div class="key-point" style="margin-top:12px">💡 每月清洁一次冰箱隔板，异味问题几乎不会出现</div>
+    </div>
+    <div class="followups">
+      <div class="followup-title">💡 你可能还想问</div>
+      <span class="followup-chip">冰箱结冰怎么办</span>
+      <span class="followup-chip">食物怎么分类存放</span>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

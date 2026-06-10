@@ -284,8 +284,7 @@ async function loadAiStatus() {
     const res = await getAiConfigStatus()
     aiStatus.value = res.data
   } catch (e) {
-    console.error(e)
-    ElMessage.error('AI 配置诊断读取失败')
+    console.error('AI config status unavailable:', e)
   } finally {
     aiStatusLoading.value = false
   }

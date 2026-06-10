@@ -1545,6 +1545,68 @@ function stepGradient(keyword) {
   if (/fruit|apple|banana|orange|grape|vegetable|tomato|fresh|ripe|choose|pick|select|buy|shop|market/.test(kw)) return 'grad-shop'
   return 'grad-cook'
 }
+
+function generateScenePrompt(data, scene) {
+  if (scene === "fashion") {
+    const occasion = data.occasion || "daily"
+    const style = data.style || "casual"
+    const items = data.items || data.outfits || []
+    const itemNames = items.slice(0, 3).map(function(i) { return i.piece || i.name || i.item || "" }).filter(Boolean).join(", ")
+    return "Professional fashion photography: a stylish " + occasion + " outfit" + (itemNames ? " featuring " + itemNames : "") + ", " + style + " style, clean background, soft natural lighting, high quality product photography"
+  }
+  if (scene === "shopping") {
+    const cat = data.category || data.\u54c1\u7c7b || "produce"
+    return "Fresh " + cat + " on rustic wooden table, natural daylight, food market photography style, high resolution, detailed texture"
+  }
+  return ""
+}
+function attachSceneImage(message, prompt, scene) {
+  if (!prompt || message._sceneImageUrl || message._sceneImageLoading) return
+  message._sceneImageLoading = true
+  message._sceneImageText = "\u{1f3a8} \u6b63\u5728\u751f\u6210\u573a\u666f\u914d\u56fe\u2026"
+  generateFoodImage(prompt).then(function(res) {
+    var d = res.data
+    if (d && d.code === 0 && d.data && d.data.imageUrl) {
+      message._sceneImageUrl = d.data.imageUrl
+      message._sceneImageLoading = false
+      message._sceneImageText = ""
+    } else if (d && d.data && d.data.taskId) {
+      pollSceneImage(message, prompt, d.data.taskId, d.data.provider)
+    } else {
+      message._sceneImageLoading = false
+      message._sceneImageText = ""
+    }
+  }).catch(function() {
+    message._sceneImageLoading = false
+    message._sceneImageText = ""
+  })
+}
+function pollSceneImage(message, prompt, taskId, provider) {
+  if (message._sceneImagePoll) clearInterval(message._sceneImagePoll)
+  message._sceneImagePoll = setInterval(function() {
+    getFoodImageStatus(taskId, provider).then(function(res) {
+      var d = res.data ? res.data.data : null
+      if (d && d.resultUrl) {
+        clearInterval(message._sceneImagePoll)
+        message._sceneImagePoll = null
+        message._sceneImageUrl = d.resultUrl
+        message._sceneImageLoading = false
+        message._sceneImageText = ""
+      } else if (d && d.error) {
+        clearInterval(message._sceneImagePoll)
+        message._sceneImagePoll = null
+        message._sceneImageLoading = false
+        message._sceneImageText = ""
+      }
+    }).catch(function() {
+      clearInterval(message._sceneImagePoll)
+      message._sceneImagePoll = null
+      message._sceneImageLoading = false
+      message._sceneImageText = ""
+    })
+  }, 3000)
+}
+
 function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 </script>
 <style scoped>

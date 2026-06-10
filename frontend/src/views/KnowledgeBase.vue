@@ -10,11 +10,27 @@
     </div>
 
     <div class="search-bar">
-      <el-input v-model="keyword" placeholder="搜索常识库..." size="default" clearable
-                prefix-icon="Search" @keyup.enter="doSearch" />
-      <el-select v-model="sceneFilter" placeholder="场景" size="default" clearable @change="doSearch" style="width:90px;margin-left:8px">
-        <el-option v-for="s in scenes" :key="s.key" :label="s.label" :value="s.key" />
-      </el-select>
+      <div class="search-row">
+        <el-input v-model="keyword" placeholder="搜索常识库..." size="default" clearable
+                  prefix-icon="Search" @keyup.enter="doSearch" />
+        <div class="fab-wrap inline-filter">
+          <div class="fab-filter" @click="sceneFilterPanel = !sceneFilterPanel">
+            <span class="fab-filter-icon">🏷️</span>
+            <span v-if="sceneFilter" class="fab-filter-active">{{ sceneLabel(sceneFilter) }}</span>
+            <span v-else class="fab-filter-placeholder">场景</span>
+          </div>
+          <Transition name="fab-drop">
+            <div v-if="sceneFilterPanel" class="fab-dropdown" @click.stop>
+              <div v-for="s in [{key:'',icon:'📋',label:'全部'}, ...scenes]" :key="s.key"
+                   class="fab-drop-item" :class="{ active: sceneFilter === s.key }"
+                   @click="sceneFilter = s.key; sceneFilterPanel = false">
+                <span class="fd-icon">{{ s.icon }}</span>
+                <span class="fd-label">{{ s.label }}</span>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </div>
     </div>
 
     <div class="stats-row" v-if="total > 0">
@@ -83,7 +99,7 @@ import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, update
 
 const keyword = ref("")
 const sceneFilter = ref("")
-const showScenePanel = ref(false)
+const sceneFilterPanel = ref(false)
 const list = ref([])
 const total = ref(0)
 const loading = ref(true)

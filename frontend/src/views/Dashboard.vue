@@ -78,25 +78,26 @@
         </div>
       </div>
 
-        <div class="section-card">
-          <div class="section-title-wrap">
-            <span class="section-icon">📆</span>
-            <span class="section-title">最近30天</span>
-          </div>
-          <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
-          <template v-else>
-            <div class="chart-container">
-              <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
-                <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
-              </div>
-            </div>
-            <div class="chart-foot">
-              <span>{{ activityData[0]?.date?.substring(5) || '' }}</span>
-              <span class="chart-foot-high">最高{{ maxActivity }} 次</span>
-              <span>{{ activityData[activityData.length-1]?.date?.substring(5) || '' }}</span>
-            </div>
-          </template>
+      <div class="section-card">
+        <div class="section-title-wrap">
+          <span class="section-icon">📆</span>
+          <span class="section-title">最近30天</span>
         </div>
+        <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
+        <template v-else>
+          <div class="chart-container">
+            <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
+              <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
+            </div>
+          </div>
+          <div class="chart-foot">
+            <span>{{ activityData[0]?.date?.substring(5) || '' }}</span>
+            <span class="chart-foot-high">最高 {{ maxActivity }} 次</span>
+            <span>{{ activityData[activityData.length-1]?.date?.substring(5) || '' }}</span>
+          </div>
+        </template>
+      </div>
+    </div>
     <div class="bottom-tabs">
       <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
       <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>

@@ -315,24 +315,10 @@ const costHint = computed(() => {
       sub: '请检查 ai.vision-api-url / ai.vision-api-key'
     }
   }
-  if (currentAiProvider.value === 'ollama') {
-    return {
-      type: 'free',
-      text: '当前模型：Ollama 本地',
-      sub: '本地模型，不扣平台费用'
-    }
-  }
-  if (currentAiProvider.value === 'deepseek') {
-    return {
-      type: 'danger',
-      text: '当前模型：DeepSeek',
-      sub: '服务端默认拦截；如开启会产生 DeepSeek 费用'
-    }
-  }
   return {
     type: 'normal',
     text: '当前模型：千问 Qwen',
-    sub: foodImageEnabled.value ? '聊天会消耗千问；菜品图只查本地缓存，不自动生图扣费' : '聊天会消耗千问；命中常识库则不扣费'
+    sub: '聊天会消耗千问；命中常识库则不扣费'
   }
 })
 
@@ -408,17 +394,7 @@ async function send() {
   pendingFollowUp.value = false
 
   refreshLocalSettings()
-  if (currentAiProvider.value === 'deepseek') {
-    const allowUntil = Number(localStorage.getItem('allow_deepseek_until') || 0)
-    if (allowUntil > Date.now()) {
-      // User has explicitly confirmed DeepSeek in Profile recently.
-    } else {
-    localStorage.setItem('setting_aiProvider', 'qwen')
-    currentAiProvider.value = 'qwen'
-    ElMessage.warning('DeepSeek 已被前端拦截并切回千问，避免误扣费')
-    return
-    }
-  }
+
 
   const scene = tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
   let convId = currentConvId.value

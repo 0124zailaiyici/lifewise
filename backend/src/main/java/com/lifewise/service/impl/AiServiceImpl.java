@@ -47,8 +47,7 @@ public class AiServiceImpl implements AiService {
     @Value("${ai.model:deepseek-chat}")
     private String model;
 
-    @Value("${ai.deepseek-enabled:false}")
-    private boolean deepseekEnabled;
+    // deepseek removed (always qwen)
 
     @Value("${ai.vision-api-url:}")
     private String visionApiUrl;
@@ -159,16 +158,7 @@ public class AiServiceImpl implements AiService {
     }
 
     private String callAI(String message, String scene, Long conversationId, String imageUrl, String provider, Long userId, boolean followUp) {
-        if ("deepseek".equals(provider) && !deepseekEnabled) {
-            log.warn("DeepSeek is disabled by server cost guard");
-            aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek disabled by server cost guard; no external API call");
-            return disabledProviderResponse("DeepSeek is disabled by server cost guard. Use Qwen or Ollama.");
-        }
-        if ("deepseek".equals(provider) && (apiKey == null || apiKey.isEmpty())) {
-            log.warn("DeepSeek API key not configured");
-            aiCallAuditService.record(userId, "deepseek", model, scene, "blocked", "DeepSeek API key missing; no external API call");
-            return disabledProviderResponse("DeepSeek API key is missing. Use Qwen or Ollama.");
-        }
+
         if (hasText(imageUrl) && (!visionEnabled || !hasText(visionApiUrl) || !hasText(visionApiKey))) {
             log.warn("Vision API not configured for image chat");
             aiCallAuditService.record(userId, "vision", visionModel, scene, "blocked", "Vision API key/url missing; no external API call");
@@ -263,23 +253,9 @@ public class AiServiceImpl implements AiService {
             return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
         }
 
-        // 根据 provider 路由到不同的 API
-        if ("ollama".equals(provider)) {
-            aiCallAuditService.record(userId, "ollama", ollamaModel, scene, "calling", "Calling Ollama local API");
-            return callOllama(messages, scene);
-        } else if ("qwen".equals(provider)) {
-            aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "Calling DashScope Qwen");
-            return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
-        } else {
-            // deepseek - 检查是否需要视觉 API
-            boolean useVision = hasImage && visionEnabled && visionApiUrl != null && !visionApiUrl.isEmpty();
-            if (useVision) {
-                aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "Calling vision API");
-                return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
-            }
-            aiCallAuditService.record(userId, "deepseek", model, scene, "calling", "Calling DeepSeek");
-            return callOpenAICompatible(apiUrl, apiKey, model, messages, false);
-        }
+        // Always use Qwen via DashScope
+        aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "Calling DashScope Qwen");
+        return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
     }
 
     /** 调用 OpenAI 兼容接口（DeepSeek / DashScope Qwen） */
@@ -316,54 +292,7 @@ public class AiServiceImpl implements AiService {
     }
 
     /** 调用 Ollama 本地 API */
-    private String callOllama(List<Map<String, Object>> messages, String scene) throws Exception {
-        // Ollama 的 /api/chat 接口格式与 OpenAI 不同
-        List<Map<String, Object>> ollamaMessages = new ArrayList<>();
-        for (Map<String, Object> msg : messages) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("role", msg.get("role"));
-            Object content = msg.get("content");
-            if (content instanceof List) {
-                // 多模态内容，提取文本部分
-                StringBuilder text = new StringBuilder();
-                for (Map<String, Object> part : (List<Map<String, Object>>) content) {
-                    if ("text".equals(part.get("type"))) {
-                        text.append(part.get("text"));
-                    }
-                }
-                m.put("content", text.toString());
-            } else {
-                m.put("content", content != null ? content.toString() : "");
-            }
-            ollamaMessages.add(m);
-        }
-
-        Map<String, Object> requestBody = new LinkedHashMap<>();
-        requestBody.put("model", ollamaModel);
-        requestBody.put("messages", ollamaMessages);
-        requestBody.put("stream", false);
-
-        String body = objectMapper.writeValueAsString(requestBody);
-        log.debug("Ollama request: {}", body.substring(0, Math.min(200, body.length())));
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(ollamaUrl))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-            .build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            log.error("Ollama error: {} - {}", response.statusCode(), response.body());
-            throw new RuntimeException("Ollama error: " + response.statusCode() + " - " + response.body());
-        }
-
-        JsonNode root = objectMapper.readTree(response.body());
-        String result = root.path("message").path("content").asText();
-        log.debug("Ollama response length: {}", result.length());
-        return result;
-    }
+    
 
     /** 将本地图片路径转为 base64 data URL */
     private String imageToDataUrl(String imageUrl) {
@@ -581,9 +510,7 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
         return baseRule + "\n" + schema;
     }
 
-    private String disabledProviderResponse(String reason) {
-        return "{\"answer\":\"" + reason.replace("\"", "\\\"") + "\",\"tips\":[\"Go to Profile -> AI Model and switch to Qwen or Ollama\",\"To use DeepSeek, explicitly set ai.deepseek-enabled=true on the server\"]}";
-    }
+    
 
     private String mockResponse(String message, String scene) {
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";

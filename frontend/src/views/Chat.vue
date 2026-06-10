@@ -1,4 +1,4 @@
-<!-- VERSION: 20260610-1 Claude Style -->
+﻿<!-- VERSION: 20260610-1 Claude Style -->
 <template>
   <div class="page-container chat-page">
     <!-- 顶部栏 -->
@@ -217,7 +217,6 @@ const currentTyping = ref(false)
 const previewImg = ref(null)
 const uploadProgress = ref(0)
 const currentConvId = ref(null)
-const currentAiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
 const foodImageEnabled = ref(localStorage.getItem('setting_foodImage') !== 'off')
 const aiConfigStatus = ref(null)
 function previewImage(url) { previewImg.value = url }
@@ -371,7 +370,6 @@ onUnmounted(() => {
 })
 
 function refreshLocalSettings() {
-  currentAiProvider.value = localStorage.getItem('setting_aiProvider') || 'qwen'
   foodImageEnabled.value = localStorage.getItem('setting_foodImage') !== 'off'
 }
 

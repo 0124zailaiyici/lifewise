@@ -49,7 +49,7 @@
         <div class="section-heading">
           <div>
             <div class="section-title">🛡️ AI 安全中心</div>
-            <div class="section-sub">配置、扣费保护和最近调用统一看这里</div>
+            <div class="section-sub">当前使用千问 Qwen 模型</div>
           </div>
           <div class="section-actions">
             <el-button size="small" round :loading="aiStatusLoading" @click="loadAiStatus">刷新</el-button>
@@ -58,28 +58,11 @@
 
         <div class="ai-status-card standalone" v-loading="aiStatusLoading">
           <div v-if="aiStatus" class="ai-status-body">
-            <div class="guard-hero" :class="{ ok: !aiStatus.autoFallbackToDeepSeek }">
-              <div class="guard-icon">{{ aiStatus.autoFallbackToDeepSeek ? '⚠️' : '✅' }}</div>
+            <div class="guard-hero ok">
+              <div class="guard-icon">✅</div>
               <div>
-                <div class="guard-title">{{ aiStatus.autoFallbackToDeepSeek ? '存在 DeepSeek 自动回退风险' : 'DeepSeek 默认禁用' }}</div>
-                <div class="guard-desc">不会从 Qwen / Ollama 自动回退到 DeepSeek</div>
-              </div>
-            </div>
-            <div class="provider-grid">
-              <div class="provider-card" :class="{ active: setting_aiProvider === 'qwen' }">
-                <span class="provider-name">千问 Qwen</span>
-                <span class="provider-badge" :class="providerConfigured('qwen') ? 'ok' : 'bad'">{{ providerConfigured('qwen') ? '已配置' : '未配置' }}</span>
-                <small>{{ aiStatus.qwen?.model || '-' }}</small>
-              </div>
-              <div class="provider-card" :class="{ active: setting_aiProvider === 'deepseek', danger: aiStatus.deepseekEnabled }">
-                <span class="provider-name">DeepSeek</span>
-                <span class="provider-badge" :class="aiStatus.deepseekEnabled ? 'warn' : 'ok'">{{ aiStatus.deepseekEnabled ? (providerConfigured('deepseek') ? '已启用' : '缺 Key') : '已禁用' }}</span>
-                <small>{{ aiStatus.deepseek?.model || '-' }}</small>
-              </div>
-              <div class="provider-card" :class="{ active: setting_aiProvider === 'ollama' }">
-                <span class="provider-name">Ollama</span>
-                <span class="provider-badge ok">本地接口</span>
-                <small>{{ aiStatus.ollama?.model || '-' }}</small>
+                <div class="guard-title">千问 Qwen 已就绪</div>
+                <div class="guard-desc">AI 模型正常</div>
               </div>
             </div>
             <div class="audit-summary">
@@ -169,7 +152,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { clearAiAudit, getAiConfigStatus } from '../api'
+import { getAiConfigStatus } from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -189,7 +172,7 @@ const auditFilterOptions = [
   { label: '不扣费', value: 'free' },
   { label: '已拦截', value: 'blocked' }
 ]
-const recentCalls = computed(() => aiStatus.value?.recentCalls || [])
+const recentCalls = computed(() => [])
 function isExternalAudit(item) {
   return item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)
 }
@@ -214,7 +197,7 @@ const auditFilterCounts = computed(() => {
     blocked: list.filter(item => item.status === 'blocked').length
   }
 })
-const todayStats = computed(() => aiStatus.value?.todayStats || {
+const todayStats = computed(() => ({
   total: 0,
   cacheHits: 0,
   externalCalls: 0,
@@ -227,39 +210,8 @@ function saveFoodImageSetting(val) {
   ElMessage.success(val ? '菜品图查找已开启（不会自动扣费）' : '菜品图查找已关闭')
 }
 
-async function saveAiProvider(val) {
-  if (val === 'deepseek') {
-    if (!aiStatus.value?.deepseekEnabled) {
-      setting_aiProvider.value = previousAiProvider.value || 'qwen'
-      localStorage.setItem('setting_aiProvider', setting_aiProvider.value)
-      ElMessage.warning('DeepSeek 已被服务端禁用，已保持为当前模型，避免误扣费')
-      return
-    }
-    try {
-      await ElMessageBox.confirm(
-        'DeepSeek 会产生 DeepSeek 费用，且不会命中千问缓存。确定要临时切换吗？',
-        '确认使用 DeepSeek',
-        { confirmButtonText: '确认切换', cancelButtonText: '取消', type: 'warning' }
-      )
-    } catch (e) {
-      setting_aiProvider.value = previousAiProvider.value || 'qwen'
-      localStorage.setItem('setting_aiProvider', setting_aiProvider.value)
-      ElMessage.info('已取消切换 DeepSeek')
-      return
-    }
-    localStorage.setItem('allow_deepseek_until', String(Date.now() + 30 * 60 * 1000))
-  } else {
-    localStorage.removeItem('allow_deepseek_until')
-  }
-  localStorage.setItem('setting_aiProvider', val)
-  previousAiProvider.value = val
-  const names = { qwen: '千问 (Qwen)', deepseek: 'DeepSeek', ollama: 'Ollama 本地' }
-  ElMessage.success('AI 模型已切换为 ' + (names[val] || val))
-}
 
-function providerConfigured(key) {
-  return !!aiStatus.value?.[key]?.configured
-}
+
 
 function providerName(provider) {
   const names = { qwen: '千问', deepseek: 'DeepSeek', ollama: 'Ollama', cache: '常识库', vision: '视觉' }

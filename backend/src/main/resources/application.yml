@@ -30,17 +30,10 @@ server:
   port: 8080
 
 ai:
-  api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
-  api-key: ${AI_API_KEY:}
-  model: ${AI_MODEL:deepseek-v4-flash}  # 备用模型（贵，仅在选择 DeepSeek 时使用）
-  deepseek-enabled: ${AI_DEEPSEEK_ENABLED:false}  # 扣费保护：默认禁用 DeepSeek，必须显式开启
-  # DashScope (千问) 配置 ⭐ 默认模型（便宜、缓存命中率高）
+  # DashScope (千问) 配置
   dashscope-api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
   dashscope-api-key: ${AI_DASHSCOPE_KEY:}
   dashscope-model: ${AI_DASHSCOPE_MODEL:qwen-plus}
-  # Ollama 本地配置
-  ollama-url: ${AI_OLLAMA_URL:http://localhost:11434/api/chat}
-  ollama-model: ${AI_OLLAMA_MODEL:qwen2.5:7b}
   # 视觉/图片配置
   vision-api-url: ${AI_VISION_API_URL:}
   vision-api-key: ${AI_VISION_API_KEY:}
@@ -49,7 +42,6 @@ ai:
 app:
   vision-enabled: ${APP_VISION_ENABLED:true}
   upload-dir: ./uploads
-  image-api-key: ${IMAGE_API_KEY:}
 
 logging:
   level:

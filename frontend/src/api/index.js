@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
@@ -49,7 +49,7 @@ export function sendChat(message, scene, conversationId, imageUrl, options = {})
   if (imageUrl) body.imageUrl = imageUrl
   if (options.followUp) body.followUp = true
   // Read AI provider setting from localStorage
-  body.provider = localStorage.getItem('setting_aiProvider') || 'qwen'
+  body.provider = 'qwen'
   return api.post('/chat/send', body)
 }
 

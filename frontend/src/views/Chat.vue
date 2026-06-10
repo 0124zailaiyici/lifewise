@@ -341,7 +341,7 @@ onMounted(async () => {
 
   msgBox.value?.addEventListener('click', handleFollowUpClick)
   refreshLocalSettings()
-  // loadAiConfigStatus() — endpoint not in backend
+  loadAiConfigStatus()
   window.addEventListener('focus', refreshLocalSettings)
   window.addEventListener('storage', refreshLocalSettings)
   await nextTick()

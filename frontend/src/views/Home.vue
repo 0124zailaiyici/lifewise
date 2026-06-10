@@ -1,13 +1,16 @@
 <template>
-  <div class="page-container">
-    <div class="home-hero">
-      <div class="hero-top">
-        <div>
-          <p class="eyebrow">LifeWise</p>
-          <h2>{{ greeting }}</h2>
-          <p class="hero-sub">生活里的小问题，直接问就行</p>
+  <div class="page-container home-page">
+    <!-- 顶部品牌区 -->
+    <header class="topbar">
+      <div class="brand-row">
+        <div class="brand">
+          <div class="mark">⌂</div>
+          <div>
+            <h1 class="brand-title">LifeWise</h1>
+            <div class="subtitle">把生活问题整理成可执行步骤</div>
+          </div>
         </div>
-        <div class="hero-actions">
+        <div class="brand-actions">
           <el-button text class="header-icon-btn" @click="$router.push('/search')">
             <el-icon :size="21"><Search /></el-icon>
           </el-button>
@@ -17,39 +20,31 @@
         </div>
       </div>
 
+      <!-- 快捷提问卡片 -->
       <div class="ask-card" @click="startChat('general', '生活助手')">
         <div class="ask-main">
-          <div class="ask-icon"><el-icon :size="24"><ChatDotSquare /></el-icon></div>
+          <div class="ask-icon">✦</div>
           <div>
-            <div class="ask-title">今天想解决什么问题？</div>
+            <div class="ask-title">{{ greeting }}，今天想解决什么问题？</div>
             <div class="ask-sub">做饭、清洁、维修、购物、健康常识都可以问</div>
           </div>
         </div>
-        <div class="ask-button">去提问</div>
+        
       </div>
-    </div>
+
+
+    </header>
 
     <div class="content">
-      <section class="quick-section">
-        <div class="section-row">
-          <h3 class="section-title">常用问题</h3>
-          <button class="link-btn" @click="$router.push('/chat')">自由提问</button>
-        </div>
-        <div class="prompt-list">
-          <button v-for="p in quickPrompts" :key="p.text" class="prompt-chip" @click="askPrompt(p)">
-            <span>{{ p.icon }}</span>{{ p.text }}
-          </button>
-        </div>
-      </section>
-
+      <!-- 场景入口网格 -->
       <section>
         <div class="section-row">
           <h3 class="section-title">场景入口</h3>
-          <span class="section-hint">选择后会带入对应场景</span>
+          <span class="section-hint">选择对应场景开始提问</span>
         </div>
         <div class="scene-grid">
-          <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ '--accent': s.accent, '--photo': `url(${s.photo})` }" @click="startChat(s.key, s.label)">
-            <span v-if="!brokenScenePhotos[s.key]" class="scene-photo" aria-hidden="true"></span>
+          <div v-for="s in scenes" :key="s.key" class="scene-card" :style="{ '--accent': s.accent, '--photo': 'url(' + s.photo + ')' }" @click="startChat(s.key, s.label)">
+            <span v-if="s.photo && !brokenScenePhotos[s.key]" class="scene-photo" aria-hidden="true"></span>
             <div class="scene-icon" v-html="svgIcon(s.icon)"></div>
             <div class="scene-info">
               <span class="scene-label">{{ s.label }}</span>
@@ -59,34 +54,37 @@
         </div>
       </section>
 
-      <section v-if="conversations.length > 0" class="recent-section">
+      <!-- 最近问答 -->
+      <section class="recent-section">
         <div class="section-row">
           <h3 class="section-title">最近问答</h3>
-          <button class="link-btn" @click="$router.push('/history')">查看全部</button>
+          <button v-if="conversations.length > 0" class="section-link" @click="$router.push('/history')">查看全部</button>
         </div>
-        <div v-for="conv in conversations" :key="conv.id" class="conv-item" @click="$router.push('/chat/' + conv.id)">
-          <span class="conv-icon">{{ conv.sceneIcon || '💬' }}</span>
-          <div class="conv-info">
-            <div class="conv-title">{{ displayConversationTitle(conv) }}</div>
-            <div class="conv-meta">{{ conv.sceneLabel || '生活助手' }} · {{ formatTime(conv.createdAt) }}</div>
+        <div v-if="conversations.length > 0">
+          <div v-for="conv in conversations" :key="conv.id" class="conv-item" @click="$router.push('/chat/' + conv.id)">
+            <span class="conv-icon">{{ conv.sceneIcon || '✦' }}</span>
+            <div class="conv-info">
+              <div class="conv-title">{{ displayConversationTitle(conv) }}</div>
+              <div class="conv-meta">{{ conv.sceneLabel || '生活助手' }} · {{ formatTime(conv.createdAt) }}</div>
+            </div>
+            <el-icon class="conv-arrow"><ArrowRight /></el-icon>
           </div>
-          <el-icon class="conv-arrow"><ArrowRight /></el-icon>
+        </div>
+        <div v-else class="empty-state">
+          <div class="empty-icon">🌿</div>
+          <div class="empty-text">还没有历史对话</div>
+          <div class="empty-hint">从上方场景或常用问题开始，AI 会帮你整理答案</div>
         </div>
       </section>
-
-      <div v-else class="empty-state">
-        <div class="empty-icon">💡</div>
-        <div class="empty-text">还没有历史对话</div>
-        <div class="empty-hint">从上方场景或常用问题开始，AI 会帮你整理答案</div>
-      </div>
     </div>
 
-    <div class="bottom-tabs">
+    <!-- 底部导航 -->
+    <nav class="bottom-tabs">
       <div class="tab active"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
       <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
       <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
       <div class="tab" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
-    </div>
+    </nav>
   </div>
 </template>
 
@@ -94,7 +92,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getConversations } from '../api'
-import { Search, User, ArrowRight, ChatDotSquare, HomeFilled, Timer, Star } from '@element-plus/icons-vue'
+import { Search, User, ArrowRight, HomeFilled, Timer, Star } from '@element-plus/icons-vue'
 import sceneCooking from '../assets/scenes/scene-cooking.webp'
 import sceneShopping from '../assets/scenes/scene-shopping.webp'
 import sceneRepair from '../assets/scenes/scene-repair.webp'
@@ -129,11 +127,11 @@ const quickPrompts = [
 ]
 
 const scenes = [
-  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#ef4444', photo: sceneCooking },
-  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#22c55e', photo: sceneShopping },
-  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#3b82f6', photo: sceneRepair },
+  { key: 'cooking', icon: 'cooking', label: '做饭助手', desc: '菜谱、火候、步骤', accent: '#8d5f3f', photo: sceneCooking },
+  { key: 'shopping', icon: 'shopping', label: '购物挑选', desc: '买菜、避坑、对比', accent: '#7d8b6f', photo: sceneShopping },
+  { key: 'repair', icon: 'repair', label: '修理指南', desc: '小故障先自查', accent: '#6b7280', photo: sceneRepair },
   { key: 'housework', icon: 'housework', label: '家务技巧', desc: '清洁、收纳、去渍', accent: '#a855f7', photo: sceneHousework },
-  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#eab308', photo: sceneHealth },
+  { key: 'health', icon: 'health', label: '健康常识', desc: '生活建议和提醒', accent: '#7d8b6f', photo: sceneHealth },
   { key: 'fashion', icon: 'fashion', label: '穿搭指南', desc: '配色、场合、风格', accent: '#ec4899', photo: sceneFashion },
   { key: 'etiquette', icon: 'etiquette', label: '社交礼仪', desc: '表达、送礼、沟通', accent: '#14b8a6', photo: sceneEtiquette },
   { key: 'pet', icon: 'pet', label: '宠物照顾', desc: '喂养、习惯、护理', accent: '#f59e0b', photo: scenePet },
@@ -199,69 +197,156 @@ function formatTime(t) {
 
 function displayConversationTitle(conv) {
   const title = (conv?.title || '').trim()
-  if (!title || isBadTitle(title)) {
-    return conv?.sceneLabel ? `${conv.sceneLabel}对话` : '未命名对话'
+  if (!title || title.includes('?')) {
+    return conv?.sceneLabel ? (conv.sceneLabel + '对话') : '未命名对话'
   }
   return title
-}
-
-function isBadTitle(title) {
-  const questionMarks = (title.match(/\?/g) || []).length
-  if (questionMarks >= 3) return true
-  if (title.includes(String.fromCharCode(0x951f)) || title.includes(String.fromCharCode(0xfffd))) return true
-  return false
 }
 </script>
 
 <style scoped>
-.home-hero { padding: 24px 20px 18px; background: radial-gradient(circle at 20% 0%, #dcfce7 0%, #f0fdf4 36%, #fff 76%); }
-.hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.eyebrow { margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #16a34a; letter-spacing: .02em; }
-.hero-top h2 { margin: 0; font-size: 26px; font-weight: 900; color: #111827; }
-.hero-sub { margin: 5px 0 0; color: #6b7280; font-size: 13px; }
-.hero-actions { display: flex; gap: 4px; padding-top: 4px; }
-.header-icon-btn { width: 36px; height: 36px; color: #374151; padding: 0; border-radius: 50%; background: rgba(255,255,255,.72); box-shadow: 0 4px 12px rgba(15,23,42,.06); }
-.ask-card { margin-top: 18px; padding: 15px; border-radius: 20px; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; box-shadow: 0 14px 28px rgba(34,197,94,.22); cursor: pointer; }
+/* ===== 顶部品牌区 ===== */
+.topbar {
+  padding: 18px 18px 8px;
+  background: var(--paper);
+}
+.brand-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.mark {
+  width: 36px; height: 36px; border-radius: 14px;
+  display: grid; place-items: center;
+  background: linear-gradient(145deg, #9b714f, #6f4a31);
+  box-shadow: var(--small-shadow), inset 0 1px 0 rgba(255,255,255,.28);
+  color: #fff7ea; font-size: 18px;
+}
+.brand-title {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", "Songti SC", serif;
+  font-weight: 600; font-size: 25px; letter-spacing: -0.04em;
+  color: var(--ink);
+}
+.subtitle {
+  margin-top: 1px; color: var(--muted); font-size: 11px;
+}
+.header-icon-btn { width: 36px; height: 36px; color: var(--muted); padding: 0; border-radius: 50%; background: rgba(255,250,241,.68); box-shadow: inset 0 1px 0 rgba(255,255,255,.72); border: 1px solid var(--line); }
+
+/* ===== 快捷提问卡片 ===== */
+.ask-card {
+  margin-top: 14px; padding: 16px 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--warm-shadow), inset 0 1px 0 rgba(255,255,255,.86);
+  cursor: pointer;
+}
 .ask-card:active { transform: scale(.985); }
-.ask-main { display: flex; align-items: center; gap: 12px; }
-.ask-icon { width: 44px; height: 44px; border-radius: 15px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.ask-title { font-size: 16px; font-weight: 900; }
-.ask-sub { margin-top: 3px; font-size: 12px; opacity: .84; line-height: 1.4; }
-.ask-button { margin-top: 12px; width: fit-content; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.18); font-size: 12px; font-weight: 800; }
-.content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); background: #fff; }
-.quick-section { margin-top: 8px; }
-.section-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 18px 0 10px; }
-.section-title { margin: 0; font-size: 16px; font-weight: 900; color: #111827; }
-.section-hint { color: #9ca3af; font-size: 11px; }
-.link-btn { border: none; background: transparent; color: #16a34a; font-size: 12px; font-weight: 800; padding: 4px; cursor: pointer; }
-.prompt-list { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 3px; }
-.prompt-chip { flex: 1 1 calc(50% - 4px); min-width: 0; border: 1px solid #e5f4e9; background: #fbfefc; color: #334155; border-radius: 999px; padding: 8px 10px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.prompt-chip:active { transform: scale(.97); background: #ecfdf5; }
+.ask-main { display: flex; align-items: center; gap: 14px; }
+.ask-icon {
+  width: 42px; height: 42px; border-radius: 16px;
+  display: grid; place-items: center;
+  background: linear-gradient(145deg, #9b714f, #6f4a31);
+  color: #fff7ea; font-size: 20px; flex-shrink: 0;
+}
+.ask-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+.ask-sub { margin-top: 3px; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.ask-button {
+  margin-top: 10px; width: fit-content; padding: 6px 12px;
+  border-radius: 999px; background: rgba(141,95,63,.10);
+  color: var(--accent); font-size: 12px; font-weight: 700;
+}
+
+/* ===== 常用问题 Chip 横滚 ===== */
+.chips {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 12px 2px 4px; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  white-space: nowrap; flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: rgba(255,250,241,.68);
+  border-radius: 999px; padding: 8px 12px;
+  color: var(--muted); font-size: 12px; cursor: pointer;
+}
+.chip:active { transform: scale(.96); }
+
+/* ===== 内容区 ===== */
+.content {
+  padding: 4px 18px calc(80px + env(safe-area-inset-bottom, 0px));
+}
+.section-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 18px 0 10px;
+}
+.section-title { margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+.section-hint { color: var(--soft); font-size: 11px; }
+.section-link { border: none; background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px; }
+
+/* ===== 场景网格 ===== */
 .scene-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
-.scene-card { position: relative; overflow: hidden; min-height: 82px; border-radius: 17px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, #fff), #fff); border: 1px solid color-mix(in srgb, var(--accent) 22%, #e5e7eb); padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 18px rgba(15,23,42,.035); }
+.scene-card {
+  position: relative; overflow: hidden; min-height: 82px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, var(--card-solid)), var(--card-solid));
+  border: 1px solid var(--line);
+  padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
 .scene-card:active { transform: scale(.97); }
-.scene-photo { position: absolute; right: 0; bottom: 0; width: 92px; height: 78px; background: var(--photo) center/cover no-repeat; opacity: .30; filter: saturate(.9) contrast(.96); pointer-events: none; z-index: 0; }
-.scene-photo::before { content: ""; position: absolute; inset: 0; background: linear-gradient(120deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.72) 42%, rgba(255,255,255,.12) 100%); }
-.scene-card::after { content: ""; position: absolute; right: -22px; bottom: -34px; width: 110px; height: 110px; border-radius: 50%; background: var(--accent); opacity: .045; pointer-events: none; z-index: 0; }
-.scene-icon { position: relative; z-index: 1; width: 38px; height: 38px; border-radius: 14px; background: color-mix(in srgb, var(--accent) 12%, #fff); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.scene-photo {
+  position: absolute; right: 0; bottom: 0; width: 92px; height: 78px;
+  background: var(--photo) center/cover no-repeat;
+  opacity: .30; filter: saturate(.9) contrast(.96);
+  pointer-events: none; z-index: 0;
+}
+.scene-photo::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,.96) 0%, rgba(255,255,255,.72) 42%, rgba(255,255,255,.12) 100%);
+}
+.scene-card::after {
+  content: ""; position: absolute; right: -22px; bottom: -34px;
+  width: 110px; height: 110px; border-radius: 50%;
+  background: var(--accent); opacity: .045; pointer-events: none; z-index: 0;
+}
+.scene-icon {
+  position: relative; z-index: 1; width: 38px; height: 38px; border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--card-solid));
+  color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .scene-icon :deep(svg) { width: 22px; height: 22px; }
 .scene-info { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.scene-label { font-size: 14px; font-weight: 900; color: #111827; }
-.scene-info small { color: #8a94a6; font-size: 10px; line-height: 1.3; }
-.recent-section { margin-top: 2px; }
-.conv-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border: 1px solid #eef2f7; border-radius: 14px; margin-bottom: 8px; cursor: pointer; }
+.scene-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+.scene-info small { color: var(--soft); font-size: 10px; line-height: 1.3; }
+
+/* ===== 最近问答 ===== */
+.conv-item {
+  display: flex; align-items: center; padding: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--card); margin-bottom: 8px; cursor: pointer;
+}
 .conv-item:active { transform: scale(.985); }
-.conv-icon { width: 32px; height: 32px; border-radius: 12px; background: #ecfdf5; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; }
+.conv-icon { width: 32px; height: 32px; border-radius: 12px; background: rgba(141,95,63,.08); display: flex; align-items: center; justify-content: center; font-size: 18px; margin-right: 12px; flex-shrink: 0; }
 .conv-info { flex: 1; min-width: 0; }
-.conv-title { font-size: 14px; color: #1f2937; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.conv-meta { font-size: 11px; color: #9ca3af; margin-top: 3px; }
-.conv-arrow { color: #cbd5e1; font-size: 14px; flex-shrink: 0; }
-.empty-state { text-align: center; padding: 34px 20px 0; }
+.conv-title { font-size: 14px; color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.conv-arrow { color: var(--soft); font-size: 14px; flex-shrink: 0; }
+
+.empty-state { text-align: center; padding: 40px 20px 0; }
 .empty-icon { font-size: 40px; margin-bottom: 8px; }
-.empty-text { font-size: 14px; color: #6b7280; font-weight: 800; }
-.empty-hint { font-size: 12px; color: #a1a1aa; margin-top: 5px; line-height: 1.5; }
-.bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
-.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
-.tab.active { color: #22c55e; }
+.empty-text { font-size: 14px; color: var(--muted); font-weight: 600; }
+.empty-hint { font-size: 12px; color: var(--soft); margin-top: 5px; line-height: 1.5; }
+
+/* ===== 底部导航 ===== */
+.bottom-tabs {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
+  background: var(--card-solid); border-top: 1px solid var(--line);
+  display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); cursor: pointer; gap: 2px; }
+.tab.active { color: var(--accent); }
 .tab .el-icon { font-size: 20px; }
 </style>

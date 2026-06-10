@@ -46,7 +46,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 | **后端** | Java 17 + Spring Boot 3.5 | REST API |
 | **ORM** | Spring Data JPA + H2/MySQL | 数据库 |
 | **安全** | JWT (jjwt) + BCrypt | 认证加密 |
-| **AI** | DeepSeek V4 + MiMo Vision | 文本生成 + 图片识别 |
+| **AI** | 千问 Qwen + DeepSeek 可选 + MiMo Vision | 文本生成 + 图片识别 |
 | **构建** | Maven 3.9 | 项目构建 |
 | **前端** | Vue 3 + Vite | SPA 框架 |
 | **UI** | Element Plus | 组件库 |
@@ -57,7 +57,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 ## ✨ 功能特性
 
 ### 核心功能
-- 🤖 **AI 智能对话** — 基于 DeepSeek，多场景问答
+- 🤖 **AI 智能对话** — 默认使用千问 Qwen，DeepSeek 仅在手动选择并启用后调用，多场景问答
 - 📷 **图片识别** — 拍照识别食材、物品（小米 MiMo Vision）
 - 📚 **常识库缓存** — Jaccard 相似度匹配，相同问题秒回无需 API
 - 💬 **多场景支持** — 做饭、买菜、修理、家务、健康、穿搭、社交、宠物、食谱、写作
@@ -125,7 +125,7 @@ LifeWise/
 
 1. 用户提问 → 检查常识库缓存（语义相似度匹配）
 2. 缓存命中 → 直接返回（毫秒级响应）
-3. 缓存未命中 → 调用 AI API（DeepSeek/MiMo）
+3. 缓存未命中 → 调用 AI API（默认 Qwen；图片问题使用 MiMo Vision；DeepSeek 需显式启用）
 4. AI 返回 → 按场景 Schema 解析为结构化数据
 5. 前端渲染 → 卡片/列表/图文等结构化展示
 6. 自动缓存 → 入库常识库，下次同类问题秒回
@@ -139,7 +139,16 @@ mvn test
 
 ## 🔧 自定义配置
 
-编辑 `backend/src/main/resources/application.yml`：
-- `ai.api-key` — DeepSeek API Key
-- `ai.model` — AI 模型
-- `ai.vision-api-key` — 图片识别 API Key（小米 MiMo）
+编辑 `backend/src/main/resources/application.yml`，或通过环境变量覆盖：
+- `ai.dashscope-api-key` / `AI_DASHSCOPE_KEY` — 千问 Qwen API Key（默认文本模型）
+- `ai.dashscope-model` / `AI_DASHSCOPE_MODEL` — 千问模型，默认 `qwen-plus`
+- `ai.deepseek-enabled` / `AI_DEEPSEEK_ENABLED` — DeepSeek 成本保护开关，默认 `false`
+- `ai.api-key` / `AI_API_KEY` — DeepSeek API Key，仅在手动选择 DeepSeek 且开关启用时使用
+- `ai.vision-api-url` / `AI_VISION_API_URL` — 图片识别 API 地址
+- `ai.vision-api-key` / `AI_VISION_API_KEY` — 图片识别 API Key（小米 MiMo）
+
+### AI 成本保护
+
+- 默认文本服务商是千问 Qwen，不会在 Qwen 未配置时自动回退到 DeepSeek。
+- DeepSeek 默认禁用，必须设置 `AI_DEEPSEEK_ENABLED=true` 并在前端手动选择 DeepSeek 才会调用。
+- 配置 API Key 后要重新编译、重启后端，并确认运行中的进程使用的是新 JAR。

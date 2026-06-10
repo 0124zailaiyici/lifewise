@@ -1,0 +1,506 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>LifeWise · Mobile Chat Prototype</title>
+  <style>
+    :root {
+      --paper: #f7f1e8;
+      --paper-deep: #eee4d6;
+      --card: rgba(255, 252, 246, 0.86);
+      --card-solid: #fffaf1;
+      --ink: #2d2924;
+      --muted: #7b7064;
+      --soft: #a69380;
+      --line: rgba(87, 68, 49, 0.12);
+      --accent: #8d5f3f;
+      --accent-deep: #68432b;
+      --sage: #7d8b6f;
+      --warm-shadow: 0 18px 55px rgba(80, 58, 38, 0.14);
+      --small-shadow: 0 8px 24px rgba(80, 58, 38, 0.10);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      color-scheme: light;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 16% 4%, rgba(250, 221, 176, 0.55), transparent 32%),
+        radial-gradient(circle at 90% 12%, rgba(187, 154, 119, 0.20), transparent 30%),
+        linear-gradient(145deg, #fbf5ec 0%, #efe4d5 52%, #f6efe4 100%);
+    }
+
+    .phone {
+      position: relative;
+      width: min(390px, 100vw - 24px);
+      height: min(844px, 100vh - 24px);
+      min-height: 680px;
+      overflow: hidden;
+      border-radius: 38px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.36), transparent 20%),
+        var(--paper);
+      border: 1px solid rgba(93, 70, 49, 0.16);
+      box-shadow: 0 30px 90px rgba(64, 44, 24, 0.22), inset 0 1px 0 rgba(255,255,255,0.76);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.36;
+      background-image:
+        linear-gradient(rgba(79, 56, 35, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 56, 35, 0.025) 1px, transparent 1px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      padding: 18px 18px 12px;
+      background: linear-gradient(180deg, rgba(247,241,232,0.96) 70%, rgba(247,241,232,0));
+      backdrop-filter: blur(16px);
+    }
+
+    .status {
+      height: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 8px;
+      color: rgba(45, 41, 36, 0.62);
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #9b714f, #6f4a31);
+      box-shadow: var(--small-shadow), inset 0 1px 0 rgba(255,255,255,.28);
+      color: #fff7ea;
+      font-size: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", "Songti SC", serif;
+      font-weight: 600;
+      font-size: 25px;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .ghost-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255,250,241,0.68);
+      color: var(--accent-deep);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 14px 2px 2px;
+      scrollbar-width: none;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+      white-space: nowrap;
+      border: 1px solid rgba(104,67,43,.13);
+      background: rgba(255, 250, 241, .68);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
+    }
+    .chip.active {
+      color: #fff8ed;
+      background: linear-gradient(135deg, #8d5f3f, #6f4b33);
+      box-shadow: 0 8px 20px rgba(104,67,43,.20);
+      border-color: transparent;
+    }
+
+    .chat {
+      height: calc(100% - 144px);
+      overflow-y: auto;
+      padding: 10px 18px 132px;
+      scroll-behavior: smooth;
+    }
+
+    .day-note {
+      width: fit-content;
+      margin: 4px auto 18px;
+      padding: 6px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,250,241,.48);
+      font-size: 11px;
+    }
+
+    .message {
+      display: flex;
+      margin: 14px 0;
+      animation: rise .55s both cubic-bezier(.2,.8,.2,1);
+    }
+    .message.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 86%;
+      border-radius: 24px;
+      padding: 14px 16px;
+      line-height: 1.58;
+      font-size: 15px;
+    }
+
+    .user .bubble {
+      color: #fff9ef;
+      background: linear-gradient(145deg, #875b3e, #69452e);
+      border-bottom-right-radius: 9px;
+      box-shadow: 0 16px 34px rgba(100, 66, 42, 0.24);
+    }
+
+    .assistant-card {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      padding: 16px;
+      background: var(--card);
+      box-shadow: var(--warm-shadow), inset 0 1px 0 rgba(255,255,255,.86);
+      backdrop-filter: blur(18px);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: #efe2d1;
+      color: var(--accent-deep);
+      border: 1px solid rgba(104,67,43,.10);
+    }
+
+    .confidence {
+      color: var(--sage);
+      font-size: 12px;
+      background: rgba(125,139,111,.10);
+      border: 1px solid rgba(125,139,111,.18);
+      border-radius: 999px;
+      padding: 5px 8px;
+      white-space: nowrap;
+    }
+
+    .answer-summary {
+      margin: 14px 0 10px;
+      color: #463d35;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(87,68,49,.10);
+      border-radius: 18px;
+      background: rgba(255, 250, 241, .62);
+    }
+
+    .num {
+      width: 26px;
+      height: 26px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      color: #fff7ea;
+      background: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .hint-strip {
+      margin-top: 13px;
+      padding: 12px 13px;
+      border-radius: 17px;
+      color: #5f513f;
+      background: linear-gradient(135deg, rgba(226,204,170,.50), rgba(255,250,241,.42));
+      border: 1px solid rgba(104,67,43,.10);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .quick-actions button {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.32);
+      color: var(--accent-deep);
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 12px;
+    }
+
+    .composer-wrap {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 22px 16px calc(16px + env(safe-area-inset-bottom));
+      background: linear-gradient(0deg, rgba(247,241,232,1) 74%, rgba(247,241,232,0));
+      z-index: 10;
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 9px;
+      padding: 10px;
+      border: 1px solid rgba(87,68,49,.16);
+      border-radius: 27px;
+      background: rgba(255, 252, 246, .88);
+      box-shadow: 0 20px 48px rgba(80,58,38,.18), inset 0 1px 0 rgba(255,255,255,.88);
+      backdrop-filter: blur(18px);
+    }
+
+    .upload, .send {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .upload {
+      color: var(--accent-deep);
+      background: #efe3d3;
+      border: 1px solid rgba(104,67,43,.10);
+    }
+
+    .send {
+      color: #fff8ed;
+      background: linear-gradient(145deg, #8d5f3f, #68432b);
+      box-shadow: 0 10px 20px rgba(104,67,43,.24);
+    }
+
+    .upload:active, .send:active { transform: scale(.96); }
+
+    textarea {
+      flex: 1;
+      min-height: 40px;
+      max-height: 92px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 9px 2px 7px;
+      font: inherit;
+      line-height: 1.35;
+    }
+    textarea::placeholder { color: rgba(123,112,100,.72); }
+
+    .fineprint {
+      margin-top: 8px;
+      text-align: center;
+      color: rgba(123,112,100,.72);
+      font-size: 11px;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 430px) {
+      body { padding: 0; }
+      .phone {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        border-radius: 0;
+        border: 0;
+      }
+    }
+
+    @media (min-width: 760px) {
+      body { padding: 34px; }
+      .phone { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone" aria-label="LifeWise 手机聊天原型">
+    <header class="topbar">
+      <div class="status" aria-hidden="true"><span>9:41</span><span>● ● ●  5G  ◒</span></div>
+      <div class="brand-row">
+        <div class="brand">
+          <div class="mark">⌂</div>
+          <div>
+            <h1>LifeWise</h1>
+            <div class="subtitle">把生活问题整理成可执行步骤</div>
+          </div>
+        </div>
+        <button class="ghost-btn" aria-label="打开菜单">☰</button>
+      </div>
+      <nav class="chips" aria-label="生活场景">
+        <span class="chip active">🍳 做饭助手</span>
+        <span class="chip">👔 穿搭建议</span>
+        <span class="chip">🧰 居家修理</span>
+        <span class="chip">🌿 健康习惯</span>
+      </nav>
+    </header>
+
+    <section class="chat">
+      <div class="day-note">今天 · 生活小帮手</div>
+
+      <div class="message user">
+        <div class="bubble">冰箱里只有鸡蛋、番茄和一点米饭，想做一个快手晚饭，最好 15 分钟内完成。</div>
+      </div>
+
+      <div class="message assistant">
+        <article class="assistant-card">
+          <div class="card-head">
+            <div class="card-title"><span class="avatar">✦</span><span>番茄鸡蛋烩饭方案</span></div>
+            <span class="confidence">15 分钟 · 低难度</span>
+          </div>
+
+          <p class="answer-summary">可以做一份偏家常的番茄鸡蛋烩饭：不用额外备菜，口感比单炒饭更湿润，也更适合剩米饭。</p>
+
+          <div class="steps">
+            <div class="step">
+              <div class="num">1</div>
+              <div><strong>先处理番茄</strong><span>切小块，热锅少油炒到出汁；如果偏酸，可以加一小撮糖。</span></div>
+            </div>
+            <div class="step">
+              <div class="num">2</div>
+              <div><strong>鸡蛋单独成型</strong><span>鸡蛋打散后快速滑熟盛出，最后再放回去，口感会更嫩。</span></div>
+            </div>
+            <div class="step">
+              <div class="num">3</div>
+              <div><strong>米饭吸汁收尾</strong><span>番茄汁里加入米饭压散，少量盐调味，最后倒回鸡蛋翻匀。</span></div>
+            </div>
+          </div>
+
+          <div class="hint-strip">小提醒：如果米饭偏干，加 2 勺水焖 40 秒；如果偏湿，就开盖多翻炒一会儿。</div>
+
+          <div class="quick-actions">
+            <button>生成采购清单</button>
+            <button>换成少油版</button>
+            <button>保存到常识库</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer class="composer-wrap">
+      <div class="composer">
+        <button class="upload" aria-label="上传图片">＋</button>
+        <textarea rows="1" placeholder="继续问 LifeWise，或上传菜品图片…"></textarea>
+        <button class="send" aria-label="发送">➜</button>
+      </div>
+      <div class="fineprint">原型：静态 HTML · 移动端优先 · 可直接浏览器打开</div>
+    </footer>
+  </main>
+
+  <script>
+    const textarea = document.querySelector('textarea');
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 92) + 'px';
+    });
+  </script>
+</body>
+</html>

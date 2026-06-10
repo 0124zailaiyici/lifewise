@@ -64,6 +64,15 @@
               <div v-else>
                 <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
 
+                <!-- 场景配图 -->
+                <div v-if="msg._sceneImageUrl" class="scene-image" @click="previewImage(msg._sceneImageUrl)">
+                  <img :src="msg._sceneImageUrl" alt="场景图" loading="lazy" />
+                  <span class="scene-badge">AI 配图</span>
+                </div>
+                <div v-if="msg._sceneImageLoading" class="food-loading">
+                  <span class="fl-spinner"></span>
+                  <span class="fl-text">{{ msg._sceneImageText || '🎨 正在生成场景配图…' }}</span>
+                </div>
                 <!-- 菜品图 -->
                 <div v-if="msg._foodImageLoading" class="food-loading">
                   <span class="fl-spinner"></span>
@@ -443,6 +452,15 @@ async function send() {
       if (foodImageEnabled) try {
         const dishName = detectDishName(fullContent, msg)
         attachLocalFoodImage(m, dishName)
+      } catch {}
+      // Scene image for fashion/shopping
+      try {
+        const parsed = tryParseJsonSafe(fullContent)
+        if (parsed && (parsed.occasion || parsed.outfits || parsed.color_palette || parsed.selection_steps || parsed.category)) {
+          const scene = parsed.occasion ? "fashion" : "shopping"
+          const prompt = generateScenePrompt(parsed, scene)
+          attachSceneImage(m, prompt, scene)
+        }
       } catch {}
     }
   } catch(e) {
@@ -1997,6 +2015,9 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-followup-chip:hover { background:rgba(141,95,63,0.15); }
 .s-followup-chip:active { transform:scale(.96); }
 .md-scene-label { font-size:12px; color:var(--muted); padding:0 0 8px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+.scene-image { margin-top: 0; cursor: pointer; border-radius: 14px 14px 0 0; overflow: hidden; position: relative; }
+.scene-image img { width: 100%; max-height: 240px; object-fit: cover; display: block; border-bottom: 1px solid var(--line); }
+.scene-badge { position: absolute; left: 10px; bottom: 10px; padding: 3px 8px; border-radius: 999px; background: rgba(104,67,43,.85); color: #fff7ea; font-size: 11px; line-height: 1; }
 .kb-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(125,139,111,0.10); color:var(--sage); border:1px solid rgba(125,139,111,0.16); margin:10px 18px 0; }
 /* deep compat with card-body */
 .card-body :deep(.s-card) { border:none; padding:0; margin:0; background:none; }
@@ -2074,6 +2095,9 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-followup-chip:hover { background:rgba(141,95,63,0.15); }
 .s-followup-chip:active { transform:scale(.96); }
 .md-scene-label { font-size:12px; color:var(--muted); padding:0 0 8px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+.scene-image { margin-top: 0; cursor: pointer; border-radius: 14px 14px 0 0; overflow: hidden; position: relative; }
+.scene-image img { width: 100%; max-height: 240px; object-fit: cover; display: block; border-bottom: 1px solid var(--line); }
+.scene-badge { position: absolute; left: 10px; bottom: 10px; padding: 3px 8px; border-radius: 999px; background: rgba(104,67,43,.85); color: #fff7ea; font-size: 11px; line-height: 1; }
 .kb-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(125,139,111,0.10); color:var(--sage); border:1px solid rgba(125,139,111,0.16); margin:10px 18px 0; }
 /* deep compat with card-body */
 

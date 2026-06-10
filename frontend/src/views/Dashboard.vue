@@ -1,9 +1,9 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="dash-header">
       <div class="header-top">
-        <el-button text @click="$router.push('/profile')" style="color:#fff;font-size:14px">鈫?杩斿洖</el-button>
-        <h2 style="margin:0;font-size:20px;font-weight:700">馃搳 鏁版嵁缁熻</h2>
+        <el-button text @click="$router.push('/profile')" style="color:#fff;font-size:14px">← 返回</el-button>
+        <h2 style="margin:0;font-size:20px;font-weight:700">📊 数据统计</h2>
         <div style="width:50px"></div>
       </div>
     </div>
@@ -12,60 +12,60 @@
       <div class="hero-card">
         <div class="hero-row">
           <div class="hero-item">
-            <span class="hero-icon">馃挰</span>
+            <span class="hero-icon">💬</span>
             <span class="hero-num">{{ stats.total?.conversations || 0 }}</span>
-            <span class="hero-label">鎬诲璇?/span>
+            <span class="hero-label">总对话</span>
           </div>
           <div class="hero-divider"></div>
           <div class="hero-item">
-            <span class="hero-icon">馃摑</span>
+            <span class="hero-icon">📝</span>
             <span class="hero-num">{{ stats.total?.messages || 0 }}</span>
-            <span class="hero-label">鎬绘秷鎭?/span>
+            <span class="hero-label">总消息</span>
           </div>
           <div class="hero-divider"></div>
           <div class="hero-item">
-            <span class="hero-icon">猸?/span>
+            <span class="hero-icon">⭐</span>
             <span class="hero-num">{{ stats.total?.favorites || 0 }}</span>
-            <span class="hero-label">鏀惰棌</span>
+            <span class="hero-label">收藏</span>
           </div>
         </div>
       </div>
 
       <div class="today-card" v-if="stats.today">
         <div class="today-left">
-          <div class="today-icon">馃搮</div>
+          <div class="today-icon">📅</div>
           <div>
-            <div class="today-label">浠婃棩娲昏穬</div>
-            <div class="today-sub">鐩告瘮鏄ㄥぉ</div>
+            <div class="today-label">今日活跃</div>
+            <div class="today-sub">相比昨天</div>
           </div>
         </div>
         <div class="today-right">
           <div class="today-num">{{ stats.today?.messages || 0 }}</div>
-          <div class="today-unit">鏉℃秷鎭?/div>
+          <div class="today-unit">条消息</div>
         </div>
       </div>
 
       <div class="compare-card">
         <div class="compare-item">
           <div class="compare-num">{{ stats.thisWeek?.conversations || 0 }}</div>
-          <div class="compare-label">鏈懆瀵硅瘽</div>
+          <div class="compare-label">本周对话</div>
         </div>
         <div class="compare-item">
           <div class="compare-num">{{ stats.thisWeek?.messages || 0 }}</div>
-          <div class="compare-label">鏈懆娑堟伅</div>
+          <div class="compare-label">本周消息</div>
         </div>
         <div class="compare-item">
           <div class="compare-num">{{ stats.total?.messages || 0 }}</div>
-          <div class="compare-label">绱娑堟伅</div>
+          <div class="compare-label">累计消息</div>
         </div>
       </div>
 
       <div class="section-card">
         <div class="section-title-wrap">
-          <span class="section-icon">馃幆</span>
-          <span class="section-title">鍦烘櫙鍒嗗竷</span>
+          <span class="section-icon">🎯</span>
+          <span class="section-title">场景分布</span>
         </div>
-        <div v-if="sceneDistribution.length === 0" class="empty-state">鏆傛棤鏁版嵁</div>
+        <div v-if="sceneDistribution.length === 0" class="empty-state">暂无数据</div>
         <div v-for="item in sceneDistribution" :key="item.scene" class="scene-row">
           <span class="scene-emoji">{{ item.icon }}</span>
           <div class="scene-bar-wrap">
@@ -78,30 +78,30 @@
         </div>
       </div>
 
-      <div class="section-card">
-        <div class="section-title-wrap">
-          <span class="section-icon">馃搯</span>
-          <span class="section-title">鏈€杩?0澶?/span>
-        </div>
-        <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">鏆傛棤娲诲姩鏁版嵁</div>
-        <template v-else>
-          <div class="chart-container">
-          <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '娆?">
-            <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
+        <div class="section-card">
+          <div class="section-title-wrap">
+            <span class="section-icon">📆</span>
+            <span class="section-title">最近30天</span>
           </div>
+          <div v-if="activityData.length === 0" class="empty-state" style="padding:30px 0">暂无活动数据</div>
+          <template v-else>
+            <div class="chart-container">
+              <div v-for="(item, i) in activityData" :key="i" class="chart-bar-wrap" :title="item.date + ': ' + item.count + '次'">
+                <div class="chart-bar" :class="{ active: item.count > 0 }" :style="{ height: chartHeight(item.count) }"></div>
+              </div>
+            </div>
+            <div class="chart-foot">
+              <span>{{ activityData[0]?.date?.substring(5) || '' }}</span>
+              <span class="chart-foot-high">最高{{ maxActivity }} 次</span>
+              <span>{{ activityData[activityData.length-1]?.date?.substring(5) || '' }}</span>
+            </div>
+          </template>
         </div>
-        <div class="chart-foot">
-          <span>{{ activityData[0]?.date?.substring(5) || '' }}</span>
-          <span class="chart-foot-high">鏈€楂?{{ maxActivity }} 娆?/span>
-          <span>{{ activityData[activityData.length-1]?.date?.substring(5) || '' }}</span>
-        </div>
-        </template>
-      </div>
     <div class="bottom-tabs">
-      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>棣栭〉</span></div>
-      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>鍘嗗彶</span></div>
-      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>鏀惰棌</span></div>
-      <div class="tab active"><el-icon><Collection /></el-icon><span>缁熻</span></div>
+      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
+      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
+      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
+      <div class="tab active"><el-icon><Collection /></el-icon><span>统计</span></div>
     </div>
   </div>
 </template>
@@ -217,10 +217,6 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .scene-num { font-size: 14px; font-weight: 500; color: var(--ink); min-width: 28px; text-align: right; }
 .scene-label-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-/* Empty */
-.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
-
-
 /* 30-day chart */
 .chart-container { display: flex; align-items: flex-end; gap: 2px; height: 100px; padding: 12px 2px; }
 .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
@@ -228,6 +224,9 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .chart-bar.active { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); }
 .chart-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding-top: 2px; }
 .chart-foot-high { font-weight: 600; color: var(--accent-deep); }
+
+/* Empty */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
 
 /* Bottom tabs */
 .bottom-tabs {

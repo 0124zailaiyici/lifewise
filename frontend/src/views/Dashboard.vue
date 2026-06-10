@@ -115,7 +115,7 @@ const activityData = ref([])
 const maxActivity = ref(1)
 
 const sceneColors = {
-  cooking: '#f97316', shopping: '#22c55e', repair: '#3b82f6',
+  cooking: '#f97316', shopping: 'var(--accent)', repair: '#3b82f6',
   housework: '#a855f7', health: '#eab308', fashion: '#ec4899',
   etiquette: '#14b8a6', pet: '#f59e0b', writing: '#0ea5e9',
   mealplan: '#f97316', other: '#94a3b8'
@@ -145,7 +145,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
 <style scoped>
 .dash-header {
-  background: linear-gradient(135deg, #22c55e, #059669);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: #fff; padding: 14px 16px 24px;
   border-radius: 0 0 24px 24px;
 }
@@ -162,7 +162,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .hero-label { font-size: 12px; color: #999; }
 .hero-divider { width: 1px; height: 44px; background: #eee; }
 
-.today-card { background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 2px 12px rgba(34,197,94,.2); }
+.today-card { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; color: #fff; box-shadow: 0 2px 12px rgba(34,197,94,.2); }
 .today-left { display: flex; align-items: center; gap: 12px; }
 .today-icon { font-size: 32px; }
 .today-label { font-size: 15px; font-weight: 600; }
@@ -173,7 +173,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
 .compare-card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-around; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
 .compare-item { text-align: center; }
-.compare-num { font-size: 22px; font-weight: 700; color: #22c55e; }
+.compare-num { font-size: 22px; font-weight: 700; color: var(--accent); }
 .compare-label { font-size: 12px; color: #999; margin-top: 2px; }
 
 .section-card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.05); }
@@ -192,9 +192,9 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
 .chart-container { display: flex; align-items: flex-end; gap: 2px; height: 84px; padding: 4px 0; }
 .chart-bar-wrap { flex: 1; display: flex; align-items: flex-end; justify-content: center; }
-.chart-bar { width: 100%; max-width: 10px; background: linear-gradient(180deg, #22c55e, #16a34a); border-radius: 3px 3px 0 0; transition: height .3s; min-height: 3px; }
+.chart-bar { width: 100%; max-width: 10px; background: linear-gradient(180deg, var(--accent), var(--accent-deep)); border-radius: 3px 3px 0 0; transition: height .3s; min-height: 3px; }
 .chart-foot { display: flex; justify-content: space-between; font-size: 10px; color: #999; margin-top: 6px; }
-.chart-foot-high { color: #22c55e; font-weight: 600; }
+.chart-foot-high { color: var(--accent); font-weight: 600; }
 
 /* 底部导航 */
 .bottom-tabs {
@@ -223,6 +223,6 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
   cursor: pointer;
   gap: 2px;
 }
-.tab.active { color: #22c55e; }
+.tab.active { color: var(--accent); }
 .tab .el-icon { font-size: 20px; }
 </style>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="login-page">
     <div class="login-card">
       <div class="logo-area">
@@ -121,7 +121,7 @@ async function handleResetPassword() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #bbf7d0 100%);
+  background: linear-gradient(135deg, var(--paper) 0%, var(--paper-deep) 50%, var(--line) 100%);
   padding: 20px;
 }
 .login-card {
@@ -137,7 +137,7 @@ async function handleResetPassword() {
 .logo-title {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(135deg, #22c55e, #059669);
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

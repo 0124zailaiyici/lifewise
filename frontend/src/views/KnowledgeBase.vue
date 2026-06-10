@@ -1,10 +1,10 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="page-header">
       <div style="display:flex;align-items:center;gap:8px">
       <h3>📚 常识库</h3>
-      <el-button text size="small" @click="handleExport" style="color:#22c55e">⬇ 导出</el-button>
-      <el-button text size="small" @click="triggerImport" style="color:#22c55e">⬆ 导入</el-button>
+      <el-button text size="small" @click="handleExport" style="color:var(--accent)">⬇ 导出</el-button>
+      <el-button text size="small" @click="triggerImport" style="color:var(--accent)">⬆ 导入</el-button>
       <input ref="importInput" type="file" accept=".json" style="display:none" @change="handleImport" />
     </div>
     </div>
@@ -183,16 +183,16 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
+.page-header { text-align: center; padding: 18px 20px 12px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, var(--paper) 0%, #fff 100%); }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; }
 .search-bar { display: flex; padding: 12px 20px; align-items: center; }
 .search-bar :deep(.el-input__wrapper) { border-radius: 20px; }
 .stats-row { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 8px; font-size: 12px; color: #888; }
-.hit-badge { background: #f0fdf4; color: #16a34a; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+.hit-badge { background: var(--paper); color: var(--accent-deep); padding: 2px 10px; border-radius: 10px; font-size: 11px; }
 .content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
 .kb-item { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
 .kb-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
-.kb-scene-tag { background: #f0fdf4; color: #16a34a; font-size: 11px; padding: 1px 8px; border-radius: 8px; white-space: nowrap; font-weight: 500; }
+.kb-scene-tag { background: var(--paper); color: var(--accent-deep); font-size: 11px; padding: 1px 8px; border-radius: 8px; white-space: nowrap; font-weight: 500; }
 .kb-q { font-size: 14px; font-weight: 600; color: #222; line-height: 1.4; }
 .kb-answer { font-size: 13px; color: #555; line-height: 1.6; padding-left: 4px; }
 .kb-footer { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #999; }
@@ -202,7 +202,7 @@ onMounted(fetchData)
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #999; cursor: pointer; gap: 2px; }
-.tab.active { color: #22c55e; }
+.tab.active { color: var(--accent); }
 .tab .el-icon { font-size: 20px; }
 </style>
 

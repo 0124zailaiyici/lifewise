@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="page-header">
       <h3>⭐ 我的收藏</h3>
@@ -162,14 +162,14 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, #f0fdf4 0%, #fff 100%); }
+.page-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #e0e0e0; background: linear-gradient(180deg, var(--paper) 0%, #fff 100%); }
 .page-header h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
 /* 右上角悬浮分类按钮 */
-.fab-filter { display: flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 20px; padding: 6px 12px; cursor: pointer; transition: .15s; }
-.fab-filter:hover { background: #dcfce7; transform: scale(1.05); }
+.fab-filter { display: flex; align-items: center; gap: 4px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 6px 12px; cursor: pointer; transition: .15s; }
+.fab-filter:hover { background: var(--paper-deep); transform: scale(1.05); }
 .fab-filter:active { transform: scale(.95); }
 .fab-filter-icon { font-size: 16px; line-height: 1; }
-.fab-filter-active { font-size: 11px; color: #16a34a; font-weight: 500; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fab-filter-active { font-size: 11px; color: var(--accent-deep); font-weight: 500; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 展开卡片 */
 
@@ -178,8 +178,8 @@ onMounted(fetchData)
 
 .fab-dropdown { position: absolute; right: 0; top: calc(100% + 6px); background: rgba(255,255,255,0.97); backdrop-filter: blur(12px); border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); border: 1px solid #e5e7eb; padding: 6px; min-width: 110px; }
 .fab-drop-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #444; white-space: nowrap; transition: .1s; }
-.fab-drop-item:hover { background: #f0fdf4; }
-.fab-drop-item.active { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+.fab-drop-item:hover { background: var(--paper); }
+.fab-drop-item.active { background: var(--paper); color: var(--accent-deep); font-weight: 600; }
 .fd-icon { font-size: 16px; }
 .fd-label { font-size: 12px; }
 
@@ -189,13 +189,13 @@ onMounted(fetchData)
 /* 分类弹窗网格 */
 
 .content { padding: 0 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
-.fav-item { display: flex; align-items: center; padding: 14px; background: #fafcfa; border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; margin-top: 12px; }
+.fav-item { display: flex; align-items: center; padding: 14px; background: var(--card); border-radius: 14px; border: 1px solid #f0f0f0; margin-bottom: 10px; cursor: pointer; transition: .15s; margin-top: 12px; }
 .fav-item:active { transform: scale(.98); }
 .fav-icon { font-size: 28px; margin-right: 14px; }
 .fav-info { flex: 1; min-width: 0; }
 .fav-title { font-size: 14px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fav-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.fav-cat-tag { background: #f0fdf4; color: #16a34a; font-size: 11px; padding: 1px 8px; border-radius: 8px; }
+.fav-cat-tag { background: var(--paper); color: var(--accent-deep); font-size: 11px; padding: 1px 8px; border-radius: 8px; }
 .fav-date { font-size: 11px; color: #aaa; }
 .fav-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .cat-btn { font-size: 14px; color: #888; }
@@ -209,8 +209,8 @@ onMounted(fetchData)
 
 .bottom-tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid #e5e7eb; display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -2px 12px rgba(0,0,0,0.06); }
 .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #777; cursor: pointer; gap: 2px; }
-.tab.active { color: #22c55e; }
+.tab.active { color: var(--accent); }
 .tab .el-icon { font-size: 20px; }
 
-:deep(.el-dropdown-menu__item.active) { color: #22c55e; font-weight: 600; background: #f0fdf4; }
+:deep(.el-dropdown-menu__item.active) { color: var(--accent); font-weight: 600; background: var(--paper); }
 </style>

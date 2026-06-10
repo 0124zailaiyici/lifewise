@@ -308,7 +308,7 @@ async function clearAuditRecords() {
   }
 }
 
-onMounted(loadAiStatus)
+// onMounted(loadAiStatus) — endpoint not in backend
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {

@@ -117,6 +117,8 @@ const stats = ref({ total: {}, today: {}, thisWeek: {} })
 const sceneDistribution = ref([])
 const activityData = ref([])
 const maxActivity = ref(1)
+const weeklyData = ref([])
+const totalActivity = ref(0)
 
 const sceneColors = {
   cooking: '#f97316', shopping: 'var(--accent)', repair: '#3b82f6',
@@ -134,6 +136,7 @@ onMounted(async () => {
     activityData.value = data.activityData || []
     const counts = activityData.value.map(d => d.count || 0)
     maxActivity.value = Math.max(...counts, 1)
+    computeWeeklyData()
   } catch (e) { console.error(e) }
 })
 
@@ -145,6 +148,40 @@ function chartHeight(count) {
   return Math.max(3, count / maxActivity.value * 80) + 'px'
 }
 function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
+
+function computeWeeklyData() {
+  const data = activityData.value
+  if (!data.length) { weeklyData.value = []; totalActivity.value = 0; return }
+  // Group into weeks (Mon-Sun)
+  const weeks = []
+  let weekStart = new Date(data[0].date)
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1) // Monday
+  let currentWeek = { start: new Date(weekStart), count: 0 }
+  totalActivity.value = 0
+  data.forEach(item => {
+    const d = new Date(item.date)
+    totalActivity.value += item.count || 0
+    if (d >= new Date(currentWeek.start.getTime() + 7*86400000)) {
+      weeks.push(currentWeek)
+      currentWeek = { start: new Date(d.getTime() - (d.getDay() - 1)*86400000 || d.getTime()), count: 0 }
+    }
+    currentWeek.count += item.count || 0
+  })
+  if (currentWeek.count > 0 || weeks.length === 0) weeks.push(currentWeek)
+  weeklyData.value = weeks.map(w => {
+    const end = new Date(w.start)
+    end.setDate(end.getDate() + 6)
+    const now = new Date()
+    const label = (w.start <= now && end >= now) ? '本周' : 
+                  (w.start.getMonth()+1) + '.' + w.start.getDate() + '-' + (end.getMonth()+1) + '.' + end.getDate()
+    return { label, count: w.count }
+  })
+}
+
+function weekBarWidth(count) {
+  const max = Math.max(...weeklyData.value.map(w => w.count || 0), 1)
+  return Math.max(count / max * 100, 2) + '%'
+}
 </script>
 
 <style scoped>
@@ -153,13 +190,13 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 /* Header bar */
 .dash-header {
   background: linear-gradient(135deg, var(--accent-deep), var(--accent));
-  padding: 20px 18px 30px; color: #fff; border-radius: 0 0 28px 28px;
+  padding: 20px 18px 16px; color: #fff; border-radius: 0 0 28px 28px;
 }
 .header-top { display: flex; align-items: center; justify-content: space-between; }
 .header-top h2 { margin: 0; font-size: 20px; font-weight: 700; }
 
 /* Content area */
-.content { padding: 0 18px; margin-top: -8px; position: relative; z-index: 1; }
+.content { padding: 0 18px; margin-top: 0; position: relative; z-index: 1; }
 
 /* Hero card */
 .hero-card {
@@ -219,14 +256,14 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 .scene-num { font-size: 14px; font-weight: 500; color: var(--ink); min-width: 28px; text-align: right; }
 .scene-label-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
-/* 30-day chart */
-.chart-container { display: flex; align-items: flex-end; gap: 3px; height: 100px; padding: 12px 2px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.chart-bar-wrap { flex: 0 0 16px; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
-.chart-bar { width: 100%; max-width: 12px; background: var(--line); border-radius: 3px 3px 0 0; min-height: 3px; transition: height .4s ease; }
-.chart-bar.active { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); }
-.chart-date-label { font-size: 9px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
-.chart-foot { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); padding-top: 2px; }
-.chart-foot-high { font-weight: 600; color: var(--accent-deep); }
+/* Weekly summary */
+.week-list { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.week-row { display: flex; align-items: center; gap: 10px; }
+.week-label { font-size: 12px; color: var(--ink); font-weight: 500; min-width: 60px; }
+.week-bar-wrap { flex: 1; height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; }
+.week-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-deep)); border-radius: 5px; transition: width .5s ease; min-width: 4px; }
+.week-count { font-size: 13px; color: var(--accent-deep); font-weight: 600; min-width: 36px; text-align: right; }
+.week-foot { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 
 /* Empty */
 .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }

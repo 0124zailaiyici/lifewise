@@ -210,8 +210,8 @@ onMounted(fetchData)
 .fav-icon { font-size: 26px; flex-shrink: 0; padding-top: 2px; }
 .fav-title { font-size: 14px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fav-meta { font-size: 12px; color: var(--muted); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
-.fav-cat-tag { font-size: 11px; padding: 1px 6px; background: var(--paper); border-radius: 8px; color: var(--accent-deep); }
-.fav-date { font-size: 11px; color: var(--muted); }
+.fav-cat-tag { font-size: 12px; padding: 1px 6px; background: var(--paper); border-radius: 8px; color: var(--accent-deep); }
+.fav-date { font-size: 12px; color: var(--muted); }
 .fav-info { flex: 1; min-width: 0; }
 .fav-question { font-size: 14px; font-weight: 500; color: var(--ink); }
 .fav-answer { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

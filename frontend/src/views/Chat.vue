@@ -552,7 +552,7 @@ async function startFoodImageGeneration(message, dishName) {
     }
     if (!data.taskId) throw new Error('生图服务未返回任务 ID')
     message._foodImageTaskId = data.taskId
-    pollFoodImageStatus(message, dishName, data.taskId)
+    pollFoodImageStatus(message, dishName, data.taskId, data.provider)
   } catch (e) {
     message._foodImageLoading = false
     message._foodImageLoadingText = ''
@@ -560,14 +560,14 @@ async function startFoodImageGeneration(message, dishName) {
   }
 }
 
-function pollFoodImageStatus(message, dishName, taskId) {
+function pollFoodImageStatus(message, dishName, taskId, provider) {
   let attempts = 0
   if (message._foodImagePoll) clearInterval(message._foodImagePoll)
   message._foodImageLoadingText = '🎨 正在生成成品图…'
   message._foodImagePoll = setInterval(async () => {
     attempts += 1
     try {
-      const res = await getFoodImageStatus(taskId)
+      const res = await getFoodImageStatus(taskId, provider)
       if (res.code && res.code !== 200) throw new Error(res.message || '查询生图状态失败')
       const data = res.data || {}
       if (data.progress) message._foodImageLoadingText = `🎨 正在生成成品图…${data.progress}`

@@ -142,8 +142,10 @@ export function lookupFoodImage(dishName) {
   return api.post('/food-image/generate', { dishName })
 }
 
-export function getFoodImageStatus(taskId) {
-  return api.get('/food-image/status', { params: { taskId } })
+export function getFoodImageStatus(taskId, provider) {
+  const params = { taskId }
+  if (provider) params.provider = provider
+  return api.get('/food-image/status', { params })
 }
 
 export function exportKnowledge() {

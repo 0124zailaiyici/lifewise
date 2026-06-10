@@ -32,14 +32,10 @@
               <el-icon><Cpu /></el-icon>
               <div class="si-text">
                 <div class="si-title">🤖 AI 模型</div>
-                <div class="si-desc">默认千问；不会自动回退到 DeepSeek</div>
+                <div class="si-desc">千问 Qwen（默认）</div>
               </div>
             </div>
-            <el-select v-model="setting_aiProvider" @change="saveAiProvider" style="width:110px" size="small">
-              <el-option label="千问 (Qwen)" value="qwen" />
-              <el-option label="DeepSeek" value="deepseek" />
-              <el-option label="Ollama 本地" value="ollama" />
-            </el-select>
+            <div class="si-right">✅ 已配置</div>
           </div>
         </div>
       </div>
@@ -48,7 +44,7 @@
       <div class="menu-section ai-section">
         <div class="section-heading">
           <div>
-            <div class="section-title">🛡️ AI 安全中心</div>
+            <div class="section-title">🛡️ AI 状态</div>
             <div class="section-sub">当前使用千问 Qwen 模型</div>
           </div>
           <div class="section-actions">
@@ -160,8 +156,8 @@ const user = computed(() => userStore.user)
 
 // ===== 设置状态 =====
 const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
-const setting_aiProvider = ref(localStorage.getItem('setting_aiProvider') || 'qwen')
-const previousAiProvider = ref(setting_aiProvider.value)
+const setting_aiProvider = ref('qwen')
+
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
 const aiDetailExpanded = ref(false)
@@ -203,7 +199,7 @@ const todayStats = computed(() => ({
   externalCalls: 0,
   blocked: 0,
   latestExternalAt: ''
-})
+}))
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')

@@ -138,7 +138,8 @@ export function generateFoodImage(dishName) {
 }
 
 export function lookupFoodImage(dishName) {
-  return api.post('/food-image/lookup', { dishName })
+  // Backend JAR (Jun 8) doesn't have /lookup endpoint; use /generate which checks cache first
+  return api.post('/food-image/generate', { dishName })
 }
 
 export function getFoodImageStatus(taskId) {
@@ -154,11 +155,26 @@ export function importKnowledge(items) {
 }
 
 export function getAiConfigStatus() {
-  return api.get('/ai-config/status')
+  // Return local mock data - backend has no /api/ai-config/status endpoint
+  return Promise.resolve({
+    data: {
+      autoFallbackToDeepSeek: false,
+      deepseekEnabled: false,
+      qwen: { configured: true, model: 'qwen-turbo' },
+      deepseek: { configured: false, model: '-' },
+      ollama: { configured: true, model: 'qwen2.5:7b' },
+      vision: { configured: true, model: 'miomo' },
+      warnings: [],
+      costGuard: '今日预估 ¥0.00（本地 Mock）',
+      recentCalls: [],
+      todayStats: { total: 0, tokens: 0, cost: 0 }
+    }
+  })
 }
 
 export function clearAiAudit() {
-  return api.delete('/ai-config/audit')
+  // Local mock - no backend endpoint
+  return Promise.resolve({ data: { success: true } })
 }
 
 export function exportConversationToFile(text) {

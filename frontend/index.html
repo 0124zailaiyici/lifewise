@@ -15,9 +15,13 @@
   <body>
     <div id="app"></div>
     <script>
+  // Unregister stale service workers (sw2.js no longer exists)
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw2.js?v=3").catch(() => {});
+    window.addEventListener("load", async () => {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.unregister();
+      }
     });
   }
 </script>

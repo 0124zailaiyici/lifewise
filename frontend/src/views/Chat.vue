@@ -286,21 +286,75 @@ const isWritingScene = computed(() => {
 })
 
 const currentLabel = computed(() => localStorage.getItem('sceneLabel') || '生活常识')
+const welcomePools = {
+  cooking: [
+    '今晚吃什么比较简单？', '红烧排骨怎么做？', '冰箱剩菜怎么搭配？',
+    '番茄炒蛋怎么做才好吃？', '青菜怎么炒才脆嫩？', '煮粥水和米的比例多少？',
+    '新手学做菜先学什么？', '瘦肉怎么炒不柴？', '蒸鱼要多长时间？',
+    '一个人做饭怎么省事？', '煲汤用什么锅好？', '鸡蛋有哪些简单做法？'
+  ],
+  shopping: [
+    '怎么挑西瓜？', '买牛肉怎么选？', '哪些水果适合囤？',
+    '买菜怎么挑新鲜的？', '超市买肉有什么技巧？', '怎么选好的大米？',
+    '买海鲜怎么看新不新鲜？', '水果买回来怎么保存？', '菜市场砍价技巧？',
+    '哪种油比较健康？', '怎么辨别注水肉？', '买鸡蛋怎么挑？'
+  ],
+  repair: [
+    '水龙头滴水怎么办？', '灯泡不亮怎么排查？', '马桶堵了先怎么处理？',
+    '墙皮脱落怎么修补？', '插座没电怎么查？', '门锁不好拧怎么办？',
+    '下水道反味怎么解决？', '窗户漏风怎么处理？', '瓷砖缝隙发霉怎么办？',
+    '电饭煲不加热怎么修？', '螺丝滑丝了怎么取？', '墙面钉子洞怎么补？'
+  ],
+  housework: [
+    '衣服染色怎么办？', '厨房油污怎么清理？', '冰箱异味怎么去除？',
+    '白衣服发黄怎么洗？', '油烟机怎么拆洗？', '地板拖完总是粘脚怎么办？',
+    '抹布发臭怎么处理？', '床单被套多久洗一次？', '浴室水垢怎么去除？',
+    '衣服起球怎么处理？', '毛绒玩具怎么清洁？', '不锈钢锅烧黑了怎么刷？'
+  ],
+  health: [
+    '熬夜后怎么恢复？', '久坐腰酸怎么办？', '感冒时饮食注意什么？',
+    '眼睛干涩疲劳怎么办？', '失眠有什么改善方法？', '换季容易生病怎么预防？',
+    '腿抽筋是什么原因？', '口臭是什么原因？', '饭后百步走有哪些讲究？',
+    '打呼噜怎么办？', '湿气重有什么表现？', '颈椎不舒服怎么缓解？'
+  ],
+  fashion: [
+    '面试穿什么合适？', '黑色裤子怎么搭配？', '矮个子怎么显高？',
+    '男生衣柜必备哪些单品？', '上班通勤怎么穿得体？', '约会穿什么比较加分？',
+    '胖人穿什么显瘦？', '小白鞋怎么搭配？', '大衣里面穿什么好看？',
+    '怎么判断衣服是否合身？', '全身颜色不超过几种？', '夏天穿什么面料凉快？'
+  ],
+  etiquette: [
+    '第一次见家长带什么？', '怎么委婉拒绝别人？', '送礼怎么避免尴尬？',
+    '饭局上怎么敬酒？', '加好友后第一句说什么？', '怎么夸人显得真诚？',
+    '跟长辈聊天的话题？', '同事借钱怎么处理？', '聚会上怎么不冷场？',
+    '怎么自然地结束对话？', '道歉怎么说才诚恳？', '被催婚怎么应对？'
+  ],
+  pet: [
+    '猫不爱喝水怎么办？', '狗狗掉毛严重怎么办？', '新手养猫要准备什么？',
+    '猫咪晚上一直叫怎么办？', '狗拉肚子可以吃什么？', '猫抓沙发怎么纠正？',
+    '宠物驱虫多久一次？', '猫狗能一起养吗？', '宠物生病有哪些征兆？',
+    '怎么教狗狗定点大小便？', '猫咪需要洗澡吗？', '宠物疫苗要打哪些？'
+  ],
+  mealplan: [
+    '帮我安排一周晚餐', '今晚吃什么比较健康？', '两个人做饭怎么搭配？',
+    '上班族怎么带饭？', '减脂期三餐怎么安排？', '夏天吃什么开胃？',
+    '适合招待朋友的菜？', '孩子不爱吃饭怎么办？', '周末在家做什么好吃的？',
+    '吃不完的食材怎么处理？', '早餐做什么又快又营养？', '低脂晚餐推荐？'
+  ],
+  writing: [],
+  general: [
+    '家里临时有问题怎么处理？', '帮我整理一个解决步骤', '这个生活问题有什么注意事项？',
+    '有什么实用的生活小技巧？', '怎么提高做事效率？', '哪些生活习惯值得坚持？',
+    '遇到突发情况怎么应对？', '这件事从哪开始着手？', '有什么常见误区？',
+    '有没有更简单的办法？', '怎么判断问题严重程度？', '紧急情况怎么处理？'
+  ]
+}
+
 const welcomePrompts = computed(() => {
   const scene = localStorage.getItem('currentScene') || 'other'
-  const map = {
-    cooking: ['今晚吃什么比较简单？', '红烧排骨怎么做？', '冰箱剩菜怎么搭配？'],
-    shopping: ['怎么挑西瓜？', '买牛肉怎么选？', '哪些水果适合囤？'],
-    repair: ['水龙头滴水怎么办？', '灯泡不亮怎么排查？', '马桶堵了先怎么处理？'],
-    housework: ['衣服染色怎么办？', '厨房油污怎么清理？', '冰箱异味怎么去除？'],
-    health: ['熬夜后怎么恢复？', '久坐腰酸怎么办？', '感冒时饮食注意什么？'],
-    fashion: ['面试穿什么合适？', '黑色裤子怎么搭配？', '矮个子怎么显高？'],
-    etiquette: ['第一次见家长带什么？', '怎么委婉拒绝别人？', '送礼怎么避免尴尬？'],
-    pet: ['猫不爱喝水怎么办？', '狗狗掉毛严重怎么办？', '新手养猫要准备什么？'],
-    mealplan: ['帮我安排一周晚餐', '今晚吃什么比较健康？', '两个人做饭怎么搭配？'],
-    writing: []
-  }
-  return map[scene] || ['家里临时有问题怎么处理？', '帮我整理一个解决步骤', '这个生活问题有什么注意事项？']
+  const pool = welcomePools[scene] || welcomePools.general
+  if (!pool.length) return []
+  return [...pool].sort(() => Math.random() - 0.5).slice(0, 3)
 })
 const costHint = computed(() => {
   if (pendingFile.value) {
@@ -1494,12 +1548,45 @@ function renderStructured(data) {
   if (!recQ.length) {
     const kw = (data.title || data.question || data.problem || data.\u54c1\u7c7b || "").replace(/[\u3001\uff0c\u3002]/g, " ").trim()
     if (kw && kw.length > 1) {
-      if (scene === "cooking") recQ = [`${kw}\u6ca1\u6709\u67d0\u98df\u6750\u7528\u4ec0\u4e48\u4ee3\u66ff`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u53ef\u4ee5\u52a0\u4ec0\u4e48\u914d\u83dc`]
-      else if (scene === "fashion") recQ = [`${kw}\u9002\u5408\u4ec0\u4e48\u573a\u5408\u7a7f`, `${kw}\u600e\u4e48\u642d\u914d\u66f4\u597d\u770b`, `${kw}\u63a8\u8350\u4ec0\u4e48\u989c\u8272`]
-      else if (scene === "shopping") recQ = [`${kw}\u600e\u4e48\u4fdd\u5b58`, `${kw}\u4ec0\u4e48\u5b63\u8282\u6700\u597d`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`]
-      else if (scene === "repair") recQ = [`${kw}\u9700\u8981\u4ec0\u4e48\u5de5\u5177`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`, `${kw}\u4ec0\u4e48\u60c5\u51b5\u8981\u627e\u4e13\u4e1a\u4eba\u5458`]
-      else if (scene === "housework") recQ = [`${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u9700\u8981\u6ce8\u610f\u4ec0\u4e48`, `${kw}\u7528\u4ec0\u4e48\u6e05\u6d01\u5242\u597d`]
-      else recQ = [`${kw}\u600e\u4e48\u505a`, `${kw}\u9700\u8981\u4ec0\u4e48`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`]
+      const pools = {
+        cooking: [
+          `${kw}\u6ca1\u6709\u67d0\u98df\u6750\u7528\u4ec0\u4e48\u4ee3\u66ff`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u53ef\u4ee5\u52a0\u4ec0\u4e48\u914d\u83dc`,
+          `${kw}\u600e\u4e48\u505a\u66f4\u597d\u5403`, `${kw}\u7684\u70b9\u91cf\u662f\u591a\u5c11`, `${kw}\u6709\u4ec0\u4e48\u8425\u517b`,
+          `${kw}\u53ef\u4ee5\u63d0\u524d\u51c6\u5907\u5417`, `${kw}\u600e\u4e48\u4fdd\u5b58`, `${kw}\u9002\u5408\u4ec0\u4e48\u4eba\u7fa4`,
+          `${kw}\u4e0d\u540c\u53e3\u5473\u505a\u6cd5`
+        ],
+        fashion: [
+          `${kw}\u9002\u5408\u4ec0\u4e48\u573a\u5408\u7a7f`, `${kw}\u600e\u4e48\u642d\u914d\u66f4\u597d\u770b`, `${kw}\u63a8\u8350\u4ec0\u4e48\u989c\u8272`,
+          `${kw}\u9002\u5408\u4ec0\u4e48\u8eab\u6750`, `${kw}\u6709\u4ec0\u4e48\u914d\u9970\u63a8\u8350`, `${kw}\u4ec0\u4e48\u5b63\u8282\u7a7f`,
+          `${kw}\u600e\u4e48\u6e05\u6d17\u4fdd\u62a4`, `${kw}\u53ef\u4ee5\u642d\u914d\u4ec0\u4e48\u978b\u5b50`, `${kw}\u6709\u4ec0\u4e48\u907f\u96f7\u6307\u5357`,
+          `${kw}\u9002\u5408\u4ec0\u4e48\u98ce\u683c`
+        ],
+        shopping: [
+          `${kw}\u600e\u4e48\u4fdd\u5b58`, `${kw}\u4ec0\u4e48\u5b63\u8282\u6700\u597d`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`,
+          `${kw}\u600e\u4e48\u6311\u9009`, `${kw}\u6709\u4ec0\u4e48\u54c1\u724c\u63a8\u8350`, `${kw}\u4ef7\u683c\u591a\u5c11\u5408\u9002`,
+          `${kw}\u600e\u4e48\u533a\u5206\u597d\u574f`, `${kw}\u53ef\u4ee5\u7f51\u8d2d\u5417`, `${kw}\u6709\u4ec0\u4e48\u5e38\u89c1\u9677\u9631`,
+          `${kw}\u7528\u4ec0\u4e48\u88c5\u5907`
+        ],
+        repair: [
+          `${kw}\u9700\u8981\u4ec0\u4e48\u5de5\u5177`, `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`, `${kw}\u4ec0\u4e48\u60c5\u51b5\u8981\u627e\u4e13\u4e1a\u4eba\u5458`,
+          `${kw}\u600e\u4e48\u9884\u9632`, `${kw}\u5e38\u89c1\u95ee\u9898\u89e3\u51b3`, `${kw}\u8981\u591a\u4e45\u4fee\u7406\u4e00\u6b21`,
+          `${kw}\u6709\u4ec0\u4e48\u66ff\u4ee3\u65b9\u6848`, `${kw}\u5b89\u5168\u6ce8\u610f\u4e8b\u9879`, `${kw}\u54ea\u4e9b\u90e8\u4f4d\u5bb9\u6613\u574f`,
+          `${kw}\u81ea\u5df1\u80fd\u4fee\u5417`
+        ],
+        housework: [
+          `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`, `${kw}\u9700\u8981\u6ce8\u610f\u4ec0\u4e48`, `${kw}\u7528\u4ec0\u4e48\u6e05\u6d01\u5242\u597d`,
+          `${kw}\u591a\u4e45\u505a\u4e00\u6b21`, `${kw}\u6709\u4ec0\u4e48\u5de5\u5177\u63a8\u8350`, `${kw}\u600e\u4e48\u505a\u66f4\u7701\u529b`,
+          `${kw}\u6709\u4ec0\u4e48\u9ad8\u6548\u65b9\u6cd5`, `${kw}\u5bb3\u7269\u8d28\u5982\u4f55\u5904\u7406`, `${kw}\u9002\u5408\u4ec0\u4e48\u7ea7\u522b`,
+          `${kw}\u6709\u4ec0\u4e48\u5e38\u89c1\u8bef\u533a`
+        ]
+      }
+      const pool = pools[scene]
+      if (pool) recQ = pool.sort(() => Math.random() - 0.5).slice(0, 3)
+      else recQ = [
+        `${kw}\u600e\u4e48\u505a`, `${kw}\u9700\u8981\u4ec0\u4e48`, `${kw}\u6709\u4ec0\u4e48\u6280\u5de7`,
+        `${kw}\u6709\u4ec0\u4e48\u6ce8\u610f\u4e8b\u9879`, `${kw}\u5e38\u89c1\u95ee\u9898`, `${kw}\u4e0d\u540c\u60c5\u51b5\u600e\u4e48\u529e`,
+        `${kw}\u6709\u4ec0\u4e48\u63a8\u8350`, `${kw}\u600e\u4e48\u6331\u9009`
+      ].sort(() => Math.random() - 0.5).slice(0, 3)
     }
   }
   if (recQ.length) parts.push(`<div class="s-followups"><div class="s-followup-title">\u{1f4a1} \u4f60\u53ef\u80fd\u8fd8\u60f3\u95ee</div>${recQ.map(q => `<span class="s-followup-chip">${esc(q)}</span>`).join(" ")}</div>`)

@@ -1496,36 +1496,19 @@ function renderStructured(data) {
     parts.push("</div>")
   }
   
-  // ===== Health: category tag =====
+  // ===== Health: category tag (from AI field: category) =====
   if (scene === "health" && data.category) {
     let catColors = {"\u75c7\u72b6\u5904\u7406":"#e3f2fd","\u7528\u836f\u5e38\u8bc6":"#fce4ec","\u8425\u517b\u5efa\u8bae":"#e8f5e9","\u6025\u6551\u77e5\u8bc6":"#fff3e0"}
     let catBg = catColors[data.category] || "#f5f5f5"
     parts.push(`<span class="s-health-cat" style="background:${catBg}">\u{1f3f7}\ufe0f ${esc(data.category)}</span>`)
   }
-  // ===== Health: disclaimer =====
+  // ===== Health: disclaimer (from AI field: disclaimer) =====
   if (data.disclaimer) parts.push(`<div class="s-disclaimer">\u26a0\ufe0f ${esc(data.disclaimer)}</div>`)
-  // ===== Health: symptoms =====
-  if (data.symptoms && data.symptoms.length) {
-    parts.push('<div class="s-sec">\u{1f9a0} \u5e38\u89c1\u75c7\u72b6</div><div class="s-mistake-list">')
-    data.symptoms.forEach(s => parts.push(`<div class="s-mistake-item">${esc(s)}</div>`))
-    parts.push("</div>")
-  }
-  // ===== Health: causes =====
-  if (data.causes && data.causes.length) {
-    parts.push('<div class="s-sec">\u{1f50d} \u53ef\u80fd\u539f\u56e0</div><div class="s-mistake-list">')
-    data.causes.forEach(c => parts.push(`<div class="s-mistake-item">${esc(c)}</div>`))
-    parts.push("</div>")
-  }
-  // ===== Health: advice =====
-  if (data.advice && data.advice.length) {
-    parts.push('<div class="s-sec">\u{1f4a1} \u5efa\u8bae</div><div class="s-step-list">')
-    data.advice.forEach((a, ai) => {
-      const at = esc(a.action || a.item || a)
-      const ad = a.detail ? ` <span class="s-ing-note">${esc(a.detail)}</span>` : ""
-      parts.push(`<div class="s-step-item"><div class="s-step-num">${ai+1}</div><div class="s-step-body">${at}${ad}</div></div>`)
-    })
-    parts.push("</div>")
-  }
+  // ===== Health: when_to_see_doctor (from AI field: when_to_see_doctor) =====
+  if (data.when_to_see_doctor) parts.push(`<div class="s-sec">\u{1f3e5} \u4ec0\u4e48\u60c5\u51b5\u8981\u770b\u533b\u751f</div><div class="s-text">${esc(data.when_to_see_doctor)}</div>`)
+  // ===== Health: prevention is handled generically below =====
+  // ===== Health: suggestions are handled generically below (AI field: suggestions with item+detail) =====
+
   // ===== Etiquette: do_list =====
   if (data.do_list && data.do_list.length) {
     parts.push('<div class="s-sec">\u2705 \u5e94\u8be5\u505a</div><div class="s-mb-list">')

@@ -1,4 +1,4 @@
-﻿package com.lifewise.controller;
+package com.lifewise.controller;
 
 import com.lifewise.common.ApiResponse;
 import com.lifewise.entity.FoodImageCache;
@@ -202,7 +202,7 @@ public class FoodImageController {
             String submitBody = objectMapper.writeValueAsString(Map.of(
                     "model", "wanx-v1",
                     "input", Map.of("prompt", prompt),
-                    "parameters", Map.of("size", "1024*1024", "n", 1)
+                    "parameters", Map.of("size", "1024*1024", "n", 1, "negative_prompt", "???????????????????")
             ));
 
             HttpRequest submitReq = HttpRequest.newBuilder()
@@ -382,7 +382,6 @@ public class FoodImageController {
         return dishName;
     }
 
-    private
     private String normalizeDishName(String dishName) {
         if (dishName == null) return "";
         dishName = repairMojibake(dishName);

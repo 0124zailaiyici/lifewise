@@ -1552,11 +1552,11 @@ function generateScenePrompt(data, scene) {
     const style = data.style || "casual"
     const items = data.items || data.outfits || []
     const itemNames = items.slice(0, 3).map(function(i) { return i.piece || i.name || i.item || "" }).filter(Boolean).join(", ")
-    return '时尚穿搭摄影风格，' + occasion + '场合穿搭，' + (itemNames ? '单品包括' + itemNames + '，' : '') + style + '风格，纯色背景，自然光线，高清展示服装细节'
+    return '专业时尚摄影，真人模特穿着' + occasion + '场合服装，' + (itemNames ? '单品有：' + itemNames + '，' : '') + style + '风格，全身展示，白色纯背景，柔和自然光线，突出服装面料质感和剪裁，商业服装摄影，不是食物不是菜肴不是菜品'
   }
   if (scene === "shopping") {
     const cat = data.category || data.\u54c1\u7c7b || "produce"
-    return '新鲜' + cat + '放在木桌上，自然日光，市场实拍风格，高分辨率，细节清晰可见'
+    return '商品实拍展示，新鲜' + cat + '放在木质桌面上，自然日光，市场陈列风格，高清细节，真实质感，不是食物不是菜品不是菜肴'
   }
   return ""
 }

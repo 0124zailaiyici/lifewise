@@ -1300,7 +1300,9 @@ function renderStructured(data) {
   else if (data.selection_steps || data.category || data.\u54c1\u7c7b) { scene = "shopping"; sceneIcon = "\u{1f6d2}"; sceneLabel = "\u8d2d\u7269\u6311\u9009" }
   else if (data.problem && (data.tools || (data.steps && data.severity))) { scene = "repair"; sceneIcon = "\u{1f527}"; sceneLabel = "\u4fee\u7406\u6307\u5357" }
   else if (data.problem && (data.materials || data.difficulty)) { scene = "housework"; sceneIcon = "\u{1f9f9}"; sceneLabel = "\u5bb6\u52a1\u6280\u5de7" }
-  if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || data.occasion || ""
+  // For fashion, dont use occasion as title (shown as tag)
+  if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || ""
+  if (!title && scene !== "fashion") title = data.occasion || ""
   // ===== 2. Card header =====
   let iconGrad = "s-icon-" + scene
   parts.push(`<div class="s-hd"><div class="s-hd-icon ${iconGrad}">${sceneIcon}</div><div class="s-hd-meta"><div class="s-hd-label">${sceneLabel}</div><div class="s-hd-title">${esc(title)}</div></div></div>`)
@@ -2069,17 +2071,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-color-list { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px; }
 .s-color-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); }
 .s-color-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.8); box-shadow:0 1px 4px rgba(0,0,0,0.12); flex-shrink:0; }
-.s-fashion-occasion{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;margin-bottom:12px;background:#f0e6ff;color:#7c3aed}
-.s-color-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.s-color-dot-lg{width:44px;height:44px;border-radius:50%;border:2px solid rgba(0,0,0,.06);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
-.s-color-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;white-space:nowrap}
-.s-mb-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
-.s-mb-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f8f8fa;border-radius:12px}
-.s-mb-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.s-mb-ifo{flex:1;min-width:0}
-.s-mb-n{font-size:14px;font-weight:500;color:#1d1d1f}
-.s-mb-d{font-size:12px;color:#888;margin-top:1px;display:flex;align-items:center;gap:6px}
-.s-mb-c{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.08);flex-shrink:0;display:inline-block}
+
 
 .s-color-desc { color:var(--muted); font-size:11px; }
 .s-outfit-list { display:flex; flex-direction:column; gap:6px; margin-bottom:2px; }
@@ -2201,5 +2193,16 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 
 
 
+.s-fashion-occasion{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;margin-bottom:12px;background:#f0e6ff;color:#7c3aed}
+.s-color-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.s-color-dot-lg{width:44px;height:44px;border-radius:50%;border:2px solid rgba(0,0,0,.06);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
+.s-color-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;white-space:nowrap}
+.s-mb-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.s-mb-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f8f8fa;border-radius:12px}
+.s-mb-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.s-mb-ifo{flex:1;min-width:0}
+.s-mb-n{font-size:14px;font-weight:500;color:#1d1d1f}
+.s-mb-d{font-size:12px;color:#888;margin-top:1px;display:flex;align-items:center;gap:6px}
+.s-mb-c{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.08);flex-shrink:0;display:inline-block}
 </style>
 

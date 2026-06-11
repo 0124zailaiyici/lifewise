@@ -23,7 +23,7 @@
             <div v-if="sceneFilterPanel" class="fab-dropdown" @click.stop>
               <div v-for="s in [{key:'',icon:'📋',label:'全部'}, ...scenes]" :key="s.key"
                    class="fab-drop-item" :class="{ active: sceneFilter === s.key }"
-                   @click="sceneFilter = s.key; sceneFilterPanel = false">
+                   @click="sceneFilter = s.key; sceneFilterPanel = false; fetchData()">
                 <span class="fd-icon">{{ s.icon }}</span>
                 <span class="fd-label">{{ s.label }}</span>
               </div>

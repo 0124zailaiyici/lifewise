@@ -1504,10 +1504,31 @@ function renderStructured(data) {
   }
   // ===== Health: disclaimer (from AI field: disclaimer) =====
   if (data.disclaimer) parts.push(`<div class="s-disclaimer">\u26a0\ufe0f ${esc(data.disclaimer)}</div>`)
+  // ===== Health: symptoms list (from AI field: symptoms) =====
+  if (data.symptoms && data.symptoms.length) {
+    parts.push('<div class="s-sec">\u{1f9a0} \u5e38\u89c1\u75c7\u72b6</div><div class="s-mistake-list">')
+    data.symptoms.forEach(s => parts.push(`<div class="s-mistake-item">${esc(s)}</div>`))
+    parts.push("</div>")
+  }
+  // ===== Health: causes list (from AI field: causes) =====
+  if (data.causes && data.causes.length) {
+    parts.push('<div class="s-sec">\u{1f50d} \u53ef\u80fd\u539f\u56e0</div><div class="s-mistake-list">')
+    data.causes.forEach(c => parts.push(`<div class="s-mistake-item">${esc(c)}</div>`))
+    parts.push("</div>")
+  }
+  // ===== Health: advice steps (from AI field: advice) =====
+  if (data.advice && data.advice.length) {
+    parts.push('<div class="s-sec">\u{1f4a1} \u5efa\u8bae\u6b65\u9aa4</div><div class="s-step-list">')
+    data.advice.forEach((a, ai) => {
+      const aItem = esc(a.item || a.action || a.name || "")
+      const aDetail = a.detail ? ` <span class="s-ing-note">${esc(a.detail)}</span>` : ""
+      parts.push(`<div class="s-step-item"><div class="s-step-num">${ai+1}</div><div class="s-step-body">${aItem}${aDetail}</div></div>`)
+    })
+    parts.push("</div>")
+  }
   // ===== Health: when_to_see_doctor (from AI field: when_to_see_doctor) =====
   if (data.when_to_see_doctor) parts.push(`<div class="s-sec">\u{1f3e5} \u4ec0\u4e48\u60c5\u51b5\u8981\u770b\u533b\u751f</div><div class="s-text">${esc(data.when_to_see_doctor)}</div>`)
   // ===== Health: prevention is handled generically below =====
-  // ===== Health: suggestions are handled generically below (AI field: suggestions with item+detail) =====
 
   // ===== Etiquette: do_list =====
   if (data.do_list && data.do_list.length) {

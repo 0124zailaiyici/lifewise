@@ -1,4 +1,4 @@
-package com.lifewise.service.impl;
+﻿package com.lifewise.service.impl;
 
 import com.lifewise.dto.ChatRequest;
 import com.lifewise.dto.AiReply;
@@ -433,7 +433,9 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 - question: 问题描述
 - category: 分类（症状处理/用药常识/营养建议/急救知识）
 - disclaimer: 免责声明（此回答仅供参考，不能代替专业医疗建议）
-- suggestions: 建议列表，每个对象包含 item（建议项）、detail（详细说明）、step_image（配图英文关键词如"fever thermometer"）
+- symptoms: 常见症状列表（字符串数组，如["发热38.5℃以上","咽喉肿痛","肌肉酸痛"]）
+- causes: 可能原因列表（字符串数组，如["病毒或细菌感染","免疫力下降","受凉"]）
+- advice: 建议步骤列表，每个对象包含 item（步骤名称）、detail（详细说明）
 - when_to_see_doctor: 什么情况下必须去看医生
 - prevention: 日常预防措施
 """;

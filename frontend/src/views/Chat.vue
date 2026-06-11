@@ -453,13 +453,12 @@ async function send() {
         const dishName = detectDishName(fullContent, msg)
         attachLocalFoodImage(m, dishName)
       } catch {}
-      // Scene image for fashion/shopping
+            // Scene image for shopping only
       try {
         const parsed = tryParseJsonSafe(fullContent)
-        if (parsed && (parsed.occasion || parsed.outfits || parsed.color_palette || parsed.selection_steps || parsed.category)) {
-          const scene = parsed.occasion ? "fashion" : "shopping"
-          const prompt = generateScenePrompt(parsed, scene)
-          attachSceneImage(m, prompt, scene)
+        if (parsed && (parsed.selection_steps || parsed.category)) {
+          const prompt = generateScenePrompt(parsed, "shopping")
+          attachSceneImage(m, prompt, "shopping")
         }
       } catch {}
     }
@@ -1362,44 +1361,69 @@ function renderStructured(data) {
     data.tools.forEach(t => parts.push(`<span class="s-tool-tag">${esc(t)}</span>`))
     parts.push("</div>")
   }
-  if (data.style) parts.push(`<div class="s-sec">\u{1f3a8} \u98ce\u683c\u5b9a\u4f4d</div><div class="s-fashion-style">${esc(data.style)}</div>`)
+    // ===== Fashion mood board =====
+  if (data.occasion || data.style) {
+    const tagText = data.occasion || data.style
+    let tagBg = "#f0e6ff"
+    let tagColor = "#7c3aed"
+    if (tagText.includes("休闲") || tagText.includes("出游")) { tagBg = "#fef7e0"; tagColor = "#e37400" }
+    else if (tagText.includes("职场") || tagText.includes("面试") || tagText.includes("商务")) { tagBg = "#e8f0fe"; tagColor = "#1967d2" }
+    else if (tagText.includes("运动") || tagText.includes("健身")) { tagBg = "#e6f4ea"; tagColor = "#1e8e3e" }
+    else if (tagText.includes("约会") || tagText.includes("宴会") || tagText.includes("晚宴")) { tagBg = "#fce8e6"; tagColor = "#c5221f" }
+    parts.push(`<div class="s-fashion-occasion" style="background:${tagBg};color:${tagColor}">${esc(tagText)}</div>`)
+  }
   if (data.color_palette && data.color_palette.length) {
-    parts.push('<div class="s-sec">\u{1f3a8} \u914d\u8272\u65b9\u6848</div><div class="s-color-list">')
+    parts.push('<div class="s-sec">\u{1f3a8} \u63a8\u8350\u914d\u8272</div><div class="s-color-row">')
     data.color_palette.forEach(c => {
       const cn = c.name || c.color || (typeof c === "string" ? c : "")
-      const cd = c.description || c.detail || (typeof c === "string" ? "" : c.note || "")
-      const ch = nameToHex(cn)
-      parts.push(`<div class="s-color-item"><span class="s-color-dot" style="background:${ch}"></span><span>${esc(cn)}</span>${cd ? `<span class="s-color-desc">${esc(cd)}</span>` : ""}</div>`)
+      const ch = nameToHex(cn) || "#ccc"
+      parts.push(`<div class="s-color-dot-lg" style="background:${ch}"><span class="s-color-label">${esc(cn)}</span></div>`)
     })
     parts.push("</div>")
   }
   if (data.outfits && data.outfits.length) {
-    parts.push('<div class="s-sec">\u{1f454} \u63a8\u8350\u7a7f\u642d</div><div class="s-outfit-list">')
+    parts.push('<div class="s-sec">\u{1f454} \u63a8\u8350\u7a7f\u642d</div><div class="s-mb-list">')
     data.outfits.forEach(o => {
       const on = o.piece || o.name || ""
       const od = o.description || o.detail || ""
-      const oc = o.color ? `<span class="s-outfit-color">${esc(o.color)}</span>` : ""
+      const oc = o.color || ""
       const oi = outfitIcon(on)
-      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">${oi}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(on)}</span>${od ? `<span class="s-outfit-desc">${esc(od)}</span>` : ""}</div>${oc}</div>`)
+      const colorDot = oc ? `<span class="s-mb-c" style="background:${nameToHex(oc)}"></span>` : ""
+      let iconBg = "#e3f2fd"
+      if (on.includes("裤") || on.includes("裙") || on.includes("半身")) iconBg = "#e8eaf6"
+      else if (on.includes("外套") || on.includes("夹克") || on.includes("西装") || on.includes("大衣")) iconBg = "#f3e5f5"
+      else if (on.includes("鞋") || on.includes("靴") || on.includes("运动鞋")) iconBg = "#fce4ec"
+      else if (on.includes("配饰") || on.includes("表") || on.includes("项链") || on.includes("耳")) iconBg = "#fff3e0"
+      else if (on.includes("包") || on.includes("袋")) iconBg = "#e0f2f1"
+      parts.push(`<div class="s-mb-item"><div class="s-mb-icon" style="background:${iconBg}">${oi}</div><div class="s-mb-ifo"><div class="s-mb-n">${esc(on)}</div>${od ? `<div class="s-mb-d">${esc(od)}${colorDot}</div>` : ""}</div></div>`)
     })
     parts.push("</div>")
   }
   if (data.items && data.items.length) {
-    parts.push('<div class="s-sec">\u{1f9e5} \u5355\u54c1\u63a8\u8350</div><div class="s-outfit-list">')
+    parts.push('<div class="s-sec">\u{1f9e5} \u5355\u54c1\u63a8\u8350</div><div class="s-mb-list">')
     data.items.forEach(it => {
       const in_ = it.name || it.item || ""
       const id = it.description || it.recommendation || it.detail || it.note || ""
+      const ic = it.color || ""
       const ii = outfitIcon(in_)
-      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">${ii}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(in_)}</span>${id ? `<span class="s-outfit-desc">${esc(id)}</span>` : ""}</div></div>`)
+      const colorDot = ic ? `<span class="s-mb-c" style="background:${nameToHex(ic)}"></span>` : ""
+      let iconBg = "#e3f2fd"
+      if (in_.includes("裤") || in_.includes("裙")) iconBg = "#e8eaf6"
+      else if (in_.includes("外套") || in_.includes("夹克")) iconBg = "#f3e5f5"
+      else if (in_.includes("鞋")) iconBg = "#fce4ec"
+      else if (in_.includes("包")) iconBg = "#e0f2f1"
+      parts.push(`<div class="s-mb-item"><div class="s-mb-icon" style="background:${iconBg}">${ii}</div><div class="s-mb-ifo"><div class="s-mb-n">${esc(in_)}</div>${id ? `<div class="s-mb-d">${esc(id)}${colorDot}</div>` : ""}</div></div>`)
     })
     parts.push("</div>")
   }
   if (data.accessories && data.accessories.length) {
-    parts.push('<div class="s-sec">\u{1f48d} \u914d\u9970\u63a8\u8350</div><div class="s-outfit-list">')
+    parts.push('<div class="s-sec">\u{1f48d} \u914d\u9970\u63a8\u8350</div><div class="s-mb-list">')
     data.accessories.forEach(a => {
       const an = a.name || a.item || ""
       const ad = a.description || a.recommendation || a.note || ""
-      parts.push(`<div class="s-outfit-item"><span class="s-outfit-ico">\u{1f48d}</span><div class="s-outfit-body"><span class="s-outfit-name">${esc(an)}</span>${ad ? `<span class="s-outfit-desc">${esc(ad)}</span>` : ""}</div></div>`)
+      const ac = a.color || ""
+      const colorDot = ac ? `<span class="s-mb-c" style="background:${nameToHex(ac)}"></span>` : ""
+      parts.push(`<div class="s-mb-item"><div class="s-mb-icon" style="background:#fff3e0">\u{1f48d}</div><div class="s-mb-ifo"><div class="s-mb-n">${esc(an)}</div>${ad ? `<div class="s-mb-d">${esc(ad)}${colorDot}</div>` : ""}</div></div>`)
     })
     parts.push("</div>")
   }
@@ -1547,13 +1571,7 @@ function stepGradient(keyword) {
 }
 
 function generateScenePrompt(data, scene) {
-  if (scene === "fashion") {
-    const occasion = data.occasion || "daily"
-    const style = data.style || "casual"
-    const items = data.items || data.outfits || []
-    const itemNames = items.slice(0, 3).map(function(i) { return i.piece || i.name || i.item || "" }).filter(Boolean).join(", ")
-    return '专业时尚摄影，真人模特穿着' + occasion + '场合服装，' + (itemNames ? '单品有：' + itemNames + '，' : '') + style + '风格，全身展示，白色纯背景，柔和自然光线，突出服装面料质感和剪裁，商业服装摄影，不是食物不是菜肴不是菜品'
-  }
+
   if (scene === "shopping") {
     const cat = data.category || data.\u54c1\u7c7b || "produce"
     return '商品实拍展示，新鲜' + cat + '放在木质桌面上，自然日光，市场陈列风格，高清细节，真实质感，不是食物不是菜品不是菜肴'
@@ -2051,6 +2069,18 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-color-list { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px; }
 .s-color-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); }
 .s-color-dot { width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.8); box-shadow:0 1px 4px rgba(0,0,0,0.12); flex-shrink:0; }
+.s-fashion-occasion{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;margin-bottom:12px;background:#f0e6ff;color:#7c3aed}
+.s-color-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.s-color-dot-lg{width:44px;height:44px;border-radius:50%;border:2px solid rgba(0,0,0,.06);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
+.s-color-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:#888;white-space:nowrap}
+.s-mb-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.s-mb-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:#f8f8fa;border-radius:12px}
+.s-mb-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.s-mb-ifo{flex:1;min-width:0}
+.s-mb-n{font-size:14px;font-weight:500;color:#1d1d1f}
+.s-mb-d{font-size:12px;color:#888;margin-top:1px;display:flex;align-items:center;gap:6px}
+.s-mb-c{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.08);flex-shrink:0;display:inline-block}
+
 .s-color-desc { color:var(--muted); font-size:11px; }
 .s-outfit-list { display:flex; flex-direction:column; gap:6px; margin-bottom:2px; }
 .s-outfit-item { display:flex; gap:8px; padding:7px 10px; border-radius:10px; background:rgba(255,255,255,0.3); border:1px solid var(--line); font-size:13px; align-items:center; }

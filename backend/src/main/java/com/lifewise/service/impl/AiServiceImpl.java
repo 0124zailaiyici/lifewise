@@ -400,11 +400,14 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 ### 场景：家庭修理指南
 输出 JSON 格式，字段说明：
 - problem: 问题描述
+- common_causes: 常见原因列表（让用户理解问题根源）
 - severity: 严重程度（轻微/中等/严重）
 - need_professional: 是否需要请专业人员（true/false）
-- tools: 所需工具列表
-- steps: 修理步骤，每个对象包含 step（序号）、action（操作描述）、warning（安全提醒，可选）、step_image（步骤配图英文关键词如"turning off valve"）
+- tools: 所需工具列表，每个对象包含 name（工具名）、alternative（替代品，可选）
+- steps: 修理步骤，每个对象包含 step（序号）、action（操作描述）、tip（操作技巧，可选）、warning（安全提醒，可选）
+- key_point: 关键要点（一句话总结最核心的技巧）
 - professional_advice: 什么情况下建议找专业人士
+- prevention: 如何预防此类问题再次发生
 """;
                 break;
             case "housework":
@@ -412,11 +415,15 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
 ### 场景：家务技巧
 输出 JSON 格式，字段说明：
 - problem: 问题描述
+- principle: 原理说明（解释为什么这个方法有效，让用户举一反三）
 - difficulty: 难度（简单/中等/困难）
-- materials: 所需材料列表，每个对象包含 name（材料名）、alternative（替代品，可选）
-- steps: 操作步骤列表，每个对象包含 step（序号）、action（操作描述）、step_image（步骤配图英文关键词如"cleaning stain"）
+- estimated_time: 预计耗时
+- materials: 所需材料列表，每个对象包含 name（材料名）、amount（用量，可选）、alternative（替代品，可选）
+- steps: 操作步骤列表，每个对象包含 step（序号）、action（操作描述）、tip（操作技巧，可选）
+- common_mistakes: 常见错误列表（用户容易做错的地方）
 - safety_tip: 安全提示
 - prevention: 如何预防此类问题
+- key_point: 关键要点（一句话总结最核心的技巧）
 """;
                 break;
             case "health":

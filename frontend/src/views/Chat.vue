@@ -1360,7 +1360,14 @@ function renderStructured(data) {
   }
   if (data.tools && data.tools.length) {
     parts.push('<div class="s-sec">\u{1f527} \u6240\u9700\u5de5\u5177</div><div class="s-tool-list">')
-    data.tools.forEach(t => parts.push(`<span class="s-tool-tag">${esc(t)}</span>`))
+    data.tools.forEach(t => {
+      if (typeof t === "string") parts.push(`<span class="s-tool-tag">${esc(t)}</span>`)
+      else {
+        let label = esc(t.name || t)
+        if (t.alternative) label += ' <span class="s-ing-note">(\u53ef\u7528' + esc(t.alternative) + '\u66ff\u4ee3)</span>'
+        parts.push(`<span class="s-tool-tag">${label}</span>`)
+      }
+    })
     parts.push("</div>")
   }
     // ===== Fashion mood board =====
@@ -1434,6 +1441,11 @@ function renderStructured(data) {
     data.common_mistakes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
     parts.push("</div>")
   }
+  if (data.common_causes && data.common_causes.length) {
+    parts.push('<div class="s-sec">\u{1f50d} \u5e38\u89c1\u539f\u56e0</div><div class="s-mistake-list">')
+    data.common_causes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
+    parts.push("</div>")
+  }
   if (data.season) parts.push(`<span class="s-season-tag">\u{1f33f} ${esc(data.season)}</span>`)
   if (data.storage_tip) parts.push(`<div class="s-sec">\u{1f4e6} \u4fdd\u5b58\u65b9\u6cd5</div><div class="s-text">${esc(data.storage_tip)}</div>`)
   if (data.summary_slogan) parts.push(`<div class="s-slogan">${esc(data.summary_slogan)}</div>`)
@@ -1443,6 +1455,7 @@ function renderStructured(data) {
   }
   if (data.professional_advice) parts.push(`<div class="s-sec">\u{1f3e5} \u9700\u8981\u627e\u4e13\u4e1a\u4eba\u5458\u7684\u60c5\u51b5</div><div class="s-text">${esc(data.professional_advice)}</div>`)
   if (data.prevention) parts.push(`<div class="s-sec">\u{1f6e1}\ufe0f \u5982\u4f55\u9884\u9632</div><div class="s-text">${esc(data.prevention)}</div>`)
+  if (data.principle) parts.push(`<div class="s-sec">\u{1f4a1} \u539f\u7406\u8bf4\u660e</div><div class="s-text">${esc(data.principle)}</div>`)
   if (data.key_point) parts.push(`<div class="s-key">\u{1f525} ${esc(data.key_point)}</div>`)
   if (data.safety_tip) parts.push(`<div class="s-safety">\u26a0\ufe0f ${esc(data.safety_tip)}</div>`)
   if (data.answer) parts.push(`<div class="s-answer">${esc(data.answer).replace(/\n/g, "<br>")}</div>`)
@@ -1459,7 +1472,7 @@ function renderStructured(data) {
     const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
     ta.forEach(t => parts.push(`<div class="s-text-line">\u00b7 ${esc(t)}</div>`))
   }
-  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b"]
+  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time"]
   Object.keys(data).forEach(k => {
     if (knownKeys.includes(k)) return
     const v = data[k]
@@ -1573,9 +1586,8 @@ function stepGradient(keyword) {
 }
 
 function generateScenePrompt(data, scene) {
-
   if (scene === "shopping") {
-    const cat = data.category || data.\u54c1\u7c7b || "produce"
+    const cat = data.category || data.品类 || "produce"
     return '商品实拍展示，新鲜' + cat + '放在木质桌面上，自然日光，市场陈列风格，高清细节，真实质感，不是食物不是菜品不是菜肴'
   }
   return ""

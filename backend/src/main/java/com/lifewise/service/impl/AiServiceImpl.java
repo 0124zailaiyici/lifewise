@@ -1,4 +1,4 @@
-﻿package com.lifewise.service.impl;
+package com.lifewise.service.impl;
 
 import com.lifewise.dto.ChatRequest;
 import com.lifewise.dto.AiReply;
@@ -265,7 +265,7 @@ public class AiServiceImpl implements AiService {
         requestBody.put("model", modelName);
         requestBody.put("messages", messages);
         requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 4096);
+        requestBody.put("max_tokens", 8192);
 
         String body = objectMapper.writeValueAsString(requestBody);
         log.debug("AI request to {}: {}", url, body.substring(0, Math.min(200, body.length())));

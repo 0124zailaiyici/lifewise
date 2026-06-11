@@ -112,7 +112,7 @@ public class AiServiceImpl implements AiService {
             String cached = knowledgeBaseService.findAnswer(message, scene, userId);
             if (cached != null) {
                 log.info("cache hit: {}", message);
-                aiCallAuditService.record(userId, "cache", "knowledge-base", scene, "hit", "Knowledge base cache hit; no external AI call");
+                aiCallAuditService.record(userId, "cache", "knowledge-base", scene, "hit", "[· " + shorten(message, 40) + "] KB缓存命中");
                 return new AiReply(cached, "knowledge-base", false, "来自常识库，未调用 AI");
             }
         } else {
@@ -161,12 +161,12 @@ public class AiServiceImpl implements AiService {
 
         if (hasText(imageUrl) && (!visionEnabled || !hasText(visionApiUrl) || !hasText(visionApiKey))) {
             log.warn("Vision API not configured for image chat");
-            aiCallAuditService.record(userId, "vision", visionModel, scene, "blocked", "Vision API key/url missing; no external API call");
+            aiCallAuditService.record(userId, "vision", visionModel, scene, "blocked", "[· " + shorten(message, 40) + "] 视觉未配置");
             return "{\"answer\":\"图片识别未配置。请在服务器配置 ai.vision-api-url、ai.vision-api-key，并确认 app.vision-enabled=true。\",\"tips\":[\"图片已上传，但当前后端不能识别图片内容\",\"配置完成后重启后端再试\"]}";
         }
         if ("qwen".equals(provider) && (dashscopeApiKey == null || dashscopeApiKey.isEmpty())) {
             log.warn("DashScope API key not configured for Qwen, please check server config");
-            aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "blocked", "Qwen API key missing; no external API call");
+            aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "blocked", "[· " + shorten(message, 40) + "] Qwen Key未配置");
             return "{\"answer\":\"Qwen API key is not configured. Please set ai.dashscope-api-key on the server, or switch to Ollama.\",\"tips\":[\"Go to Profile -> AI Model to switch provider\"]}";
         }
 
@@ -249,12 +249,12 @@ public class AiServiceImpl implements AiService {
 
         // Image questions must use the configured vision model; text-only provider selection stays unchanged.
         if (hasImage) {
-            aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "Calling vision API for image chat");
+            aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "[· " + shorten(message, 40) + "] 视觉回答");
             return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
         }
 
         // Always use Qwen via DashScope
-        aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "Calling DashScope Qwen");
+        aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "[· " + shorten(message, 40) + "] Qwen回答");
         return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
     }
 
@@ -518,6 +518,13 @@ followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
     }
 
     
+
+    private String shorten(String s, int max) {
+        if (s == null) return "";
+        String v = s.replaceAll("[\\s\\u3000]+", " ").trim();
+        if (v.length() <= max) return v;
+        return v.substring(0, max) + "...";
+    }
 
     private String mockResponse(String message, String scene) {
         return "{\"question\":\"" + message.replace("\"", "\\\"") + "\",\"answer\":\"Mock response. API key not configured.\",\"tips\":[\"Configure API key in settings\"]}";

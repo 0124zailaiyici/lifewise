@@ -159,30 +159,11 @@ export function importKnowledge(items) {
 }
 
 export function getAiConfigStatus() {
-  // Return local mock data - backend has no /api/ai-config/status endpoint
-  return Promise.resolve({
-    data: {
-      autoFallbackToDeepSeek: false,
-      deepseekEnabled: false,
-      qwen: { configured: true, model: 'qwen-turbo' },
-      deepseek: { configured: false, model: '-' },
-      ollama: { configured: true, model: 'qwen2.5:7b' },
-      vision: { configured: true, model: 'miomo' },
-      warnings: [],
-      costGuard: '今日预估 ¥0.00（本地 Mock）',
-      recentCalls: [
-        { provider: 'cache', status: 'hit', time: new Date().toISOString(), model: 'qwen-turbo', detail: '命中常识库缓存' },
-        { provider: 'qwen', status: 'calling', time: new Date(Date.now() - 60000).toISOString(), model: 'qwen-turbo', detail: '外调AI: 送礼怎么避免尴尬？' },
-        { provider: 'ollama', status: 'call', time: new Date(Date.now() - 300000).toISOString(), model: 'qwen2.5:7b', detail: '本地模型回答' }
-      ],
-      todayStats: { total: 7, cacheHits: 3, externalCalls: 3, blocked: 1, latestExternalAt: new Date().toISOString() }
-    }
-  })
+  return api.get('/ai-config/status')
 }
 
 export function clearAiAudit() {
-  // Local mock - no backend endpoint
-  return Promise.resolve({ data: { success: true } })
+  return api.delete('/ai-config/audit')
 }
 
 export function exportConversationToFile(text) {

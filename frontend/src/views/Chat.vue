@@ -507,10 +507,10 @@ async function send() {
         const dishName = detectDishName(fullContent, msg)
         attachLocalFoodImage(m, dishName)
       } catch {}
-            // Scene image for shopping only
+            // Scene image generation: shopping only, skip health
       try {
         const parsed = tryParseJsonSafe(fullContent)
-        if (parsed && (parsed.selection_steps || parsed.category)) {
+        if (parsed && (parsed.selection_steps || (parsed.category && !parsed.disclaimer && !parsed.prevention))) {
           const prompt = generateScenePrompt(parsed, "shopping")
           attachSceneImage(m, prompt, "shopping")
         }
@@ -1351,11 +1351,15 @@ function renderStructured(data) {
   let title = data.title || ""
   if (data.ingredients && data.steps) { scene = "cooking"; sceneIcon = "\u{1f373}"; sceneLabel = "\u505a\u996d\u52a9\u624b" }
   else if (data.occasion || data.outfits || data.color_palette) { scene = "fashion"; sceneIcon = "\u{1f454}"; sceneLabel = "\u7a7f\u642d\u6307\u5357" }
+  else if (data.disclaimer || data.when_to_see_doctor || data.category === "\u75c7\u72b6\u5904\u7406" || data.category === "\u7528\u836f\u5e38\u8bc6" || data.category === "\u8425\u517b\u5efa\u8bae" || data.category === "\u6025\u6551\u77e5\u8bc6" || (data.prevention && !data.ingredients && !data.outfits && !data.selection_steps && !data.tools)) { scene = "health"; sceneIcon = "\u{1f49a}"; sceneLabel = "\u5065\u5eb7\u5e38\u8bc6" }
   else if (data.selection_steps || data.category || data.\u54c1\u7c7b) { scene = "shopping"; sceneIcon = "\u{1f6d2}"; sceneLabel = "\u8d2d\u7269\u6311\u9009" }
   else if (data.problem && (data.tools || (data.steps && data.severity))) { scene = "repair"; sceneIcon = "\u{1f527}"; sceneLabel = "\u4fee\u7406\u6307\u5357" }
   else if (data.problem && (data.materials || data.difficulty)) { scene = "housework"; sceneIcon = "\u{1f9f9}"; sceneLabel = "\u5bb6\u52a1\u6280\u5de7" }
+  else if (data.do_list || data.dont_list || data.key_principles || (data.occasion && (data.occasion.includes("\u793c") || data.occasion.includes("\u5e94\u916c") || data.occasion.includes("\u5bb4") || data.occasion.includes("\u89c1\u5bb6\u957f")))) { scene = "etiquette"; sceneIcon = "\u{1f91d}"; sceneLabel = "\u793e\u4ea4\u793c\u4eea" }
+  else if (data.pet_type || data.when_to_see_vet || data.topic === "\u5ba0\u7269") { scene = "pet"; sceneIcon = "\u{1f431}"; sceneLabel = "\u5ba0\u7269\u7167\u987e" }
+  else if (data.weekly_plan || data.shopping_list) { scene = "mealplan"; sceneIcon = "\u{1f4c5}"; sceneLabel = "\u98df\u8c31\u89c4\u5212" }
   // For fashion, dont use occasion as title (shown as tag)
-  if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || ""
+  if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || data.topic || ""
   if (!title && scene !== "fashion") title = data.occasion || ""
   // ===== 2. Card header =====
   let iconGrad = "s-icon-" + scene
@@ -1391,8 +1395,9 @@ function renderStructured(data) {
     parts.push("</div>")
   }
   if (data.steps && data.steps.length) {
-    const stepIcon = scene === "cooking" ? "\u{1f468}\u200d\u{1f373}" : scene === "repair" ? "\u{1f527}" : "\u{1f4cb}"
-    parts.push(`<div class="s-sec">${stepIcon} \u6b65\u9aa4</div><div class="s-step-list">`)
+    const stepIcon = scene === "cooking" ? "\u{1f468}\u200d\u{1f373}" : scene === "repair" ? "\u{1f527}" : scene === "pet" ? "\u{1f431}" : "\u{1f4cb}"
+    const stepLabel = scene === "pet" ? "\u7167\u6599\u6b65\u9aa4" : scene === "cooking" ? "\u505a\u6cd5\u6b65\u9aa4" : "\u6b65\u9aa4"
+    parts.push(`<div class="s-sec">${stepIcon} ${stepLabel}</div><div class="s-step-list">`)
     data.steps.forEach(s => {
       const stepNum = s.step || ""
       const stepAction = esc(s.action || s || "")
@@ -1490,7 +1495,94 @@ function renderStructured(data) {
     })
     parts.push("</div>")
   }
-  if (data.common_mistakes && data.common_mistakes.length) {
+  
+  // ===== Health: category tag =====
+  if (scene === "health" && data.category) {
+    let catColors = {"\u75c7\u72b6\u5904\u7406":"#e3f2fd","\u7528\u836f\u5e38\u8bc6":"#fce4ec","\u8425\u517b\u5efa\u8bae":"#e8f5e9","\u6025\u6551\u77e5\u8bc6":"#fff3e0"}
+    let catBg = catColors[data.category] || "#f5f5f5"
+    parts.push(`<span class="s-health-cat" style="background:${catBg}">\u{1f3f7}\ufe0f ${esc(data.category)}</span>`)
+  }
+  // ===== Health: disclaimer =====
+  if (data.disclaimer) parts.push(`<div class="s-disclaimer">\u26a0\ufe0f ${esc(data.disclaimer)}</div>`)
+  // ===== Health: symptoms =====
+  if (data.symptoms && data.symptoms.length) {
+    parts.push('<div class="s-sec">\u{1f9a0} \u5e38\u89c1\u75c7\u72b6</div><div class="s-mistake-list">')
+    data.symptoms.forEach(s => parts.push(`<div class="s-mistake-item">${esc(s)}</div>`))
+    parts.push("</div>")
+  }
+  // ===== Health: causes =====
+  if (data.causes && data.causes.length) {
+    parts.push('<div class="s-sec">\u{1f50d} \u53ef\u80fd\u539f\u56e0</div><div class="s-mistake-list">')
+    data.causes.forEach(c => parts.push(`<div class="s-mistake-item">${esc(c)}</div>`))
+    parts.push("</div>")
+  }
+  // ===== Health: advice =====
+  if (data.advice && data.advice.length) {
+    parts.push('<div class="s-sec">\u{1f4a1} \u5efa\u8bae</div><div class="s-step-list">')
+    data.advice.forEach((a, ai) => {
+      const at = esc(a.action || a.item || a)
+      const ad = a.detail ? ` <span class="s-ing-note">${esc(a.detail)}</span>` : ""
+      parts.push(`<div class="s-step-item"><div class="s-step-num">${ai+1}</div><div class="s-step-body">${at}${ad}</div></div>`)
+    })
+    parts.push("</div>")
+  }
+  // ===== Etiquette: do_list =====
+  if (data.do_list && data.do_list.length) {
+    parts.push('<div class="s-sec">\u2705 \u5e94\u8be5\u505a</div><div class="s-mb-list">')
+    data.do_list.forEach(d => {
+      const da = esc(d.action || d)
+      const dr = d.reason ? `<div class="s-mb-d">${esc(d.reason)}</div>` : ""
+      parts.push(`<div class="s-et-item"><div class="s-et-do">\u2705</div><div><div class="s-mb-n">${da}</div>${dr}</div></div>`)
+    })
+    parts.push("</div>")
+  }
+  // ===== Etiquette: dont_list =====
+  if (data.dont_list && data.dont_list.length) {
+    parts.push('<div class="s-sec">\u274c \u4e0d\u5e94\u8be5\u505a</div><div class="s-mb-list">')
+    data.dont_list.forEach(d => {
+      const da = esc(typeof d === "string" ? d : d.action || d.item || "")
+      parts.push(`<div class="s-et-item"><div class="s-et-dont">\u274c</div><div class="s-mb-n">${da}</div></div>`)
+    })
+    parts.push("</div>")
+  }
+  // ===== Etiquette: key_principles =====
+  if (data.key_principles && data.key_principles.length) {
+    parts.push('<div class="s-sec">\u{1f4d6} \u5173\u952e\u539f\u5219</div><div class="s-mistake-list">')
+    data.key_principles.forEach(p => parts.push(`<div class="s-mistake-item">${esc(p)}</div>`))
+    parts.push("</div>")
+  }
+  // ===== Etiquette: cultural_notes =====
+  if (data.cultural_notes) parts.push(`<div class="s-sec">\u{1f30d} \u6587\u5316\u8bf4\u660e</div><div class="s-text">${esc(data.cultural_notes)}</div>`)
+  // ===== Mealplan: weekly_plan =====
+  if (data.weekly_plan && data.weekly_plan.length) {
+    parts.push('<div class="s-sec">\u{1f4c5} \u6bcf\u5468\u8ba1\u5212</div>')
+    data.weekly_plan.forEach(day => {
+      parts.push(`<div class="s-plan-day"><div class="s-plan-day-label">${esc(day.day || "")}</div>`)
+      if (day.meals && day.meals.length) {
+        day.meals.forEach(m => {
+          const mt = m.type ? `<span class="s-plan-meal-type">${esc(m.type)}</span>` : ""
+          const mn = esc(m.name || "")
+          const time = m.time ? ` \u23f1 ${esc(m.time)}` : ""
+          const diff = m.difficulty ? ` \u{1f4ca} ${esc(m.difficulty)}` : ""
+          parts.push(`<div class="s-plan-meal">${mt}${mn}${time}${diff}</div>`)
+        })
+      }
+      parts.push("</div>")
+    })
+  }
+  // ===== Mealplan: shopping_list =====
+  if (data.shopping_list && data.shopping_list.length) {
+    parts.push('<div class="s-sec">\u{1f6d2} \u8d2d\u7269\u6e05\u5355</div>')
+    data.shopping_list.forEach(item => {
+      if (typeof item === "string") parts.push(`<div class="s-text-line">\u00b7 ${esc(item)}</div>`)
+      else {
+        const cat = item.category ? `<div class="s-shop-cat">${esc(item.category)}</div>` : ""
+        const items_html = item.items ? item.items.map(i => `<div class="s-text-line">\u00b7 ${esc(i)}</div>`).join("") : ""
+        parts.push(cat + items_html)
+      }
+    })
+  }
+if (data.common_mistakes && data.common_mistakes.length) {
     parts.push('<div class="s-sec">\u26a0\ufe0f \u5e38\u89c1\u8bef\u533a</div><div class="s-mistake-list">')
     data.common_mistakes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
     parts.push("</div>")
@@ -1526,7 +1618,7 @@ function renderStructured(data) {
     const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
     ta.forEach(t => parts.push(`<div class="s-text-line">\u00b7 ${esc(t)}</div>`))
   }
-  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time"]
+  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time","disclaimer","symptoms","causes","advice","when_to_see_doctor","do_list","dont_list","key_principles","cultural_notes","pet_type","topic","when_to_see_vet","weekly_plan","shopping_list","preference"]
   Object.keys(data).forEach(k => {
     if (knownKeys.includes(k)) return
     const v = data[k]
@@ -1578,6 +1670,30 @@ function renderStructured(data) {
           `${kw}\u591a\u4e45\u505a\u4e00\u6b21`, `${kw}\u6709\u4ec0\u4e48\u5de5\u5177\u63a8\u8350`, `${kw}\u600e\u4e48\u505a\u66f4\u7701\u529b`,
           `${kw}\u6709\u4ec0\u4e48\u9ad8\u6548\u65b9\u6cd5`, `${kw}\u5bb3\u7269\u8d28\u5982\u4f55\u5904\u7406`, `${kw}\u9002\u5408\u4ec0\u4e48\u7ea7\u522b`,
           `${kw}\u6709\u4ec0\u4e48\u5e38\u89c1\u8bef\u533a`
+        ],
+        health: [
+          `${kw}\u4ec0\u4e48\u60c5\u51b5\u8981\u770b\u533b\u751f`, `${kw}\u6709\u4ec0\u4e48\u9884\u9632\u63aa\u65bd`, `${kw}\u5e38\u89c1\u539f\u56e0\u6709\u54ea\u4e9b`,
+          `${kw}\u75c7\u72b6\u600e\u4e48\u7f13\u89e3`, `${kw}\u6709\u4ec0\u4e48\u8b66\u53f7`, `${kw}\u53ef\u4ee5\u81ea\u5df1\u5904\u7406\u5417`,
+          `${kw}\u54ea\u4e9b\u98df\u7269\u5e2e\u52a9\u6062\u590d`, `${kw}\u5e38\u89c1\u8bef\u533a`, `${kw}\u8fd0\u52a8\u6709\u5e2e\u52a9\u5417`,
+          `${kw}\u4ec0\u4e48\u65f6\u5019\u53ef\u4ee5\u5403\u836f`
+        ],
+        etiquette: [
+          `${kw}\u573a\u5408\u6709\u4ec0\u4e48\u533a\u522b`, `${kw}\u6709\u4ec0\u4e48\u5173\u952e\u539f\u5219`, `${kw}\u5e38\u89c1\u5931\u8bef`,
+          `${kw}\u600e\u4e48\u81ea\u7136\u8868\u8fbe`, `${kw}\u6709\u4ec0\u4e48\u6587\u5316\u5dee\u5f02`, `${kw}\u600e\u4e48\u907f\u514d\u5c34\u5c2c`,
+          `${kw}\u9002\u5408\u4ec0\u4e48\u793c\u7269`, `${kw}\u7528\u8bcd\u6709\u4ec0\u4e48\u8bb2\u7a76`, `${kw}\u600e\u4e48\u8868\u793a\u5c0a\u91cd`,
+          `${kw}\u6709\u4ec0\u4e48\u5199\u4fe1\u89c4\u8303`
+        ],
+        pet: [
+          `${kw}\u6709\u4ec0\u4e48\u5e38\u89c1\u95ee\u9898`, `${kw}\u600e\u4e48\u9884\u9632`, `${kw}\u4ec0\u4e48\u60c5\u51b5\u8981\u770b\u517d\u533b`,
+          `${kw}\u996e\u98df\u6709\u4ec0\u4e48\u8981\u6c42`, `${kw}\u9002\u5408\u4ec0\u4e48\u54c1\u79cd`, `${kw}\u5e38\u89c1\u75c5\u600e\u4e48\u5904\u7406`,
+          `${kw}\u7528\u4ec0\u4e48\u7528\u54c1`, `${kw}\u600e\u4e48\u57f9\u517b\u4e60\u60ef`, `${kw}\u82b1\u8d39\u591a\u5c11`,
+          `${kw}\u521d\u6b21\u517b\u8981\u6ce8\u610f\u4ec0\u4e48`
+        ],
+        mealplan: [
+          `${kw}\u6709\u4ec0\u4e48\u7701\u65f6\u6280\u5de7`, `${kw}\u8d2d\u7269\u6e05\u5355`, `${kw}\u8425\u517b\u600e\u4e48\u6446\u62ec`,
+          `${kw}\u9002\u5408\u4ec0\u4e48\u4eba\u7fa4`, `${kw}\u6709\u4ec0\u4e48\u66ff\u4ee3\u65b9\u6848`, `${kw}\u505a\u6cd5\u6709\u591a\u96be`,
+          `${kw}\u600e\u4e48\u63d0\u524d\u51c6\u5907`, `${kw}\u6709\u4ec0\u4e48\u654f\u6377`, `${kw}\u5b58\u50a8\u600e\u4e48\u5b89\u6392`,
+          `${kw}\u53e3\u5473\u600e\u4e48\u53d8\u5316`
         ]
       }
       const pool = pools[scene]
@@ -1673,6 +1789,8 @@ function stepGradient(keyword) {
 }
 
 function generateScenePrompt(data, scene) {
+  // Health scene: no image generation
+  if (scene === "health") return ""
   if (scene === "shopping") {
     const cat = data.category || data.品类 || "produce"
     return '商品实拍展示，新鲜' + cat + '放在木质桌面上，自然日光，市场陈列风格，高清细节，真实质感，不是食物不是菜品不是菜肴'
@@ -2141,6 +2259,10 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-icon-repair { background:linear-gradient(145deg,#fdebd0,#f0d5a0); }
 .s-icon-housework { background:linear-gradient(145deg,#d6eaf8,#aed6f1); }
 .s-icon-general { background:linear-gradient(145deg,#fdebd0,#fadbd8); }
+.s-icon-health { background:linear-gradient(145deg,#d5f5e3,#a9dfbf); }
+.s-icon-etiquette { background:linear-gradient(145deg,#e8daf5,#d4b5e8); }
+.s-icon-pet { background:linear-gradient(145deg,#fdebd0,#f9e79f); }
+.s-icon-mealplan { background:linear-gradient(145deg,#d6eaf8,#a3e4d7); }
 .s-hd-label { font-size:11px; color:var(--muted); line-height:1.2; }
 .s-hd-title { font-size:15px; font-weight:700; color:var(--ink); line-height:1.3; }
 .s-bd { padding:14px 18px 12px; }
@@ -2223,6 +2345,10 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-icon-repair { background:linear-gradient(145deg,#fdebd0,#f0d5a0); }
 .s-icon-housework { background:linear-gradient(145deg,#d6eaf8,#aed6f1); }
 .s-icon-general { background:linear-gradient(145deg,#fdebd0,#fadbd8); }
+.s-icon-health { background:linear-gradient(145deg,#d5f5e3,#a9dfbf); }
+.s-icon-etiquette { background:linear-gradient(145deg,#e8daf5,#d4b5e8); }
+.s-icon-pet { background:linear-gradient(145deg,#fdebd0,#f9e79f); }
+.s-icon-mealplan { background:linear-gradient(145deg,#d6eaf8,#a3e4d7); }
 .s-hd-label { font-size:11px; color:var(--muted); line-height:1.2; }
 .s-hd-title { font-size:15px; font-weight:700; color:var(--ink); line-height:1.3; }
 .s-bd { padding:14px 18px 12px; }

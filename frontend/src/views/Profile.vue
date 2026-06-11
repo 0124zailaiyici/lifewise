@@ -168,7 +168,7 @@ const auditFilterOptions = [
   { label: '不扣费', value: 'free' },
   { label: '已拦截', value: 'blocked' }
 ]
-const recentCalls = computed(() => [])
+const recentCalls = computed(() => aiStatus.value?.recentCalls || [])
 function isExternalAudit(item) {
   return item.status === 'calling' && !['cache', 'ollama'].includes(item.provider)
 }
@@ -193,13 +193,16 @@ const auditFilterCounts = computed(() => {
     blocked: list.filter(item => item.status === 'blocked').length
   }
 })
-const todayStats = computed(() => ({
-  total: 0,
-  cacheHits: 0,
-  externalCalls: 0,
-  blocked: 0,
-  latestExternalAt: ''
-}))
+const todayStats = computed(() => {
+  const s = aiStatus.value?.todayStats || {}
+  return {
+    total: s.total || 0,
+    cacheHits: s.cacheHits || 0,
+    externalCalls: s.externalCalls || 0,
+    blocked: s.blocked || 0,
+    latestExternalAt: s.latestExternalAt || ''
+  }
+})
 
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')

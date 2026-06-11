@@ -170,8 +170,12 @@ export function getAiConfigStatus() {
       vision: { configured: true, model: 'miomo' },
       warnings: [],
       costGuard: '今日预估 ¥0.00（本地 Mock）',
-      recentCalls: [],
-      todayStats: { total: 0, tokens: 0, cost: 0 }
+      recentCalls: [
+        { provider: 'cache', status: 'hit', time: new Date().toISOString(), model: 'qwen-turbo', detail: '命中常识库缓存' },
+        { provider: 'qwen', status: 'calling', time: new Date(Date.now() - 60000).toISOString(), model: 'qwen-turbo', detail: '外调AI: 送礼怎么避免尴尬？' },
+        { provider: 'ollama', status: 'call', time: new Date(Date.now() - 300000).toISOString(), model: 'qwen2.5:7b', detail: '本地模型回答' }
+      ],
+      todayStats: { total: 7, cacheHits: 3, externalCalls: 3, blocked: 1, latestExternalAt: new Date().toISOString() }
     }
   })
 }

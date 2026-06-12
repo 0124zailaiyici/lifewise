@@ -83,7 +83,7 @@
                   <img :src="msg._foodImageUrl" alt="成品图" loading="lazy" />
                   <span v-if="msg._foodImageSource" class="food-badge" :class="{ paid: msg._foodImageSource === 'generated' }">{{ msg._foodImageSource === 'generated' ? 'AI 生成' : '本地图' }}</span>
                 </div>
-                <div v-if="msg.role === 'assistant' && msg._foodDishName && !msg._foodImageUrl && !msg._foodImageLoading && !msg._sceneImageLoading && !msg._sceneImageUrl" class="food-actions">
+                <div v-if="msg.role === 'assistant' && msg._foodDishName && !msg._foodImageUrl && !msg._foodImageLoading && !msg._sceneImageLoading && !msg._sceneImageUrl && localStorage.getItem('setting_foodImage') !== 'off'" class="food-actions">
                   <span>未找到 "{{ msg._foodDishName }}" 本地图</span>
                   <button class="food-gen-btn" @click="confirmGenerateFoodImage(msg)">手动生成</button>
                 </div>
@@ -502,8 +502,7 @@ async function send() {
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
       // Recipe image: only lookup local/server cache automatically; never auto-submit paid generation.
-      const foodImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
-      if (foodImageEnabled) try {
+      try {
         const dishName = detectDishName(fullContent, msg)
         attachLocalFoodImage(m, dishName)
       } catch {}

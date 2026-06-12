@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <router-view />
 </template>
 
@@ -31,19 +31,10 @@ body {
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
 }
-
-/* ===== 基础页面容器 ====
-   手机端：宽度 100%
-   平板/桌面：居中显示，带阴影圆角
-*/
 .page-container {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
+  width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh;
   background: var(--paper);
   position: relative;
-  overflow-x: clip;
 }
 
 /* 移动端安全区域 */
@@ -68,50 +59,6 @@ body {
 
 /* 触摸目标最小尺寸 */
 button, .el-button, .chip, .scene-card, .conv-item, .tab { min-height: 44px; }
-
-/* ===== 响应式：小屏手机 (< 400px) ===== */
-@media (max-width: 399px) {
-  .page-container {
-    padding-left: 4px;
-    padding-right: 4px;
-  }
-  body {
-    font-size: 14px;
-  }
-}
-
-/* ===== 响应式：平板 (481px - 768px) ===== */
-@media (min-width: 481px) and (max-width: 768px) {
-  body {
-    background: #e0d6c8;
-  }
-  .page-container {
-    max-width: 480px;
-    margin: 0 auto;
-    box-shadow: 0 0 40px rgba(80, 58, 38, 0.12);
-    border-left: 1px solid var(--line);
-    border-right: 1px solid var(--line);
-  }
-}
-
-/* ===== 响应式：桌面 (> 768px) ===== */
-@media (min-width: 769px) {
-  body {
-    background: linear-gradient(135deg, #e8ded0 0%, #ddd2c2 100%);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-  }
-  .page-container {
-    max-width: 460px;
-    margin: 20px auto;
-    border-radius: 32px;
-    box-shadow: var(--warm-shadow), 0 0 0 1px rgba(87, 68, 49, 0.06);
-    min-height: calc(100vh - 40px);
-    overflow: hidden;
-  }
-}
 
 /* Element Plus 覆盖 — 暖色主题 */
 .el-button--success {

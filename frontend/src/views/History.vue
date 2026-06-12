@@ -340,7 +340,7 @@ function formatTime(t) {
 
 /* Bottom tabs */
 .bottom-tabs {
-  position: sticky; bottom: 0;
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: var(--card-solid); border-top: 1px solid var(--line); display: flex;
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));

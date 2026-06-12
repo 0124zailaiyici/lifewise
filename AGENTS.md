@@ -111,3 +111,11 @@
 - Desktop view (> 768px): phone-like rounded frame (32px radius) with warm shadow on gradient background.
 - Tablet (481-768px): centered with shadow + side borders.
 - Mobile (<= 480px): full-width, unchanged.
+
+## Lessons: position:fixed vs position:sticky for bottom tabs (2026-06-12)
+- Bottom tabs MUST use position:fixed; bottom:0; left:50%; transform:translateX(-50%) NOT position:sticky.
+- sticky causes tabs to float mid-page when content is shorter than viewport (no scrolling = no "stick" trigger).
+- overflow-x:clip on .page-container can interfere with touch/click events on mobile for fixed children.
+- Desktop @media with overflow:hidden + order-radius on page-container creates hit-test issues for fixed tabs.
+- Rule: don't put overflow props on page-container when bottom tabs are fixed children inside it.
+- Favorites filter dropdown: position:absolute with left when parent uses justify-content:flex-end causes wrong popup position. Always use ight when button is on the right side.

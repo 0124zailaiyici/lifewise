@@ -178,7 +178,7 @@ onMounted(fetchData)
 .fab-filter-icon { font-size: 14px; }
 .fab-filter-active { font-weight: 600; }
 .fab-dropdown {
-  position: absolute; top: 44px; left: 18px; z-index: 50;
+  position: absolute; top: 44px; right: 18px; z-index: 50;
   background: rgba(255,252,246,0.97); backdrop-filter: blur(12px);
   border: 1px solid var(--line); border-radius: 14px;
   box-shadow: 0 4px 20px rgba(80,58,38,0.14); padding: 6px;

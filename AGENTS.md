@@ -118,9 +118,23 @@
 - overflow-x:clip on .page-container can interfere with touch/click events on mobile for fixed children.
 - Desktop @media with overflow:hidden + order-radius on page-container creates hit-test issues for fixed tabs.
 - Rule: don't put overflow props on page-container when bottom tabs are fixed children inside it.
-- Favorites filter dropdown: position:absolute with left when parent uses justify-content:flex-end causes wrong popup position. Always use ight when button is on the right side.## Auto-deploy watchdog (2026-06-12)
+- Favorites filter dropdown: position:absolute with left when parent uses justify-content:flex-end causes wrong popup position. Always use 
+ight when button is on the right side.## Auto-deploy watchdog (2026-06-12)
 - Server has systemd service lifewise-watchdog running /opt/lifewise/auto-deploy.sh
 - Polls GitHub API every 30s for new commits on master, auto-deploys frontend
 - To check: systemctl status lifewise-watchdog; tail -f /opt/lifewise/auto-deploy.log
 - Service file: deploy/lifewise-watchdog.service; Script: deploy/auto-deploy.sh
 
+
+
+## Mobile UX optimization (2026-06-12)
+- App.vue: body position:fixed + overflow:hidden to prevent iOS elastic overscroll
+- App.vue: 100dvh dynamic viewport height with 100vh fallback
+- App.vue: page transition animation around router-view
+- App.vue: overscroll-behavior containment on all scrollable areas
+- App.vue: iOS momentum scrolling (-webkit-overflow-scrolling: touch)
+- App.vue: tap highlight, touch callout, scrollbar auto-hide on touch devices
+- New BottomTabs.vue: shared bottom tab component (replaces 6 duplicated copies)
+- Chat.vue: dvh height, iOS momentum + overscroll on messages
+- All views with tabs updated: Home, History, Favorites, Profile, Dashboard, KB
+- Touch-friendly active states, safe-area padding unified

@@ -1,0 +1,14 @@
+﻿[Unit]
+Description=LifeWise Auto-Deploy Watchdog
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lifewise
+ExecStart=/bin/bash /opt/lifewise/auto-deploy.sh
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target

@@ -265,7 +265,7 @@ public class AiServiceImpl implements AiService {
         requestBody.put("model", modelName);
         requestBody.put("messages", messages);
         requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 8192);
+        requestBody.put("max_tokens", 16384);
 
         String body = objectMapper.writeValueAsString(requestBody);
         log.debug("AI request to {}: {}", url, body.substring(0, Math.min(200, body.length())));

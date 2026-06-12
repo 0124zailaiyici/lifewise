@@ -1,4 +1,4 @@
-name: Build & Deploy LifeWise
+﻿name: Build & Deploy LifeWise
 
 on:
   push:
@@ -94,23 +94,4 @@ jobs:
           name: lifewise-deploy
           path: lifewise-full-deploy.zip
           if-no-files-found: error
-
-  auto-deploy:
-    needs: [deploy]
-    runs-on: ubuntu-latest
-    if: success() && github.ref == 'refs/heads/master'
-    steps:
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          known_hosts: ${{ secrets.SERVER_HOST }}
-      - name: Add server to known_hosts
-        run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-      - name: Deploy frontend via SSH
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /opt/lifewise && MODE=frontend bash deploy-latest.sh"
-
-
-
-
+

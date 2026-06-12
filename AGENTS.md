@@ -1,4 +1,4 @@
-# LifeWise agent notes (compact)
+﻿# LifeWise agent notes (compact)
 
 ## Mandatory: prevent Codex/AiMaMi 413
 - If error URL looks like `127.0.0.1:*/codex/router/v1/responses`, root cause is Codex/AiMaMi model-router payload too large, NOT LifeWise app Nginx upload.
@@ -99,3 +99,15 @@
 ## Encoding hazard (PowerShell Set-Content)
 - `Set-Content -NoNewline` corrupts multi-byte UTF-8 in .vue files.
 - Fix: `git checkout -- file` then re-edit with proper UTF-8 write.
+
+## Scene prompt config extract (2026-06-12)
+- `AiServiceImpl.java`: `buildSystemPrompt()` now reads from config instead of hardcoded text blocks.
+- New `ScenePromptProperties.java`: Spring @ConfigurationProperties bound to `scene.*` in `application.yml`.
+- File reduced from 537->345 lines, 22KB->16KB. Schema changes no longer need Java recompile.
+- Scene schemas in `application.yml` under `scene.schemas.*`, follow-up prompts under `scene.follow-up.*`.
+
+## Mobile responsiveness (2026-06-12)
+- `App.vue` added proper `@media` queries for mobile/tablet/desktop breakpoints.
+- Desktop view (> 768px): phone-like rounded frame (32px radius) with warm shadow on gradient background.
+- Tablet (481-768px): centered with shadow + side borders.
+- Mobile (<= 480px): full-width, unchanged.

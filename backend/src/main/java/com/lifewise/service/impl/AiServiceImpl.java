@@ -26,6 +26,7 @@ import java.util.Map;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import com.lifewise.config.ScenePromptProperties;
 
 @Slf4j
 @Service
@@ -35,6 +36,7 @@ public class AiServiceImpl implements AiService {
     private final KnowledgeBaseService knowledgeBaseService;
     private final MessageRepository messageRepository;
     private final AiCallAuditService aiCallAuditService;
+    private final ScenePromptProperties scenePromptProperties;
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -319,207 +321,15 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildSystemPrompt(String scene, boolean hasImage, boolean followUp) {
-        // Follow-up mode: only use natural language when frontend explicitly marks a clicked follow-up chip.
+        // Follow-up mode: natural language when frontend explicitly marks a clicked follow-up chip.
         if (followUp) {
-            String scenePrompt;
-            switch (scene != null ? scene : "other") {
-                case "cooking":
-                    scenePrompt = "用户正在当前对话基础上追问食材替代、口味调整、烹饪技巧等，请保持烹饪菜谱风格回答";
-                    break;
-                case "shopping":
-                    scenePrompt = "用户正在当前对话基础上追问挑选细节、保存方法、应季品种等，请保持选购指南风格回答";
-                    break;
-                case "repair":
-                    scenePrompt = "用户正在当前对话基础上追问修理细节、工具替代、安全注意等，请保持修理指南风格回答";
-                    break;
-                case "housework":
-                    scenePrompt = "用户正在当前对话基础上追问清洁技巧、材料替代、注意事项等，请保持家务技巧风格回答";
-                    break;
-                case "health":
-                    scenePrompt = "用户正在当前对话基础上追问症状细节、用药建议、就医时机等，请保持健康常识风格回答";
-                    break;
-                case "fashion":
-                    scenePrompt = "用户正在当前对话基础上追问搭配细节、颜色选择、场合建议等，请保持穿搭指南风格回答";
-                    break;
-                case "etiquette":
-                    scenePrompt = "用户正在当前对话基础上追问礼仪细节、场合差异、文化说明等，请保持社交礼仪风格回答";
-                    break;
-                case "pet":
-                    scenePrompt = "用户正在当前对话基础上追问照料细节、常见问题、就医判断等，请保持宠物照料风格回答";
-                    break;
-                default:
-                    scenePrompt = "用户正在当前对话基础上追问细节、补充信息等，请保持之前的回答风格";
-                    break;
-            }
-            return """
-你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。
-
-""" + scenePrompt + """
-保持口语化、亲切感，像朋友聊天一样。不要输出 JSON 格式，不要结构化卡片。
-""";
+            String scenePrompt = scenePromptProperties.getFollowUpPrompt(scene);
+            return scenePromptProperties.getFollowUpReturn().replace("{scenePrompt}", scenePrompt);
         }
-        String baseRule = """
-你是 LifeWise 生活助手，专门帮助缺乏生活经验的新手。回答要通俗易懂，步骤要具体可操作。涉及危险必须提醒。只输出纯JSON，不要markdown标记。如果用户上传了图片，优先分析图片内容。
-""";
-        String schema;
-        switch (scene != null ? scene : "other") {
-            case "cooking":
-                schema = """
-输出菜谱JSON，字段：
-title(菜名，必须具体，如"西红柿炒鸡蛋")
-difficulty(入门/初级/中级)
-time(用时)
-servings(份量)
-ingredients(数组，每项name食材,amount用量,note备注)
-steps(数组，每项step序号,action操作,tip提示,step_image步骤配图英文关键词如"cutting tomatoes")
-tips(提醒)
-key_point(关键)
-followUps(推荐追问列表，数组，如["追问1","追问2","追问3"])
-
-示例：{"title":"西红柿炒鸡蛋","difficulty":"入门","time":"15分钟","servings":"2人份","ingredients":[{"name":"西红柿","amount":"2个","note":"选熟透的"},{"name":"鸡蛋","amount":"3个"}],"steps":[{"step":1,"action":"西红柿切块，鸡蛋打散加少许盐","step_image":"cutting tomatoes"},{"step":2,"action":"热锅倒油，倒入蛋液炒至凝固盛出","step_image":"frying eggs"},{"step":3,"action":"锅中加油炒西红柿出汁，倒回鸡蛋翻炒均匀","step_image":"stir frying"}],"tips":"全程大火快炒","key_point":"西红柿要炒出红油再和鸡蛋混合"}
-直接输出JSON，不要```标记。
-""";
-                break;
-            case "shopping":
-                schema = """
-### 场景：买菜/水果挑选指南
-输出 JSON 格式，字段说明：
-- category: 品类名称
-- season: 当前是否应季
-- selection_steps: 挑选步骤，每个对象包含 step_name（步骤名称）、action（具体操作描述）、step_image（步骤配图英文关键词如"checking watermelon"）
-- common_mistakes: 常见误区列表
-- storage_tip: 保存方法
-- summary_slogan: 总结口诀
-
-示例：
-{"category":"西瓜","season":"夏季应季","selection_steps":[{"step_name":"看外观","action":"选深绿带光泽、纹路清晰均匀的；瓜底部凹陷深、圆圈小的皮薄肉甜"},{"step_name":"听声音","action":"指关节轻敲，声音低沉浑厚像敲鼓为好"}],"common_mistakes":["不要只看瓜藤是否弯曲，关键是颜色和鲜活性"],"storage_tip":"常温阴凉处保存，切开后冷藏","summary_slogan":"一看二摸三听四掂，凹陷深、藤新鲜就是好瓜"}
-""";
-                break;
-            case "repair":
-                schema = """
-### 场景：家庭修理指南
-输出 JSON 格式，字段说明：
-- problem: 问题描述
-- common_causes: 常见原因列表（让用户理解问题根源）
-- severity: 严重程度（轻微/中等/严重）
-- need_professional: 是否需要请专业人员（true/false）
-- tools: 所需工具列表，每个对象包含 name（工具名）、alternative（替代品，可选）
-- steps: 修理步骤，每个对象包含 step（序号）、action（操作描述）、tip（操作技巧，可选）、warning（安全提醒，可选）
-- key_point: 关键要点（一句话总结最核心的技巧）
-- professional_advice: 什么情况下建议找专业人士
-- prevention: 如何预防此类问题再次发生
-""";
-                break;
-            case "housework":
-                schema = """
-### 场景：家务技巧
-输出 JSON 格式，字段说明：
-- problem: 问题描述
-- principle: 原理说明（解释为什么这个方法有效，让用户举一反三）
-- difficulty: 难度（简单/中等/困难）
-- estimated_time: 预计耗时
-- materials: 所需材料列表，每个对象包含 name（材料名）、amount（用量，可选）、alternative（替代品，可选）
-- steps: 操作步骤列表，每个对象包含 step（序号）、action（操作描述）、tip（操作技巧，可选）
-- common_mistakes: 常见错误列表（用户容易做错的地方）
-- safety_tip: 安全提示
-- prevention: 如何预防此类问题
-- key_point: 关键要点（一句话总结最核心的技巧）
-""";
-                break;
-            case "health":
-                schema = """
-### 场景：健康常识
-输出 JSON 格式，字段说明：
-- question: 问题描述
-- category: 分类（症状处理/用药常识/营养建议/急救知识）
-- disclaimer: 免责声明（此回答仅供参考，不能代替专业医疗建议）
-- symptoms: 常见症状列表（字符串数组，如["发热38.5℃以上","咽喉肿痛","肌肉酸痛"]）
-- causes: 可能原因列表（字符串数组，如["病毒或细菌感染","免疫力下降","受凉"]）
-- advice: 建议步骤列表，每个对象包含 item（步骤名称）、detail（详细说明）
-- when_to_see_doctor: 什么情况下必须去看医生
-- prevention: 日常预防措施
-""";
-                break;
-            case "fashion":
-                schema = """
-### 场景：穿搭指南
-输出 JSON 格式，字段说明：
-- occasion: 场合
-- style: 推荐风格
-- color_palette: 推荐颜色列表
-- outfits: 推荐穿搭列表，每个对象包含 piece（单品）、description（款式建议）、color（推荐颜色）、step_image（商品配图英文关键词如"white tshirt"）
-- avoid: 避免什么
-- tips: 穿搭小技巧
-""";
-                break;
-            case "etiquette":
-                schema = """
-### 场景：社交礼仪
-输出 JSON 格式，字段说明：
-- occasion: 场合
-- key_principles: 关键原则列表
-- do_list: 应该做的事列表，每个对象包含 action（应该做的事）、reason（为什么要这样做）
-- dont_list: 不应该做的事列表
-- cultural_notes: 文化差异说明（如适用）
-""";
-                break;
-            case "pet":
-                schema = """
-### 场景：宠物照料
-输出 JSON 格式，字段说明：
-- pet_type: 宠物类型
-- topic: 问题主题
-- difficulty: 难度（入门/初级/中级）
-- steps: 照料步骤列表，每个对象包含 step（序号）、action（操作描述）、step_image（步骤配图英文关键词如"brushing dog"）
-- common_mistakes: 常见错误列表
-- when_to_see_vet: 什么情况下需要看兽医
-""";
-                break;
-            case "mealplan":
-                schema = """
-### 场景：食谱规划
-根据用户提供的食材、口味偏好、预算等信息，推荐一周的每日食谱。
-输出 JSON 格式：
-- title: 标题
-- preference: 用户需求概述
-- weekly_plan: 一周计划，每天包含 day（星期几）、meals（三餐列表，每餐含type、name、time、difficulty）
-- shopping_list: 购物清单，按分类列出
-- tips: 省时省钱建议
-""";
-                break;
-            case "writing":
-                schema = """
-### 场景：写作助手
-帮助用户写日记、周记、备忘录、待办清单、学习笔记、灵感记录等。
-
-支持以下写作类型（根据用户需求自动选择最合适的格式）：
-- 日记/周记：第一人称，时间顺序，含日期天气心情事件感悟
-- 待办清单：分类列出，每项含任务和优先级
-- 备忘录：主题明确，结构清晰，关键信息突出
-- 学习笔记：核心概念、关键要点、个人理解
-- 购物清单：按类别分组，简洁条目
-- 灵感/想法记录：自由形式，标题加描述
-
-输出要求：
-- 使用 Markdown 格式，标题用 ## 或 ###，列表用 - 或 1.
-- 重点内容用 **加粗**
-- 直接输出内容，不要 JSON 包装
-""";
-                break;
-            default:
-                schema = """
-### 通用模式
-输出 JSON 格式：
-- question: 用户问题
-- answer: 详细回答
-- tips: 小贴士列表
-""";
-                break;
-        }
+        String baseRule = scenePromptProperties.getBaseRule();
+        String schema = scenePromptProperties.getSchema(scene);
         return baseRule + "\n" + schema;
     }
-
-    
 
     private String shorten(String s, int max) {
         if (s == null) return "";

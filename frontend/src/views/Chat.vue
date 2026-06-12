@@ -1806,9 +1806,37 @@ function stepGradient(keyword) {
 function generateScenePrompt(data, scene) {
   // Health scene: no image generation
   if (scene === "health") return ""
+  if (scene === "cooking") {
+    const name = data.name || data.dishName || data.菜名 || '美食'
+    return '专业美食摄影，' + name + '，精致摆盘，自然光线，暖色调，微距拍摄，诱人色泽，高清画质，温暖氛围'
+  }
+  if (scene === "fashion") {
+    const oc = data.occasion || data.场合 || '日常穿搭'
+    return '时尚穿搭摄影，' + oc + '风格，全身搭配展示，干净背景，自然光线，高清质感，模特实穿，简约高级'
+  }
   if (scene === "shopping") {
-    const cat = data.category || data.品类 || "produce"
-    return '商品实拍展示，新鲜' + cat + '放在木质桌面上，自然日光，市场陈列风格，高清细节，真实质感，不是食物不是菜品不是菜肴'
+    const cat = data.category || data.品类 || '商品'
+    return '商品实拍展示，' + cat + '，干净背景，自然日光，高清细节，真实质感，不是食物不是菜品不是菜肴'
+  }
+  if (scene === "repair") {
+    const prob = data.problem || '维修'
+    return '实用工具展示，' + prob + '，工具和材料实拍，工作台场景，清晰细节，操作步骤示意，干净明亮'
+  }
+  if (scene === "housework") {
+    const prob = data.problem || '家务'
+    return '家居清洁场景，' + prob + '，整洁家居环境，工具材料展示，自然光线，温馨氛围，真实生活场景'
+  }
+  if (scene === "mealplan") {
+    const plan = data.plan_name || data.planName || '食谱规划'
+    return '健康美食摆盘，' + plan + '，丰富食材展示，餐桌布置，自然光，诱人色彩，精致生活风格'
+  }
+  if (scene === "etiquette") {
+    const oc = data.occasion || data.场合 || '社交礼仪'
+    return '社交场景摄影，' + oc + '，优雅环境，得体着装，温馨氛围，自然光线，真实场景'
+  }
+  if (scene === "pet") {
+    const type = data.pet_type || data.petType || data.宠物类型 || '宠物'
+    return '可爱宠物摄影，' + type + '，温馨家庭环境，自然光线，高清毛绒细节，治愈风格，真实抓拍'
   }
   return ""
 }

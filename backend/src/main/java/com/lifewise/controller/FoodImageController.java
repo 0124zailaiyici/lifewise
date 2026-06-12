@@ -108,7 +108,7 @@ public class FoodImageController {
             return ApiResponse.error(400, "dishName is required");
         }
         String scene = request.get("scene");
-        boolean isScene = scene != null && ("fashion".equals(scene) || "shopping".equals(scene) || "repair".equals(scene) || "housework".equals(scene));
+        boolean isScene = scene != null && ("cooking".equals(scene) || "fashion".equals(scene) || "shopping".equals(scene) || "repair".equals(scene) || "housework".equals(scene) || "mealplan".equals(scene) || "etiquette".equals(scene) || "pet".equals(scene));
         if (!isScene) {
             dishName = normalizeDishName(dishName);
         }

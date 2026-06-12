@@ -79,3 +79,6 @@ backend/src/main/resources/application-local.yml
 
 # Local startup script with secrets
 start-local.ps1
+
+# H2 database
+backend/data/

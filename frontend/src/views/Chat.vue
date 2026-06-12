@@ -508,7 +508,8 @@ async function send() {
         attachLocalFoodImage(m, dishName)
       } catch {}
             // Scene image generation: all supported scenes
-      try {
+      const sceneImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
+      if (sceneImageEnabled) try {
         const parsed = tryParseJsonSafe(fullContent)
         if (parsed) {
           var detectedScene = null

@@ -1604,7 +1604,7 @@ if (data.common_mistakes && data.common_mistakes.length) {
     parts.push(`<div class="s-sec">\u26a1 \u4e25\u91cd\u7a0b\u5ea6</div><span class="${sv}">${esc(data.severity)}</span>`)
   }
   if (data.professional_advice) parts.push(`<div class="s-sec">\u{1f3e5} \u9700\u8981\u627e\u4e13\u4e1a\u4eba\u5458\u7684\u60c5\u51b5</div><div class="s-text">${esc(data.professional_advice)}</div>`)
-  if (data.prevention) parts.push(`<div class="s-sec">\u{1f6e1}\ufe0f \u5982\u4f55\u9884\u9632</div><div class="s-text">${esc(data.prevention)}</div>`)
+  if (data.prevention && typeof data.prevention === "string" && data.prevention.trim()) parts.push(`<div class="s-sec">\u{1f6e1}\ufe0f \u5982\u4f55\u9884\u9632</div><div class="s-text">${esc(data.prevention)}</div>`)
   if (data.principle) parts.push(`<div class="s-sec">\u{1f4a1} \u539f\u7406\u8bf4\u660e</div><div class="s-text">${esc(data.principle)}</div>`)
   if (data.key_point) parts.push(`<div class="s-key">\u{1f525} ${esc(data.key_point)}</div>`)
   if (data.safety_tip) parts.push(`<div class="s-safety">\u26a0\ufe0f ${esc(data.safety_tip)}</div>`)

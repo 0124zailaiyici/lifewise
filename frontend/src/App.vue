@@ -38,11 +38,7 @@ body {
   font-family: "Avenir Next", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
-  /* 阻止 iOS 上拉弹性滚动暴露背景 */
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  overscroll-behavior: none;
 }
 #app {
   width: 100%;

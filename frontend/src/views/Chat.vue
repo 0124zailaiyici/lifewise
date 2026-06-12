@@ -74,7 +74,7 @@
                   <span class="fl-text">{{ msg._sceneImageText || '🎨 正在生成场景配图…' }}</span>
                 </div>
                 <!-- 菜品图 -->
-                <div v-if="msg._foodImageLoading" class="food-loading">
+                <div v-if="msg._foodImageLoading && !msg._sceneImageLoading && !msg._sceneImageUrl" class="food-loading">
                   <span class="fl-spinner"></span>
                   <span class="fl-text">{{ msg._foodImageLoadingText || '查找本地成品图…' }}</span>
                   <button class="fl-cancel" @click="cancelFoodImage(msg)">取消</button>
@@ -83,7 +83,7 @@
                   <img :src="msg._foodImageUrl" alt="成品图" loading="lazy" />
                   <span v-if="msg._foodImageSource" class="food-badge" :class="{ paid: msg._foodImageSource === 'generated' }">{{ msg._foodImageSource === 'generated' ? 'AI 生成' : '本地图' }}</span>
                 </div>
-                <div v-if="msg.role === 'assistant' && msg._foodDishName && !msg._foodImageUrl && !msg._foodImageLoading" class="food-actions">
+                <div v-if="msg.role === 'assistant' && msg._foodDishName && !msg._foodImageUrl && !msg._foodImageLoading && !msg._sceneImageLoading && !msg._sceneImageUrl" class="food-actions">
                   <span>未找到 "{{ msg._foodDishName }}" 本地图</span>
                   <button class="food-gen-btn" @click="confirmGenerateFoodImage(msg)">手动生成</button>
                 </div>

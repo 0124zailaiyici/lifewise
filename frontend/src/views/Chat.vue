@@ -2235,6 +2235,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   resize: none; border: 0; outline: 0; background: transparent;
   color: var(--ink); padding: 8px 2px 6px;
   font: inherit; font-size: 15px; line-height: 1.35;
+}
 .composer textarea::placeholder { color: var(--soft); font-size: 15px; }
 
 /* 收藏分类弹窗 */

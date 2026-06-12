@@ -236,14 +236,4 @@ onMounted(fetchData)
 .fab-drop-enter-from, .fab-drop-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* Bottom tabs */
-.bottom-tabs {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: var(--card-solid); border-top: 1px solid var(--line); display: flex;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -2px 12px rgba(80,58,38,0.08); z-index: 100;
-}
-.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); cursor: pointer; gap: 2px; }
-.tab.active { color: var(--accent); }
-.tab .el-icon { font-size: 20px; }
 </style>

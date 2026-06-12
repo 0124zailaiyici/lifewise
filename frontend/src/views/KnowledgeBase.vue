@@ -96,6 +96,7 @@ import { ref, onMounted } from "vue"
 import { HomeFilled, Timer, User, Star } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
 import { searchKnowledge, markHelpful as markHelpfulApi, deleteKnowledge, updateKnowledge, exportKnowledge, importKnowledge } from "../api"
+import BottomTabs from '../components/BottomTabs.vue'
 
 const keyword = ref("")
 const sceneFilter = ref("")
@@ -277,16 +278,6 @@ onMounted(fetchData)
 .empty-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
 /* Bottom tabs */
-.bottom-tabs {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: var(--card-solid); border-top: 1px solid var(--line); display: flex;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  box-shadow: 0 -2px 12px rgba(80,58,38,0.08); z-index: 100;
-}
-.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); cursor: pointer; gap: 2px; }
-.tab.active { color: var(--accent); }
-.tab .el-icon { font-size: 20px; }
 </style>
 
 

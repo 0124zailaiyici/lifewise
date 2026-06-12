@@ -79,12 +79,7 @@
     </div>
 
     <!-- 底部导航 -->
-    <nav class="bottom-tabs">
-      <div class="tab active"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
-      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
-      <div class="tab" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
-    </nav>
+    <BottomTabs active="home" />
   </div>
 </template>
 
@@ -92,7 +87,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getConversations } from '../api'
-import { Search, User, ArrowRight, HomeFilled, Timer, Star } from '@element-plus/icons-vue'
+import { Search, User, ArrowRight } from '@element-plus/icons-vue'
 import sceneCooking from '../assets/scenes/scene-cooking.webp'
 import sceneShopping from '../assets/scenes/scene-shopping.webp'
 import sceneRepair from '../assets/scenes/scene-repair.webp'
@@ -103,6 +98,7 @@ import sceneEtiquette from '../assets/scenes/scene-etiquette.webp'
 import scenePet from '../assets/scenes/scene-pet.webp'
 import sceneWriting from '../assets/scenes/scene-writing.webp'
 import sceneMealplan from '../assets/scenes/scene-mealplan.webp'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const router = useRouter()
 const conversations = ref([])
@@ -338,15 +334,4 @@ function displayConversationTitle(conv) {
 .empty-text { font-size: 14px; color: var(--muted); font-weight: 600; }
 .empty-hint { font-size: 12px; color: var(--soft); margin-top: 5px; line-height: 1.5; }
 
-/* ===== 底部导航 ===== */
-.bottom-tabs {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
-  background: var(--card-solid); border-top: 1px solid var(--line);
-  display: flex; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
-}
-.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); cursor: pointer; gap: 2px; }
-.tab.active { color: var(--accent); }
-.tab .el-icon { font-size: 20px; }
 </style>

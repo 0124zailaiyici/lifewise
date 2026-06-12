@@ -1937,6 +1937,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   flex: 1; overflow-y: auto;
   padding: 10px 16px 20px;
   scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 /* 欢迎 */

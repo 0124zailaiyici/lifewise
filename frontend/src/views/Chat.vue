@@ -1266,7 +1266,13 @@ function startVoice() {
 }
 
 function goBack() { router.back() }
-function scrollBottom() { nextTick(() => { if (msgBox.value) msgBox.value.scrollTop = msgBox.value.scrollHeight }) }
+function scrollBottom() {
+  nextTick(() => {
+    if (!msgBox.value) return
+    // 直接跳到底部，不用 smooth 动画，避免影响后续手动滚动
+    msgBox.value.scrollTo({ top: msgBox.value.scrollHeight, behavior: 'instant' })
+  })
+}
 
 // ===== 渲染 =====
 function renderContent(content) {
@@ -1936,9 +1942,9 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .messages {
   flex: 1; overflow-y: auto;
   padding: 10px 16px 20px;
-  scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 欢迎 */
@@ -2120,6 +2126,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   display: flex; align-items: center; justify-content: center;
 }
 .preview-img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+.overlay { touch-action: none; }
 .overlay-close {
   position: fixed; top: 20px; right: 24px; color: #fff; font-size: 28px; cursor: pointer;
   width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;

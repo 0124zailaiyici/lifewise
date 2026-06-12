@@ -85,8 +85,8 @@ body {
 /* iOS 回弹滚动支持 */
 .messages, .content, .scroll-area {
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scroll-behavior: smooth;
+  overscroll-behavior: none;
+  overflow-x: hidden;
 }
 .scroll-area {
   flex: 1;

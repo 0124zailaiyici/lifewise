@@ -310,3 +310,21 @@ convId = createConversation(...)   // AI 回复后才创建对话
 - 更新流程：下载构建包 → 停旧后端 → 备份数据库 → 解压覆盖 → 启动新后端
 - 配置文件（application-cloud.properties）单独保存不被覆盖
 - 脚本放在 deploy/update.sh，服务器下载后可直接执行
+
+## Scene image gen lessons (2026-06-12)
+- generateScenePrompt() must return non-empty prompt for ALL scenes, not just shopping
+- Backend FoodImageController's isScene check must include ALL scene types, not just a subset
+- Scene image generation should respect the same setting_foodImage toggle as food images
+- Local food cache lookup (attachLocalFoodImage) should always run regardless of toggle; only auto-gen respects toggle
+- Manual gen button ("�ֶ�����") should show when no cache found, regardless of scene image state or toggle
+
+## Dual image system clarification
+- There are TWO separate image systems: "��Ʒͼ" (food recipe images via attachLocalFoodImage) and "������ͼ" (scene images via attachSceneImage)
+- They can fire simultaneously for cooking queries; ensure display doesn't duplicate
+- Food-actions template condition: show when _foodDishName set AND no _foodImageUrl AND no _foodImageLoading (no _sceneImage check needed)
+- Scene image gen condition: respect setting_foodImage via localStorage check
+
+## Deployment lessons (2026-06-12)
+- GitHub Actions auto-deploy job failed due to missing SSH secrets; removed it since server watchdog handles it
+- Watchdog polls GitHub API every 30s, runs MODE=frontend deploy-latest.sh
+- Nightly.link artifacts only update on SUCCESSFUL workflow runs; failed auto-deploy step caused stale artifacts

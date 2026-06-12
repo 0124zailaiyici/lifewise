@@ -15,23 +15,30 @@ spring:
       enabled: true
       max-file-size: 10MB
       max-request-size: 20MB
+
 server:
   port: 8080
+
 ai:
-  api-url: ${AI_API_URL:https://api.deepseek.com/v1/chat/completions}
-  api-key: ${AI_API_KEY:}
-  model: ${AI_MODEL:deepseek-v4-flash}
-  deepseek-enabled: ${AI_DEEPSEEK_ENABLED:false}
+  dashscope-api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+  dashscope-api-key: ${AI_DASHSCOPE_KEY:}
+  dashscope-model: ${AI_DASHSCOPE_MODEL:qwen-plus}
   vision-api-url: ${AI_VISION_API_URL:}
   vision-api-key: ${AI_VISION_API_KEY:}
   vision-model: ${AI_VISION_MODEL:mimo-v2-omni}
+
+  api-url: ${AI_DASHSCOPE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions}
+  api-key: ${AI_DASHSCOPE_KEY:}
+  model: ${API_MODEL:qwen-plus}
+
 app:
   vision-enabled: ${APP_VISION_ENABLED:true}
   upload-dir: /opt/lifewise/uploads
-  image-api-key: ${IMAGE_API_KEY:}
+
 logging:
   level:
     com.lifewise: info
+
 gl-image:
   api-key: ${GL_IMAGE_API_KEY:}
   api-url: ${GL_IMAGE_API_URL:https://api.lk888.ai/api}

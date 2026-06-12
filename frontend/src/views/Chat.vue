@@ -191,7 +191,7 @@
       <div class="composer">
         <button class="composer-btn upload-btn" @click="triggerUpload">＋</button>
         <button class="composer-btn mic-btn" :class="{ listening: isListening }" @click="startVoice" :disabled="loading">🎤</button>
-        <textarea ref="inputRef" v-model="inputText" placeholder="继续问 LifeWise，或上传菜品图片…" rows="1" @keyup.enter="send" :disabled="loading" @input="onUserInput"></textarea>
+        <textarea ref="inputRef" v-model="inputText" placeholder="问 LifeWise…" rows="1" @keyup.enter="send" :disabled="loading" @input="onUserInput"></textarea>
         <button class="composer-btn send-btn" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
       </div>
     </footer>
@@ -2301,6 +2301,15 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   50% { box-shadow: 0 0 0 8px rgba(104,67,43,0); }
 }
 .mic-btn { color: var(--accent-deep); background: #efe3d3; border: 1px solid rgba(104,67,43,.10); font-size: 16px; }
+
+@media (max-width: 400px) {
+  .composer { gap: 4px; padding: 6px; border-radius: 22px; }
+  .composer-btn { width: 32px; height: 32px; font-size: 15px; }
+  .composer textarea { font-size: 13px; min-height: 32px; }
+  .upload-btn { font-size: 17px; }
+  .send-btn { font-size: 15px; }
+  .mic-btn { font-size: 14px; }
+}
 /* ===== Scene Cards Redesign ===== */
 .s-card { border:none; padding:0; margin:0; background:none; }
 .s-hd { display:flex; align-items:center; gap:10px; padding:14px 18px 10px; border-bottom:1px solid var(--line); }

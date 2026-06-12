@@ -2234,9 +2234,9 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   flex: 1; min-height: 38px; max-height: 88px;
   resize: none; border: 0; outline: 0; background: transparent;
   color: var(--ink); padding: 7px 2px;
-  font: inherit; font-size: 20px; line-height: 1.4;
+  font: inherit; font-size: 22px; line-height: 1.3;
 }
-.composer textarea::placeholder { color: var(--soft); font-size: 20px; }
+.composer textarea::placeholder { color: var(--soft); font-size: 22px; }
 
 /* 收藏分类弹窗 */
 .fav-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -2305,8 +2305,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 @media (max-width: 400px) {
   .composer { gap: 4px; padding: 6px; border-radius: 22px; }
   .composer-btn { width: 32px; height: 32px; font-size: 15px; }
-  .composer textarea { font-size: 18px; min-height: 34px; }
-  .upload-btn { font-size: 20px; }
+  .composer textarea { font-size: 20px; min-height: 34px; }
+  .upload-btn { font-size: 22px; }
   .send-btn { font-size: 15px; }
   .mic-btn { font-size: 14px; }
 }

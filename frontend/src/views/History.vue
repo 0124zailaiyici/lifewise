@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="page-header">
       <h3>&#x1f4f0; &#x5386;&#x53f2;&#x8bb0;&#x5f55;</h3>
@@ -340,7 +340,7 @@ function formatTime(t) {
 
 /* Bottom tabs */
 .bottom-tabs {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  position: sticky; bottom: 0;
   width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: var(--card-solid); border-top: 1px solid var(--line); display: flex;
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));

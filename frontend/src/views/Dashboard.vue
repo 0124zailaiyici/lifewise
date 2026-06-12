@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="page-container">
     <div class="dash-header">
       <div class="header-top">
@@ -270,7 +270,7 @@ function sceneColor(key) { return sceneColors[key] || '#94a3b8' }
 
 /* Bottom tabs */
 .bottom-tabs {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  position: sticky; bottom: 0;
   width: 100%; max-width: 480px; height: calc(64px + env(safe-area-inset-bottom, 0px));
   background: var(--card-solid); border-top: 1px solid var(--line); display: flex;
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));

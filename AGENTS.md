@@ -51,7 +51,7 @@
 
 ## Scene cards (Claude-style structured layout) -- 2026-06-10
 - `renderStructured()` in Chat.vue renders JSON as warm Claude-style cards.
-- Detects scene: cooking (ingredients+steps), fashion (occasion/outfits/color_palette), shopping (selection_steps/category), repair (problem+tools/steps+severity), housework (problem+materials/difficulty), general.
+- Detects 9 scenes (else-if order): cooking, fashion, health, shopping, repair, housework, etiquette, pet, mealplan.
 - Card header: scene icon + label + title with gradient accent.
 - Tags row: difficulty/time/servings.
 - Scene sections: ingredients (checklist), steps (numbered, with time/tip/warning), tools (tag list), style/color_palette (swatches), outfits/items (with icons), accessories, common_mistakes, selection_steps, severity badge, etc.
@@ -63,6 +63,28 @@
 - `attachSceneImage(message, prompt, scene)` triggers gen after AI response.
 - `pollSceneImage(message, prompt, taskId, provider)` polls async task every 3s.
 - Scene image plan in `docs/scene-image-plan.md`.
+
+## Health scene fixes (2026-06-11)
+- Backend schema: symptoms[], causes[], advice[{item,detail}], when_to_see_doctor, prevention
+- Frontend renders full structured card for health queries.
+- max_tokens increased to 16384 to prevent truncation.
+- Prevention section: only renders if non-empty string content.
+
+## Database: MySQL default (2026-06-12)
+- application.yml default profile set to `mysql` (no more accidental H2 usage).
+- MySQL80 service (root/123456), database `lifewise`.
+- Start: `net start MySQL80`. If reserved: `net stop winnat` then start.
+
+## Backend startup
+- cd backend && mvn spring-boot:run (mysql profile default)
+- JAVA_HOME=D:\jdk-home\jdk-17
+
+## Frontend startup
+- cd frontend && npx vite --host (port 5173)
+
+## AI audit known issue
+- Profile shows recent AI calls but without conversationId/title.
+- User feedback: cannot tell which conversation triggered the call.
 
 ## Dashboard 30-day activity -- 2026-06-09/10
 - Replaced scrollable bar chart with clean 4-stat card layout.

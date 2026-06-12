@@ -2234,9 +2234,8 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   flex: 1; min-height: 38px; max-height: 88px;
   resize: none; border: 0; outline: 0; background: transparent;
   color: var(--ink); padding: 8px 2px 6px;
-  font: inherit; font-size: 14px; line-height: 1.35;
-}
-.composer textarea::placeholder { color: var(--soft); }
+  font: inherit; font-size: 15px; line-height: 1.35;
+.composer textarea::placeholder { color: var(--soft); font-size: 15px; }
 
 /* 收藏分类弹窗 */
 .fav-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

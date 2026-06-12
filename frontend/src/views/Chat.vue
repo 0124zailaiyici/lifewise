@@ -507,12 +507,23 @@ async function send() {
         const dishName = detectDishName(fullContent, msg)
         attachLocalFoodImage(m, dishName)
       } catch {}
-            // Scene image generation: shopping only, skip health
+            // Scene image generation: all supported scenes
       try {
         const parsed = tryParseJsonSafe(fullContent)
-        if (parsed && (parsed.selection_steps || (parsed.category && !parsed.disclaimer && !parsed.prevention))) {
-          const prompt = generateScenePrompt(parsed, "shopping")
-          attachSceneImage(m, prompt, "shopping")
+        if (parsed) {
+          var detectedScene = null
+          if (parsed.ingredients && parsed.steps) detectedScene = 'cooking'
+          else if (parsed.occasion || parsed.outfits || parsed.color_palette || parsed.style) detectedScene = 'fashion'
+          else if (parsed.selection_steps || parsed.storage_tip || parsed.summary_slogan) detectedScene = 'shopping'
+          else if (parsed.problem && (parsed.tools || parsed.severity)) detectedScene = 'repair'
+          else if (parsed.problem && (parsed.materials || parsed.difficulty)) detectedScene = 'housework'
+          else if (parsed.weekly_plan || parsed.shopping_list) detectedScene = 'mealplan'
+          else if (parsed.do_list || parsed.dont_list || parsed.key_principles) detectedScene = 'etiquette'
+          else if (parsed.pet_type || parsed.when_to_see_vet) detectedScene = 'pet'
+          if (detectedScene && detectedScene !== 'health') {
+            var imgPrompt = generateScenePrompt(parsed, detectedScene)
+            if (imgPrompt) attachSceneImage(m, imgPrompt, detectedScene)
+          }
         }
       } catch {}
     }

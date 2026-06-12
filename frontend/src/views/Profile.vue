@@ -148,7 +148,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { HomeFilled, Timer, Star, User, ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getAiConfigStatus } from '../api'
+import { getAiConfigStatus, clearAiAudit } from '../api'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -236,6 +236,7 @@ async function loadAiStatus() {
     aiStatus.value = res.data
   } catch (e) {
     console.error('AI config status unavailable:', e)
+    aiStatus.value = { _error: true, _errorMsg: '无法获取 AI 状态，请检查后端是否启动' }
   } finally {
     aiStatusLoading.value = false
   }

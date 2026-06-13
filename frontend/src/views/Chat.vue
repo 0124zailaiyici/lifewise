@@ -1,4 +1,4 @@
-﻿<!-- VERSION: 20260610-1 Claude Style -->
+<!-- VERSION: 20260610-1 Claude Style -->
 <template>
   <div class="page-container chat-page">
     <!-- 顶部栏 -->
@@ -1907,23 +1907,23 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .chat-page {
   display: flex; flex-direction: column; height: 100vh;
   background: var(--paper);
-  overflow: hidden;
 }
 
 /* ===== 顶部栏 ===== */
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px 10px;
-  background: linear-gradient(180deg, var(--paper) 70%, transparent);
-  backdrop-filter: blur(16px);
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: var(--card-solid);
+  border-bottom: 1px solid var(--line);
   z-index: 5; flex-shrink: 0;
 }
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-back {
-  width: 34px; height: 34px; border: 1px solid var(--line);
-  border-radius: 12px; background: rgba(255,250,241,.68);
-  color: var(--accent-deep); font-size: 18px; cursor: pointer;
+  width: 38px; height: 38px; border: 2px solid var(--line);
+  border-radius: 14px; background: var(--card-solid);
+  color: var(--accent-deep); font-size: 20px; cursor: pointer;
   display: grid; place-items: center;
+  flex-shrink: 0;
 }
 .header-back:active { transform: scale(.94); }
 .header-title { font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; }

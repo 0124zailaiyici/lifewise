@@ -1916,7 +1916,6 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   background: var(--card-solid);
   border-bottom: 1px solid var(--line);
   z-index: 50; flex-shrink: 0;
-  position: sticky; top: 0;
 }
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-back {

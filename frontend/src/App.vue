@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <router-view />
 </template>
 
@@ -25,7 +25,8 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+html, body { width: 100%; max-width: 100%; 
+  /* overflow handled per-page */ }
 body {
   font-family: "Avenir Next", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--paper);

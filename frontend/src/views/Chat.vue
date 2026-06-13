@@ -1912,10 +1912,11 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 /* ===== 顶部栏 ===== */
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 10px;
+  padding: 14px 16px 10px;
   background: var(--card-solid);
   border-bottom: 1px solid var(--line);
-  z-index: 5; flex-shrink: 0;
+  z-index: 50; flex-shrink: 0;
+  position: sticky; top: 0;
 }
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-back {

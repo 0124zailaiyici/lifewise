@@ -1265,7 +1265,14 @@ function startVoice() {
   }
 }
 
-function goBack() { router.back() }
+function goBack() {
+  const back = window.history.state?.back
+  if (back) {
+    router.back()
+  } else {
+    router.push('/home')
+  }
+}
 function scrollBottom() {
   nextTick(() => {
     if (!msgBox.value) return

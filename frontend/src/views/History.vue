@@ -81,20 +81,16 @@
       </div>
     </div>
 
-    <div class="bottom-tabs">
-      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
-      <div class="tab active"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
-      <div class="tab" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
-    </div>
+    <BottomTabs active="history" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getConversations, deleteConversation, renameConversation, repairConversationTitles } from '../api'
-import { HomeFilled, Timer, Star, User, Delete, Edit, Search } from '@element-plus/icons-vue'
+import { Delete, Edit, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const loading = ref(true)
 const groups = ref([])

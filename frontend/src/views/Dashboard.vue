@@ -119,18 +119,12 @@
         </template>
       </div>
     </div>
-    <div class="bottom-tabs">
-      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
-      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab" @click="$router.push('/favorites')"><el-icon><Star /></el-icon><span>收藏</span></div>
-      <div class="tab active"><el-icon><Collection /></el-icon><span>统计</span></div>
-    </div>
+    <BottomTabs active="profile" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { HomeFilled, Timer, Star, Collection } from '@element-plus/icons-vue'
 import { getDashboard } from '../api'
 import BottomTabs from '../components/BottomTabs.vue'
 

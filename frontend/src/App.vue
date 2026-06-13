@@ -58,7 +58,7 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--soft); border-radius: 4px; }
 
 /* 触摸目标最小尺寸 */
-button, .el-button, .chip, .scene-card, .conv-item, .tab { min-height: 44px; }
+button, .el-button, .chip, .scene-card, .conv-item { min-height: 44px; }
 
 /* Element Plus 覆盖 — 暖色主题 */
 .el-button--success {

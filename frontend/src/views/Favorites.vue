@@ -63,12 +63,7 @@
       </div>
     </div>
 
-    <div class="bottom-tabs">
-      <div class="tab" @click="$router.push('/home')"><el-icon><HomeFilled /></el-icon><span>首页</span></div>
-      <div class="tab" @click="$router.push('/history')"><el-icon><Timer /></el-icon><span>历史</span></div>
-      <div class="tab active"><el-icon><Star /></el-icon><span>收藏</span></div>
-      <div class="tab" @click="$router.push('/profile')"><el-icon><User /></el-icon><span>我的</span></div>
-    </div>
+    <BottomTabs active="favorites" />
   </div>
 </template>
 
@@ -76,8 +71,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getFavorites, removeFavorite, updateFavoriteCategory } from '../api'
-import { HomeFilled, Timer, Star, User, Collection, Filter } from '@element-plus/icons-vue'
+import { Collection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import BottomTabs from '../components/BottomTabs.vue'
 
 const router = useRouter()
 const loading = ref(true)

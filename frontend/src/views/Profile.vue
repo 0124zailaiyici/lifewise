@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="page-container">
     <div class="page-header">
       <h3>👤 我的</h3>
@@ -21,8 +21,8 @@
             <div class="si-left">
               <el-icon><Picture /></el-icon>
               <div class="si-text">
-                <div class="si-title">🖼️ 菜品成品图</div>
-                <div class="si-desc">对话时只自动查找本地/缓存图；手动生成才扣费</div>
+                <div class="si-title">🖼️ 自动场景配图</div>
+                <div class="si-desc">开启后自动为结构化回答生成配图；关闭则只显示文字</div>
               </div>
             </div>
             <el-switch v-model="setting_foodImage" @change="saveFoodImageSetting" />
@@ -31,11 +31,50 @@
             <div class="si-left">
               <el-icon><Cpu /></el-icon>
               <div class="si-text">
-                <div class="si-title">🤖 AI 模型</div>
-                <div class="si-desc">千问 Qwen（默认）</div>
+                <div class="si-title">🤖 AI 直连配置</div>
+                <div class="si-desc">{{ aiConfigured ? ('已配置 · ' + (aiForm.model || '未填模型')) : '未配置，聊天前请先填写' }}</div>
               </div>
             </div>
-            <div class="si-right">✅ 已配置</div>
+            <div class="si-right">{{ aiConfigured ? '✅ 就绪' : '⚠️ 待填' }}</div>
+          </div>
+          <div class="ai-config-card">
+            <div class="ai-config-tip">本地独立模式：手机直连你的 AI 接口，不经过 LifeWise 服务器。Key 仅保存在本机。建议先点「测试连接」通过后再聊天。</div>
+            <el-input v-model="aiForm.baseUrl" placeholder="接口地址，如 https://dashscope.aliyuncs.com/compatible-mode/v1" clearable class="ai-input" @change="refreshEndpointPreview" @blur="refreshEndpointPreview" />
+            <div v-if="endpointPreview.chatUrl" class="endpoint-preview">将请求：{{ endpointPreview.chatUrl }}</div>
+            <el-input v-model="aiForm.apiKey" type="password" show-password placeholder="API Key" clearable class="ai-input" />
+            <el-input v-model="aiForm.model" placeholder="聊天模型，如 gpt-5.4-mini" clearable class="ai-input" />
+            <el-input v-model="aiForm.imageModel" placeholder="生图模型，可留空沿用聊天模型" clearable class="ai-input" />
+            <div class="ai-config-actions">
+              <el-input-number v-model="aiForm.contextRounds" :min="1" :max="20" size="small" />
+              <span class="rounds-label">上下文轮数</span>
+            </div>
+            <div class="ai-config-actions" style="margin-top:8px">
+              <el-button type="success" size="small" round @click="saveAiConfigForm">保存配置</el-button>
+              <el-button type="primary" size="small" round :loading="testLoading" @click="runAiTest">测试连接</el-button>
+            </div>
+
+            <div v-if="testResult" class="test-result" :class="{ ok: testResult.ok, bad: !testResult.ok }">
+              <div class="test-title">{{ testResult.ok ? '✅ 测试通过，可以去聊天' : '❌ 测试未通过' }}</div>
+              <div v-for="(s, i) in (testResult.steps || [])" :key="i" class="test-step">
+                <span>{{ s.ok ? '✓' : '!' }}</span>
+                <b>{{ s.name }}</b>
+                <span>{{ s.detail }}</span>
+              </div>
+              <div v-if="testResult.chatUrl" class="test-meta">chat：{{ testResult.chatUrl }}</div>
+              <div v-if="testResult.models?.length" class="model-pick">
+                <div class="model-pick-title">识别到的模型（点选填入）：</div>
+                <div class="model-chips">
+                  <button
+                    v-for="m in testResult.models"
+                    :key="m"
+                    type="button"
+                    class="model-chip"
+                    :class="{ active: aiForm.model === m }"
+                    @click="pickModel(m)"
+                  >{{ m }}</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -45,7 +84,7 @@
         <div class="section-heading">
           <div>
             <div class="section-title">🛡️ AI 状态</div>
-            <div class="section-sub">当前使用千问 Qwen 模型</div>
+            <div class="section-sub">本地直连 · Key/地址在上方配置</div>
           </div>
           <div class="section-actions">
             <el-button size="small" round :loading="aiStatusLoading" @click="loadAiStatus">刷新</el-button>
@@ -57,8 +96,8 @@
             <div class="guard-hero ok">
               <div class="guard-icon">✅</div>
               <div>
-                <div class="guard-title">千问 Qwen 已就绪</div>
-                <div class="guard-desc">AI 模型正常</div>
+                <div class="guard-title">{{ aiConfigured ? "本地 AI 已就绪" : "本地 AI 未配置" }}</div>
+                <div class="guard-desc">{{ aiStatus?.model || aiForm.model || "未设置模型" }}</div>
               </div>
             </div>
             <div class="audit-summary">
@@ -103,7 +142,7 @@
               </div>
             </transition>
           </div>
-          <div v-else class="ai-empty">点“刷新”检查当前服务器配置，不会调用 AI</div>
+          <div v-else class="ai-empty">点“刷新”查看本地配置与调用记录</div>
         </div>
       </div>
       <div class="menu-section">
@@ -129,7 +168,7 @@
 
       <div class="footer-info">
         <div class="app-name">LifeWise v1.0</div>
-        <div class="app-desc">AI 生活常识助手</div>
+        <div class="app-desc">AI 生活常识助手 · 本地独立版</div>
       </div>
     </div>
 
@@ -143,7 +182,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { getAiConfigStatus, clearAiAudit } from '../api'
+import { getAiConfigStatus, clearAiAudit, loadLocalAiConfig, saveLocalAiConfig, testAiConnection, previewAiEndpoints } from '../api'
 import BottomTabs from '../components/BottomTabs.vue'
 
 const router = useRouter()
@@ -152,7 +191,12 @@ const user = computed(() => userStore.user)
 
 // ===== 设置状态 =====
 const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
-const setting_aiProvider = ref('qwen')
+const setting_aiProvider = ref('local')
+const aiForm = ref({ baseUrl: '', apiKey: '', model: 'qwen-plus', imageModel: '', contextRounds: 5 })
+const aiConfigured = computed(() => !!(aiForm.value.baseUrl && aiForm.value.apiKey))
+const testLoading = ref(false)
+const testResult = ref(null)
+const endpointPreview = ref({ chatUrl: '', modelsUrl: '', displayBase: '' })
 
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
@@ -200,9 +244,85 @@ const todayStats = computed(() => {
   }
 })
 
+function currentAiFormPayload() {
+  return {
+    baseUrl: String(aiForm.value.baseUrl || '').trim(),
+    apiKey: String(aiForm.value.apiKey || '').trim(),
+    model: String(aiForm.value.model || 'qwen-plus').trim(),
+    imageModel: String(aiForm.value.imageModel || '').trim(),
+    contextRounds: Number(aiForm.value.contextRounds || 5)
+  }
+}
+
+function refreshEndpointPreview() {
+  const p = previewAiEndpoints(aiForm.value.baseUrl)
+  endpointPreview.value = p?.error ? { chatUrl: '', modelsUrl: '', displayBase: '', error: p.error } : p
+}
+
+function saveAiConfigForm(silent = false) {
+  if (!aiForm.value.baseUrl || !aiForm.value.apiKey) {
+    ElMessage.warning('请填写接口地址和 API Key')
+    return false
+  }
+  saveLocalAiConfig(currentAiFormPayload())
+  refreshEndpointPreview()
+  if (!silent) ElMessage.success('AI 配置已保存到本机')
+  loadAiStatus()
+  return true
+}
+
+function loadAiConfigForm() {
+  const cfg = loadLocalAiConfig()
+  aiForm.value = {
+    baseUrl: cfg.baseUrl || '',
+    apiKey: cfg.apiKey || '',
+    model: cfg.model || 'qwen-plus',
+    imageModel: cfg.imageModel || '',
+    contextRounds: cfg.contextRounds || 5
+  }
+  refreshEndpointPreview()
+}
+
+function pickModel(m) {
+  aiForm.value.model = m
+  saveLocalAiConfig(currentAiFormPayload())
+  ElMessage.success('已选择模型：' + m)
+}
+
+async function runAiTest() {
+  if (!aiForm.value.baseUrl || !aiForm.value.apiKey) {
+    ElMessage.warning('请先填写接口地址和 API Key')
+    return
+  }
+  // 测试前先静默保存，确保聊天也能读到同一份配置
+  saveAiConfigForm(true)
+  testLoading.value = true
+  testResult.value = null
+  try {
+    const res = await testAiConnection(currentAiFormPayload())
+    testResult.value = res
+    if (res.ok) {
+      ElMessage.success('连接测试通过')
+    } else {
+      ElMessage.error('连接测试未通过')
+    }
+    loadAiStatus()
+  } catch (e) {
+    testResult.value = e?.testResult || {
+      ok: false,
+      steps: [{ name: '聊天测试', ok: false, detail: e?.message || '测试失败' }],
+      models: e?.testResult?.models || []
+    }
+    ElMessage.error(e?.message || '测试失败')
+    loadAiStatus()
+  } finally {
+    testLoading.value = false
+  }
+}
+
 function saveFoodImageSetting(val) {
   localStorage.setItem('setting_foodImage', val ? 'on' : 'off')
-  ElMessage.success(val ? '菜品图查找已开启（不会自动扣费）' : '菜品图查找已关闭')
+  ElMessage.success(val ? '自动场景配图已开启' : '自动场景配图已关闭')
 }
 
 
@@ -256,7 +376,10 @@ async function clearAuditRecords() {
   }
 }
 
-onMounted(loadAiStatus)
+onMounted(() => {
+  loadAiConfigForm()
+  loadAiStatus()
+})
 
 function handleLogout() {
   ElMessageBox.confirm('确定退出登录吗？', '提示', {
@@ -383,6 +506,60 @@ function handleLogout() {
 .app-name { font-size: 13px; color: #ccc; font-weight: 500; }
 .app-desc { font-size: 11px; color: #bbb; margin-top: 4px; }
 
+
+.ai-config-card {
+  margin: 0 12px 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255,250,241,0.95);
+  border: 1px solid rgba(87,68,49,0.10);
+}
+.ai-config-tip {
+  font-size: 12px;
+  color: #7b7064;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.ai-input { margin-bottom: 8px; }
+.ai-config-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rounds-label { font-size: 12px; color: #7b7064; margin-right: auto; }
+
+.endpoint-preview {
+  font-size: 11px;
+  color: #8d5f3f;
+  margin: -2px 0 8px;
+  word-break: break-all;
+  line-height: 1.4;
+}
+.test-result {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(87,68,49,0.12);
+}
+.test-result.ok { border-color: rgba(34,197,94,0.35); background: rgba(34,197,94,0.06); }
+.test-result.bad { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+.test-title { font-weight: 700; margin-bottom: 6px; color: #2d2924; }
+.test-step { font-size: 12px; color: #5c5349; line-height: 1.5; margin: 3px 0; display: grid; grid-template-columns: 14px 72px 1fr; gap: 6px; }
+.test-meta { margin-top: 6px; font-size: 11px; color: #8a7c6d; word-break: break-all; }
+.model-pick { margin-top: 8px; }
+.model-pick-title { font-size: 12px; color: #5c5349; margin-bottom: 6px; }
+.model-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.model-chip {
+  border: 1px solid rgba(87,68,49,0.16);
+  background: #fffaf1;
+  color: #5a4636;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.model-chip.active { background: #8d5f3f; color: #fff; border-color: #8d5f3f; }
 </style>
 
 

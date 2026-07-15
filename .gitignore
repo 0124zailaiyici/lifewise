@@ -1,6 +1,7 @@
-﻿# Java
+# Java
 *.class
 *.jar
+!frontend/android/gradle/wrapper/gradle-wrapper.jar
 *.war
 target/
 !.mvn/wrapper/maven-wrapper.jar
@@ -30,10 +31,14 @@ frontend-dev.err
 
 # Env
 .env
+.env.*
+!.env.example
 *.local
 
-
 # Build artifacts
+.gradle-home/
+release/
+*.apk
 backend/target/
 backend/data/
 *.bak
@@ -45,16 +50,19 @@ backend-err.log
 # Generated/script files
 *.py
 *.json
+!frontend/capacitor.config.json
 !package.json
 !pom.xml
+
 # Uploads
 backend/uploads/
-# Temp.vite/
 
+# Temp
+.vite/
 frontend/vite-out.txt
 frontend/vite-err.txt
 
-# Dev workflow.codex/
+# Dev workflow
 .codex/
 fix_*.py
 start*.bat
@@ -72,10 +80,6 @@ _check_script.js
 # Local config with secrets
 application-local.yml
 backend/src/main/resources/application-local.yml
-
-# Environment files
-.env
-*.env.local
 
 # Local startup script with secrets
 start-local.ps1

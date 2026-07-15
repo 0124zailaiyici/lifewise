@@ -1,0 +1,25 @@
+{
+  "appId": "com.lifewise.app",
+  "appName": "LifeWise",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "http://zailaiyici.xyz/*",
+      "https://zailaiyici.xyz/*",
+      "https://*.zailaiyici.xyz/*",
+      "http://*.zailaiyici.xyz/*",
+      "http://47.106.126.50/*"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#f7f1e8"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

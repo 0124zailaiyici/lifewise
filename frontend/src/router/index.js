@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHashHistory } from 'vue-router'
 
 const Home = () => import('../views/Home.vue')
 const Chat = () => import('../views/Chat.vue')
@@ -25,7 +25,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  // Capacitor/Android WebView 用 hash 路由最稳，不依赖服务端 try_files
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes
 })
 

@@ -176,6 +176,8 @@
       </div>
     </div>
 
+    <input ref="fileInput" class="file-picker" type="file" accept="image/*" @change="handleFileSelect" />
+
     <!-- 输入区 (Composer) -->
     <footer class="composer-wrap">
       <div v-if="promptPrefilled && inputText.trim() && !loading" class="prefill-hint">已填入示例问题，确认后发送</div>
@@ -191,7 +193,7 @@
       <div class="composer">
         <button class="composer-btn upload-btn" @click="triggerUpload">＋</button>
         <button class="composer-btn mic-btn" :class="{ listening: isListening }" @click="startVoice" :disabled="loading">🎤</button>
-        <textarea ref="inputRef" v-model="inputText" placeholder="继续问 LifeWise，或上传菜品图片…" rows="1" @keyup.enter="send" :disabled="loading" @input="onUserInput"></textarea>
+        <textarea ref="inputRef" v-model="inputText" :placeholder="composerPlaceholder" rows="1" @keydown.enter.exact.prevent="send" :disabled="loading" @input="onUserInput"></textarea>
         <button class="composer-btn send-btn" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
       </div>
     </footer>
@@ -201,8 +203,12 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus } from '../api'
+import { resolveAssetUrl } from '../config'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Filesystem, Directory } from '@capacitor/filesystem'
+import { Share as NativeShare } from '@capacitor/share'
 
 const route = useRoute()
 const router = useRouter()
@@ -222,6 +228,9 @@ const uploadProgress = ref(0)
 const currentConvId = ref(null)
 const foodImageEnabled = ref(localStorage.getItem('setting_foodImage') !== 'off')
 const aiConfigStatus = ref(null)
+const NativeSpeech = registerPlugin('NativeSpeech')
+const nativeListenerHandles = []
+const currentModelLabel = computed(() => aiConfigStatus.value?.model || '未配置模型')
 function previewImage(url) { previewImg.value = url }
 function onImgError(e) {
   e.target.style.display = "none"
@@ -284,6 +293,7 @@ const isWritingScene = computed(() => {
   const scene = localStorage.getItem('currentScene')
   return scene === 'writing'
 })
+const composerPlaceholder = computed(() => isWritingScene.value ? '告诉我你想写什么，或粘贴原始内容…' : '继续提问，或添加一张图片…')
 
 const currentLabel = computed(() => localStorage.getItem('sceneLabel') || '生活常识')
 const welcomePools = {
@@ -358,24 +368,16 @@ const welcomePrompts = computed(() => {
 })
 const costHint = computed(() => {
   if (pendingFile.value) {
-    const vision = aiConfigStatus.value?.vision
-    if (vision?.configured) {
-      return {
-        type: 'warn',
-        text: '图片识别：将调用小米 MiMo 视觉模型',
-        sub: '图片会跳过常识库缓存，发送前请确认问题'
-      }
-    }
     return {
-      type: 'danger',
-      text: '图片识别未配置完整',
-      sub: '请检查 ai.vision-api-url / ai.vision-api-key'
+      type: 'warn',
+      text: '图片将发送给：' + currentModelLabel.value,
+      sub: '能否识图取决于当前模型是否支持视觉输入'
     }
   }
   return {
     type: 'normal',
-    text: '当前模型：千问 Qwen',
-    sub: '聊天会消耗千问；命中常识库则不扣费'
+    text: '当前模型：' + currentModelLabel.value,
+    sub: loading.value ? '正在连接并接收回答…' : '回答将实时显示；模型可在“我的”页面修改'
   }
 })
 
@@ -386,6 +388,7 @@ onMounted(async () => {
   loadAiConfigStatus()
   window.addEventListener('focus', refreshLocalSettings)
   window.addEventListener('storage', refreshLocalSettings)
+  await setupNativeSpeechListeners()
   await nextTick()
   inputRef.value?.focus()
   if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
@@ -404,6 +407,7 @@ onUnmounted(() => {
   msgBox.value?.removeEventListener('click', handleFollowUpClick)
   window.removeEventListener('focus', refreshLocalSettings)
   window.removeEventListener('storage', refreshLocalSettings)
+  nativeListenerHandles.splice(0).forEach(handle => handle.remove?.())
   messages.value.forEach(m => {
     if (m._foodImagePoll) {
       clearInterval(m._foodImagePoll)
@@ -414,6 +418,7 @@ onUnmounted(() => {
 
 function refreshLocalSettings() {
   foodImageEnabled.value = localStorage.getItem('setting_foodImage') !== 'off'
+  loadAiConfigStatus()
 }
 
 async function loadAiConfigStatus() {
@@ -489,7 +494,20 @@ async function send() {
   messages.value.push({ _id: 'ai-' + Date.now(), role: 'assistant', content: '', imageUrl: '', _typing: true, _displayHtml: '', _faved: false })
 
   try {
-    const res = await sendChat(msg, scene, convId, imageUrl, { followUp: isFollowUp })
+    const res = await sendChat(msg, scene, convId, imageUrl, {
+      followUp: isFollowUp,
+      onChunk(content) {
+        const target = messages.value[aiIdx]
+        if (!target) return
+        target.content = content
+        target._displayHtml = scene === 'writing'
+          ? renderMarkdown(content)
+          : '<div class="streaming-preview">' + esc(content) + '</div>'
+        target._typing = true
+        currentTyping.value = true
+        scrollBottom()
+      }
+    })
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
     if (res.data?.conversationId) currentConvId.value = res.data.conversationId
@@ -501,13 +519,13 @@ async function send() {
       m._sourceLabel = res.data?.sourceLabel || ''
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
-      // Recipe image: only lookup local/server cache automatically; never auto-submit paid generation.
-      try {
-        const dishName = detectDishName(fullContent, msg)
-        attachLocalFoodImage(m, dishName)
-      } catch {}
-            // Scene image generation: all supported scenes
+      // Scene image generation: enabled scenes auto-generate; cooking keeps the image in the food-image slot.
       const sceneImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
+      let dishName = ''
+      try {
+        dishName = detectDishName(fullContent, msg) || ''
+        if (sceneImageEnabled && dishName) m._foodDishName = dishName
+      } catch {}
       if (sceneImageEnabled) try {
         const parsed = tryParseJsonSafe(fullContent)
         if (parsed) {
@@ -522,7 +540,7 @@ async function send() {
           else if (parsed.pet_type || parsed.when_to_see_vet) detectedScene = 'pet'
           if (detectedScene && detectedScene !== 'health') {
             var imgPrompt = generateScenePrompt(parsed, detectedScene)
-            if (imgPrompt) attachSceneImage(m, imgPrompt, detectedScene)
+            if (imgPrompt) attachSceneImage(m, imgPrompt, detectedScene, dishName || parsed.title || parsed.dishName || parsed.name || "")
           }
         }
       } catch {}
@@ -530,11 +548,12 @@ async function send() {
   } catch(e) {
     const m = messages.value[aiIdx]
     if (m) {
-      let errMsg = "请求出错了，请稍后再试"
+      let errMsg = e?.response?.data?.message || e?.message || '请求出错了，请检查 AI Key/地址'
       if (e?.response?.status === 502) errMsg = "AI 服务暂时不可用，请稍后再试"
       else if (e?.response?.status === 401) errMsg = "登录已过期，请重新登录"
-      else if (e?.message?.includes("Network")) errMsg = "无法连接服务器，请检查后端是否启动"
-      m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px">' + errMsg + '</div>'; currentTyping.value = false
+      else if (e?.message) errMsg = e.message
+      else if (e?.response?.data?.message) errMsg = e.response.data.message
+      m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px;white-space:pre-wrap;line-height:1.5">' + String(errMsg || '').replace(/</g,'&lt;') + '</div>'; currentTyping.value = false
     }
   } finally { loading.value = false }
 }
@@ -681,6 +700,52 @@ function copyMsg(i) {
   })
 }
 
+function textToBase64(text) {
+  const bytes = new TextEncoder().encode(String(text || ''))
+  let binary = ''
+  const step = 0x8000
+  for (let i = 0; i < bytes.length; i += step) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + step))
+  }
+  return btoa(binary)
+}
+
+async function saveExportFile(fileName, data, mimeType, isBase64 = false) {
+  if (Capacitor.isNativePlatform()) {
+    const result = await Filesystem.writeFile({
+      path: 'LifeWise/' + fileName,
+      data: isBase64 ? String(data || '').replace(/^data:[^,]+,/, '') : textToBase64(data),
+      directory: Directory.Documents,
+      recursive: true
+    })
+    try {
+      await NativeShare.share({
+        title: 'LifeWise 导出',
+        text: '文件已保存到 Documents/LifeWise/' + fileName,
+        url: result.uri,
+        dialogTitle: '分享或保存导出文件'
+      })
+    } catch (e) {
+      if (!/cancel/i.test(String(e?.message || ''))) throw e
+    }
+    ElMessage.success('已保存到 Documents/LifeWise/' + fileName)
+    return result.uri
+  }
+
+  const href = isBase64 && String(data).startsWith('data:')
+    ? data
+    : URL.createObjectURL(new Blob([data], { type: mimeType }))
+  const a = document.createElement('a')
+  a.href = href
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  if (String(href).startsWith('blob:')) URL.revokeObjectURL(href)
+  ElMessage.success('已下载到浏览器默认“下载”目录：' + fileName)
+  return href
+}
+
 async function exportConversation() {
   const msgs = messages.value
   if (!msgs.length) { ElMessage.info('没有可导出的消息'); return }
@@ -708,21 +773,14 @@ async function exportConversation() {
   text += '='.repeat(40) + '\n'
   text += '\u7531 LifeWise AI \u751f\u6d3b\u52a9\u624b\u751f\u6210\n'
   
-   try {
-    // 直接下载到本地，不经过后端
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
+  try {
     const now = new Date()
-    const ts2 = now.getFullYear() + String(now.getMonth()+1).padStart(2,"0") + String(now.getDate()).padStart(2,"0") + "_" + String(now.getHours()).padStart(2,"0") + String(now.getMinutes()).padStart(2,"0")
-    a.download = "LifeWise对话_" + ts2 + ".txt"
-    document.body.appendChild(a); a.click(); document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    ElMessage.success("对话已下载到本地")
+    const ts2 = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0')
+    await saveExportFile('LifeWise对话_' + ts2 + '.txt', text, 'text/plain;charset=utf-8')
   } catch(e) {
-    ElMessage.error("导出失败: " + (e.message || "未知错误"))
-  }}
+    ElMessage.error('导出失败: ' + (e.message || '未知错误'))
+  }
+}
 
 /**
  * 导出对话为图片（长截图）
@@ -791,12 +849,8 @@ async function exportConversationAsImage() {
     
     document.body.removeChild(wrapper)
     
-    // Download the image
-    const link = document.createElement('a')
-    link.download = 'lifewise-conversation-' + Date.now() + '.png'
-    link.href = canvas.toDataURL('image/png')
-    link.click()
-    ElMessage.success('对话图片已下载')
+    const fileName = 'LifeWise对话_' + Date.now() + '.png'
+    await saveExportFile(fileName, canvas.toDataURL('image/png'), 'image/png', true)
   } catch (e) {
     console.error('[exportImage] err:', e)
     ElMessage.error('导出图片失败: ' + (e.message || '未知错误'))
@@ -891,8 +945,8 @@ async function exportConversationAsPdf() {
       }
     }
     
-    pdf.save('lifewise-conversation-' + Date.now() + '.pdf')
-    ElMessage.success('PDF 已下载')
+    const fileName = 'LifeWise对话_' + Date.now() + '.pdf'
+    await saveExportFile(fileName, pdf.output('datauristring'), 'application/pdf', true)
   } catch (e) {
     console.error('[exportPdf] err:', e)
     ElMessage.error('导出PDF失败: ' + (e.message || '未知错误'))
@@ -1061,7 +1115,7 @@ async function shareToSocial() {
     if (navigator.share) {
       const shareData = { title: 'LifeWise', text }
       if (route.params.id) {
-        shareData.url = window.location.origin + '/chat/' + route.params.id
+        shareData.url = window.location.origin + window.location.pathname + '#/chat/' + route.params.id
       }
       
       // Try to include image
@@ -1135,7 +1189,13 @@ function handleFollowUpClick(e) {
   }
 }
 
-function triggerUpload() { fileInput.value?.click() }
+function triggerUpload() {
+  if (!fileInput.value) {
+    ElMessage.error('图片选择器未就绪，请重新进入对话页')
+    return
+  }
+  fileInput.value.click()
+}
 function handleFileSelect(e) {
   const file = e.target.files?.[0]; if (!file) return
   const maxSize = 10 * 1024 * 1024
@@ -1163,12 +1223,13 @@ function handleFileSelect(e) {
   reader.readAsDataURL(file); e.target.value = ''
 }
 function imgUrl(url) {
-  if (!url) return ''
-  if (url.startsWith('http') || url.startsWith('data:')) return url
-  if (url.startsWith('/')) return url
-  return '/uploads/' + url
+  return resolveAssetUrl(url)
 }
 function startVoice() {
+  if (Capacitor.isNativePlatform()) {
+    startNativeVoice()
+    return
+  }
   // If already listening, stop manually
   if (isListening.value) {
     if (window._voiceRecognition) {
@@ -1181,7 +1242,7 @@ function startVoice() {
   }
 
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-    ElMessage.warning('当前浏览器不支持语音识别，建议用 Chrome 浏览器打开 http://localhost:5173')
+    ElMessage.warning('当前环境不支持语音识别，请改用手机系统语音输入法')
     return
   }
 
@@ -1225,7 +1286,7 @@ function startVoice() {
   r.onerror = (e) => {
     if (e.error === 'not-allowed') {
       isListening.value = false; window._voiceRecognition = null
-      ElMessage.error('❌ 麦克风被拒绝，请在浏览器地址栏左侧点击 🔒 开启麦克风权限后刷新页面')
+      ElMessage.error('麦克风权限被拒绝，请在系统设置中允许 LifeWise 使用麦克风')
     } else if (e.error === 'no-speech') {
       if (retryCount < maxRetries) {
         retryCount++
@@ -1252,7 +1313,7 @@ function startVoice() {
     if (window._voiceRecognition) {
       window._voiceRecognition = null
       if (inputText.value.trim()) {
-        setTimeout(() => send(), 300)
+        ElMessage.success('语音已转成文字，确认后发送')
       }
     }
   }
@@ -1262,6 +1323,45 @@ function startVoice() {
   } catch (e) {
     isListening.value = false; window._voiceRecognition = null
     ElMessage.error('启动语音识别失败: ' + e.message)
+  }
+}
+
+async function setupNativeSpeechListeners() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    nativeListenerHandles.push(await NativeSpeech.addListener('speechResult', result => {
+      if (result?.text) {
+        inputText.value = result.text
+        promptPrefilled.value = false
+      }
+    }))
+    nativeListenerHandles.push(await NativeSpeech.addListener('speechError', result => {
+      isListening.value = false
+      ElMessage.error(result?.message || '语音识别失败，请检查麦克风权限和网络')
+    }))
+    nativeListenerHandles.push(await NativeSpeech.addListener('speechEnd', () => {
+      isListening.value = false
+      if (inputText.value.trim()) ElMessage.success('语音已转成文字，确认后发送')
+    }))
+  } catch (e) {
+    console.warn('[nativeSpeech] listener setup failed:', e)
+  }
+}
+
+async function startNativeVoice() {
+  if (isListening.value) {
+    await NativeSpeech.stop().catch(() => {})
+    isListening.value = false
+    ElMessage.info('已停止语音输入')
+    return
+  }
+  try {
+    isListening.value = true
+    ElMessage.info('正在听，请说话…')
+    await NativeSpeech.start({ language: 'zh-CN' })
+  } catch (e) {
+    isListening.value = false
+    ElMessage.error(e?.message || '无法启动麦克风，请检查系统权限')
   }
 }
 
@@ -1759,7 +1859,7 @@ function makeStepImg(kw) {
   if (!kw) kw = "cooking"
   const emoji = stepEmoji(kw)
   const cls = stepGradient(kw)
-  return '<div class="rc-step-img"><img class="rc-step-photo" src="/api/images/step-img?q=' + encodeURIComponent(kw) + '" alt="' + esc(kw) + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/><div class="rc-step-illustration ' + cls + '" style="display:none"><span>' + emoji + '</span></div></div>'
+  return '<div class="rc-step-img"><img class="rc-step-photo" src="' + resolveAssetUrl('/api/images/step-img?q=' + encodeURIComponent(kw)) + '" alt="' + esc(kw) + '" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"/><div class="rc-step-illustration ' + cls + '" style="display:none"><span>' + emoji + '</span></div></div>'
 }
 
 function stepEmoji(keyword) {
@@ -1820,61 +1920,86 @@ function generateScenePrompt(data, scene) {
   // Health scene: no image generation
   if (scene === "health") return ""
   if (scene === "cooking") {
-    const name = data.name || data.dishName || data.菜名 || '美食'
-    return '专业美食摄影，' + name + '，精致摆盘，自然光线，暖色调，微距拍摄，诱人色泽，高清画质，温暖氛围'
+    const name = data.name || data.dishName || data.title || 'delicious homemade dish'
+    return 'Professional food photography of ' + name + ', appetizing plating, natural light, warm colors, close-up, high detail, cozy atmosphere'
   }
   if (scene === "fashion") {
-    const oc = data.occasion || data.场合 || '日常穿搭'
-    return '时尚穿搭摄影，' + oc + '风格，全身搭配展示，干净背景，自然光线，高清质感，模特实穿，简约高级'
+    const oc = data.occasion || data.style || 'casual daily outfit'
+    return 'Fashion lookbook photo, full outfit for ' + oc + ', clean studio background, natural light, high quality, model standing pose'
   }
   if (scene === "shopping") {
-    const cat = data.category || data.品类 || '商品'
-    return '商品实拍展示，' + cat + '，干净背景，自然日光，高清细节，真实质感，不是食物不是菜品不是菜肴'
+    const cat = data.category || data.item || data.title || 'product'
+    return 'Product photography of ' + cat + ', clean background, natural daylight, sharp details, realistic texture, not food'
   }
   if (scene === "repair") {
-    const prob = data.problem || '维修'
-    return '实用工具展示，' + prob + '，工具和材料实拍，工作台场景，清晰细节，操作步骤示意，干净明亮'
+    const prob = data.problem || data.title || 'home repair tools'
+    return 'Practical tools and materials for ' + prob + ', workbench scene, clear details, instructional style, clean bright lighting'
   }
   if (scene === "housework") {
-    const prob = data.problem || '家务'
-    return '家居清洁场景，' + prob + '，整洁家居环境，工具材料展示，自然光线，温馨氛围，真实生活场景'
+    const prob = data.problem || data.title || 'housework'
+    return 'Home cleaning scene for ' + prob + ', tidy interior, cleaning tools, natural light, warm realistic lifestyle photo'
   }
   if (scene === "mealplan") {
-    const plan = data.plan_name || data.planName || '食谱规划'
-    return '健康美食摆盘，' + plan + '，丰富食材展示，餐桌布置，自然光，诱人色彩，精致生活风格'
+    const plan = data.plan_name || data.planName || data.title || 'healthy meal plan'
+    return 'Healthy meal prep photography for ' + plan + ', colorful ingredients, table setting, natural light, appetizing lifestyle style'
   }
   if (scene === "etiquette") {
-    const oc = data.occasion || data.场合 || '社交礼仪'
-    return '社交场景摄影，' + oc + '，优雅环境，得体着装，温馨氛围，自然光线，真实场景'
+    const oc = data.occasion || data.title || 'social etiquette'
+    return 'Elegant social scene for ' + oc + ', proper attire, warm atmosphere, natural light, realistic photography'
   }
   if (scene === "pet") {
-    const type = data.pet_type || data.petType || data.宠物类型 || '宠物'
-    return '可爱宠物摄影，' + type + '，温馨家庭环境，自然光线，高清毛绒细节，治愈风格，真实抓拍'
+    const type = data.pet_type || data.petType || data.title || 'cute pet'
+    return 'Cute pet photography of ' + type + ', warm home environment, natural light, high detail fur, adorable realistic style'
   }
   return ""
 }
-function attachSceneImage(message, prompt, scene) {
-  if (!prompt || message._sceneImageUrl || message._sceneImageLoading) return
-  message._sceneImageLoading = true
-  message._sceneImageText = "\u{1f3a8} \u6b63\u5728\u751f\u6210\u573a\u666f\u914d\u56fe\u2026"
-          generateFoodImage(prompt, scene).then(function(res) {
+function attachSceneImage(message, prompt, scene, cacheName) {
+  const isFoodImage = scene === 'cooking'
+  if (!prompt) return
+  if (isFoodImage) {
+    if (message._foodImageUrl || message._foodImageLoading) return
+    message._foodDishName = cacheName || message._foodDishName || ''
+    message._foodImageLoading = true
+    message._foodImageLoadingText = '🎨 正在生成成品图…'
+  } else {
+    if (message._sceneImageUrl || message._sceneImageLoading) return
+    message._sceneImageLoading = true
+    message._sceneImageText = '🎨 正在生成场景配图…'
+  }
+
+  generateFoodImage(prompt, scene).then(function(res) {
     var d = res
     if (d && d.code === 200 && d.data && d.data.imageUrl) {
-      message._sceneImageUrl = d.data.imageUrl
-      message._sceneImageLoading = false
-      message._sceneImageText = ""
+      if (isFoodImage) {
+        applyFoodImage(message, cacheName || prompt, d.data.imageUrl, 'generated')
+      } else {
+        message._sceneImageUrl = d.data.imageUrl
+        message._sceneImageLoading = false
+        message._sceneImageText = ''
+        nextTick(scrollBottom)
+      }
     } else if (d && d.data && d.data.taskId) {
-      pollSceneImage(message, prompt, d.data.taskId, d.data.provider)
+      pollSceneImage(message, prompt, d.data.taskId, d.data.provider, scene, cacheName)
+    } else if (isFoodImage) {
+      message._foodImageLoading = false
+      message._foodImageLoadingText = ''
     } else {
       message._sceneImageLoading = false
-      message._sceneImageText = ""
+      message._sceneImageText = ''
     }
   }).catch(function() {
-    message._sceneImageLoading = false
-    message._sceneImageText = ""
+    if (isFoodImage) {
+      message._foodImageLoading = false
+      message._foodImageLoadingText = ''
+    } else {
+      message._sceneImageLoading = false
+      message._sceneImageText = ''
+    }
   })
 }
-function pollSceneImage(message, prompt, taskId, provider) {
+
+function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
+  const isFoodImage = scene === 'cooking'
   if (message._sceneImagePoll) clearInterval(message._sceneImagePoll)
   message._sceneImagePoll = setInterval(function() {
     getFoodImageStatus(taskId, provider).then(function(res) {
@@ -1882,28 +2007,46 @@ function pollSceneImage(message, prompt, taskId, provider) {
       if (d && d.code === 200 && d.data && d.data.resultUrl) {
         clearInterval(message._sceneImagePoll)
         message._sceneImagePoll = null
-        message._sceneImageUrl = d.data.resultUrl
-        message._sceneImageLoading = false
-        message._sceneImageText = ""
+        if (isFoodImage) {
+          applyFoodImage(message, cacheName || prompt, d.data.resultUrl, 'generated')
+        } else {
+          message._sceneImageUrl = d.data.resultUrl
+          message._sceneImageLoading = false
+          message._sceneImageText = ''
+          nextTick(scrollBottom)
+        }
       } else if (d && d.code !== 200) {
         clearInterval(message._sceneImagePoll)
         message._sceneImagePoll = null
-        message._sceneImageLoading = false
-        message._sceneImageText = ""
+        if (isFoodImage) {
+          message._foodImageLoading = false
+          message._foodImageLoadingText = ''
+        } else {
+          message._sceneImageLoading = false
+          message._sceneImageText = ''
+        }
       }
     }).catch(function() {
       clearInterval(message._sceneImagePoll)
       message._sceneImagePoll = null
-      message._sceneImageLoading = false
-      message._sceneImageText = ""
+      if (isFoodImage) {
+        message._foodImageLoading = false
+        message._foodImageLoadingText = ''
+      } else {
+        message._sceneImageLoading = false
+        message._sceneImageText = ''
+      }
     })
   }, 3000)
 }
+
 
 function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 </script>
 <style scoped>
 /* ===== Claude 风格聊天页 ===== */
+.file-picker { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: -9999px; }
+.streaming-preview { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; color: var(--ink); }
 .chat-page {
   display: flex; flex-direction: column; height: 100vh;
   background: var(--paper);
@@ -2392,6 +2535,7 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .card-body :deep(.s-followup-chip) { font-size:12px; padding:4px 12px; border-radius:999px; background:rgba(141,95,63,0.08); color:var(--accent-deep); border:1px solid rgba(141,95,63,0.14); cursor:pointer; }
 .card-body :deep(.s-followup-chip:hover) { background:rgba(141,95,63,0.15); }
 .card-body :deep(.md-scene-label) { font-size:12px; color:var(--muted); padding:0 0 8px; border-bottom:1px solid var(--line); margin-bottom:10px; }
+
 </style>
 <style>
 /* ===== Scene Cards Redesign ===== */
@@ -2488,5 +2632,28 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-mb-n{font-size:14px;font-weight:500;color:#1d1d1f}
 .s-mb-d{font-size:12px;color:#888;margin-top:1px;display:flex;align-items:center;gap:6px}
 .s-mb-c{width:12px;height:12px;border-radius:50%;border:1px solid rgba(0,0,0,.08);flex-shrink:0;display:inline-block}
+
+
+/* ===== BACK BUTTON FALLBACK (non-scoped) ===== */
+.chat-header .header-back {
+  width: 38px !important;
+  height: 38px !important;
+  border: 2px solid var(--line) !important;
+  border-radius: 14px !important;
+  background: var(--card-solid) !important;
+  color: var(--accent-deep) !important;
+  font-size: 20px !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.chat-header {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
 </style>
 

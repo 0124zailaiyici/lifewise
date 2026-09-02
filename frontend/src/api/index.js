@@ -116,7 +116,6 @@ export async function sendChat(message, scene, conversationId, imageUrl, options
       createdAt: aiMsg.createdAt
     })
   } catch (e) {
-    try { addMessage(convId, 'user', message || '', imageUrl || '') } catch {}
     const msg = e?.message || 'AI 调用失败'
     throw { response: { data: { message: msg } }, message: msg }
   }

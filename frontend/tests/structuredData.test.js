@@ -16,6 +16,8 @@ test('normalizes unstable list fields used by every assistant', () => {
     color_palette: '白色、浅蓝、灰色',
     steps: { step: 1, action: '先检查' },
     advice: '多喝水\n充分休息',
+    avoid: '全黑搭配\n过多配饰',
+    nutrition_tips: { protein: '每餐补充一份蛋白质' },
     dont_list: { action: '不要催促' },
     followUps: '还要注意什么？',
     weekly_plan: { day: '周一', meals: '番茄鸡蛋面' }
@@ -24,6 +26,8 @@ test('normalizes unstable list fields used by every assistant', () => {
   assert.deepEqual(data.color_palette, ['白色', '浅蓝', '灰色'])
   assert.deepEqual(data.steps, [{ step: 1, action: '先检查' }])
   assert.deepEqual(data.advice, ['多喝水', '充分休息'])
+  assert.deepEqual(data.avoid, ['全黑搭配', '过多配饰'])
+  assert.deepEqual(data.nutrition_tips, [{ protein: '每餐补充一份蛋白质' }])
   assert.deepEqual(data.dont_list, [{ action: '不要催促' }])
   assert.deepEqual(data.followUps, ['还要注意什么？'])
   assert.deepEqual(data.weekly_plan, [{ day: '周一', meals: ['番茄鸡蛋面'] }])

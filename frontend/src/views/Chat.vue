@@ -4,14 +4,14 @@
     <!-- 顶部栏 -->
     <header class="chat-header">
       <div class="header-left">
-        <button class="header-back" @click="goBack">←</button>
+        <button class="header-back" type="button" aria-label="返回" @click="goBack">←</button>
         <div>
-          <div class="header-title" @click="handleRenameTitle">{{ currentLabel }}</div>
+          <button class="header-title" type="button" @click="handleRenameTitle">{{ currentLabel }}</button>
           <div class="header-sub">LifeWise</div>
         </div>
       </div>
       <div class="header-right">
-        <button class="header-btn" @click="toggleExportMenu" title="导出对话">⋯</button>
+        <button class="header-btn" type="button" aria-label="导出对话" @click="toggleExportMenu" title="导出对话">⋯</button>
         <div v-if="showExportMenu" class="export-menu" @mouseleave="showExportMenu = false">
           <div class="export-item" @click="exportConversation(); showExportMenu = false">📄 导出文本</div>
           <div class="export-item" @click="exportConversationAsImage(); showExportMenu = false">🖼️ 导出图片</div>
@@ -202,7 +202,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus, loadLocalAiConfig, previewAiEndpoints } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus, loadLocalAiConfig, previewAiEndpoints, renameConversation } from '../api'
 import { resolveAssetUrl } from '../config'
 import { normalizeStructuredData, parseStructuredJson, structuredFallbackText, structuredText } from '../local/structuredData.js'
 import { buildNativeSpeechOptions } from '../local/speechConfig.js'
@@ -1435,6 +1435,23 @@ function goBack() {
     router.push('/home')
   }
 }
+
+async function handleRenameTitle() {
+  if (!currentConvId.value) return
+  try {
+    const { value } = await ElMessageBox.prompt('输入新的对话标题', '重命名对话', {
+      inputValue: currentLabel.value,
+      inputPlaceholder: '最多 50 个字',
+      inputValidator: value => String(value || '').trim() ? true : '标题不能为空'
+    })
+    const title = String(value || '').trim().slice(0, 50)
+    await renameConversation(currentConvId.value, title)
+    localStorage.setItem('sceneLabel', title)
+    ElMessage.success('标题已更新')
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('重命名失败，请重试')
+  }
+}
 function scrollBottom() {
   nextTick(() => {
     if (!msgBox.value) return
@@ -1456,7 +1473,10 @@ function renderContent(content) {
     }
   }
   const html = renderMarkdown(content)
-  if (localStorage.getItem('currentScene') !== 'writing') return html
+  const currentScene = localStorage.getItem('currentScene')
+  if (currentScene !== 'writing') {
+    return structuredScenes.has(currentScene) ? '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>请重试以获取结构化步骤。</span></div>' : html
+  }
   return html + '<div class="writing-outcome"><button type="button" class="writing-outcome-primary" data-chat-reply="请在保留核心信息的前提下润色这版初稿，让表达更自然。">润色初稿</button><button type="button" data-chat-reply="请把这版初稿压缩到更短、更利落的版本。">精简</button><button type="button" data-chat-reply="请把这版初稿改成更正式、得体的语气。">改正式</button><button type="button" data-chat-reply="这版可以定稿了，请只回复最终可直接使用的版本。">确认定稿</button></div>'
 }
 
@@ -1730,6 +1750,11 @@ function renderStructured(data) {
     })
     parts.push("</div>")
   }
+  if (data.avoid?.length) {
+    parts.push('<div class="s-sec">避开这些搭配</div><div class="s-mistake-list">')
+    data.avoid.forEach(item => parts.push(`<div class="s-mistake-item">${esc(structuredText(item))}</div>`))
+    parts.push('</div>')
+  }
   
   // ===== Health: category tag (from AI field: category) =====
   if (scene === "health" && data.category) {
@@ -1823,6 +1848,11 @@ function renderStructured(data) {
         parts.push(cat + items_html)
       }
     })
+  }
+  if (data.nutrition_tips?.length) {
+    parts.push('<div class="s-sec">营养提示</div><div class="s-mistake-list">')
+    data.nutrition_tips.forEach(item => parts.push(`<div class="s-mistake-item">${esc(structuredText(item))}</div>`))
+    parts.push('</div>')
   }
   if (data.common_mistakes && data.common_mistakes.length) {
     parts.push('<div class="s-sec">\u26a0\ufe0f \u5e38\u89c1\u8bef\u533a</div><div class="s-mistake-list">')
@@ -2216,7 +2246,7 @@ function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&
   flex-shrink: 0;
 }
 .header-back:active { transform: scale(.94); }
-.header-title { font-size: 16px; font-weight: 700; color: var(--ink); cursor: pointer; }
+.header-title { padding:0; border:0; background:transparent; font:inherit; font-size:16px; font-weight:700; color:var(--ink); cursor:pointer; }
 .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
 .header-right { position: relative; display: flex; align-items: center; }
 .header-btn {
@@ -2363,6 +2393,7 @@ function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&
 .card-actions button:active { transform: scale(.96); }
 .card-actions button.faved { color: #d97706; }
 .card-actions button:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline:3px solid rgba(180,83,9,.45); outline-offset:2px; }
 
 /* 菜品图 */
 .food-image { margin-top: 8px; cursor: pointer; border-radius: 14px; overflow: hidden; position: relative; }

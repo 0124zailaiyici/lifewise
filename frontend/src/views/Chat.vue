@@ -13,9 +13,9 @@
       <div class="header-right">
         <button class="header-btn" type="button" aria-label="导出对话" @click="toggleExportMenu" title="导出对话">⋯</button>
         <div v-if="showExportMenu" class="export-menu" @mouseleave="showExportMenu = false">
-          <div class="export-item" @click="exportConversation(); showExportMenu = false">📄 导出文本</div>
-          <div class="export-item" @click="exportConversationAsImage(); showExportMenu = false">🖼️ 导出图片</div>
-          <div class="export-item" @click="exportConversationAsPdf(); showExportMenu = false">📑 导出PDF</div>
+          <button type="button" class="export-item" @click="exportConversation(); showExportMenu = false">📄 导出文本</button>
+          <button type="button" class="export-item" @click="exportConversationAsImage(); showExportMenu = false">🖼️ 导出图片</button>
+          <button type="button" class="export-item" @click="exportConversationAsPdf(); showExportMenu = false">📑 导出PDF</button>
         </div>
       </div>
     </header>
@@ -32,10 +32,10 @@
         <div v-if="isWritingScene" class="writing-modes">
           <div class="wm-title">📝 写作类型</div>
           <div class="wm-grid">
-            <div v-for="wm in writingModes" :key="wm.key" class="wm-chip" @click="fillPrompt(wm.prompt)">
+            <button v-for="wm in writingModes" :key="wm.key" type="button" class="wm-chip" @click="fillPrompt(wm.prompt)">
               <span class="wm-icon">{{ wm.icon }}</span>
               <span class="wm-label">{{ wm.label }}</span>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -175,12 +175,12 @@
     <div v-if="pendingImage" class="image-bar">
       <div class="ib-preview">
         <img :src="pendingImage" />
-        <span class="ib-remove" @click="pendingImage = null; pendingFile = null">✕</span>
+        <button type="button" class="ib-remove" aria-label="移除图片" @click="pendingImage = null; pendingFile = null">✕</button>
       </div>
       <div class="ib-actions">
-        <span class="ib-chip" @click="fillImagePrompt('请分析这张图片', 'cooking')">🔍 分析图片</span>
-        <span class="ib-chip" @click="fillImagePrompt('请识别这张图片的内容', 'other')">👀 识别内容</span>
-        <span class="ib-chip" @click="fillImagePrompt('请描述这张图片', 'writing')">📝 描述图片</span>
+        <button type="button" class="ib-chip" @click="fillImagePrompt('请分析这张图片', 'cooking')">🔍 分析图片</button>
+        <button type="button" class="ib-chip" @click="fillImagePrompt('请识别这张图片的内容', 'other')">👀 识别内容</button>
+        <button type="button" class="ib-chip" @click="fillImagePrompt('请描述这张图片', 'writing')">📝 描述图片</button>
       </div>
     </div>
 
@@ -199,10 +199,10 @@
         <span class="mode-tip">{{ pendingFollowUp ? '结合上文补充' : '按新问题回答' }}</span>
       </div>
       <div class="composer">
-        <button class="composer-btn upload-btn" @click="triggerUpload">＋</button>
-        <button class="composer-btn mic-btn" :class="{ listening: isListening }" @click="startVoice" :disabled="loading || isTranscribing">🎤</button>
+        <button class="composer-btn upload-btn" type="button" aria-label="上传图片" @click="triggerUpload">＋</button>
+        <button class="composer-btn mic-btn" type="button" :aria-label="isListening ? '停止语音输入' : '开始语音输入'" :class="{ listening: isListening }" @click="startVoice" :disabled="loading || isTranscribing">🎤</button>
         <textarea ref="inputRef" v-model="inputText" :placeholder="composerPlaceholder" rows="1" @keydown.enter.exact.prevent="send" :disabled="loading" @input="onUserInput"></textarea>
-        <button class="composer-btn send-btn" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
+        <button class="composer-btn send-btn" type="button" aria-label="发送消息" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
       </div>
     </footer>
   </div>
@@ -2318,7 +2318,7 @@ function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&
   border-radius: 16px; box-shadow: var(--small-shadow); min-width: 130px;
   overflow: hidden;
 }
-.export-item { padding: 10px 16px; cursor: pointer; font-size: 13px; color: var(--ink); }
+.export-item { display:block; width:100%; padding:10px 16px; border:0; background:transparent; cursor:pointer; font:inherit; font-size:13px; color:var(--ink); text-align:left; }
 .export-item:hover { background: rgba(141,95,63,.06); }
 
 /* ===== 消息区 ===== */
@@ -2354,7 +2354,7 @@ function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&
 .wm-chip {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 12px 6px; border-radius: 14px; cursor: pointer;
-  background: rgba(255,250,241,.48); border: 1px solid var(--line);
+  background: rgba(255,250,241,.48); border: 1px solid var(--line); font:inherit;
 }
 .wm-chip:active { transform: scale(.96); }
 .wm-icon { font-size: 24px; }
@@ -2539,13 +2539,13 @@ button:focus-visible { outline:3px solid rgba(180,83,9,.45); outline-offset:2px;
 .ib-remove {
   position: absolute; top: -5px; right: -5px;
   width: 16px; height: 16px; background: #b91c1c; color: #fff;
-  border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border:0; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
 .ib-actions { display: flex; gap: 6px; }
 .ib-chip {
   background: rgba(255,250,241,.68); color: var(--accent-deep);
   font-size: 12px; padding: 5px 10px; border-radius: 8px;
-  cursor: pointer; border: 1px solid var(--line); white-space: nowrap;
+  cursor: pointer; border: 1px solid var(--line); white-space: nowrap; font:inherit;
 }
 .ib-chip:active { transform: scale(.96); }
 

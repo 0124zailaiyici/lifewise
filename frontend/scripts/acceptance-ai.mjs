@@ -32,6 +32,42 @@ if (!selectedCases.length) {
 
 const { chatUrl } = resolveOpenAIEndpoints(baseUrl)
 let failures = 0
+const maxAttempts = 3
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function isRetryable(status, error) {
+  return status === 429 || status >= 500 || /fetch failed|network|timeout/i.test(String(error?.message || error || ''))
+}
+
+async function requestWithRetry(body) {
+  let lastError
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(chatUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(body)
+      })
+      const raw = await response.text()
+      if (!response.ok) {
+        const error = new Error(`HTTP ${response.status}: ${raw.slice(0, 160)}`)
+        error.status = response.status
+        throw error
+      }
+      return raw
+    } catch (error) {
+      lastError = error
+      if (attempt === maxAttempts || !isRetryable(error.status, error)) throw error
+      const delayMs = 800 * 2 ** (attempt - 1)
+      console.warn(`RETRY ${attempt}/${maxAttempts - 1} after ${delayMs}ms: ${error.message}`)
+      await wait(delayMs)
+    }
+  }
+  throw lastError
+}
 
 for (const [scene, message] of selectedCases) {
   const body = {
@@ -47,13 +83,7 @@ for (const [scene, message] of selectedCases) {
   if (scene !== 'writing') body.response_format = { type: 'json_object' }
 
   try {
-    const response = await fetch(chatUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(body)
-    })
-    const raw = await response.text()
-    if (!response.ok) throw new Error(`HTTP ${response.status}: ${raw.slice(0, 160)}`)
+    const raw = await requestWithRetry(body)
     const content = JSON.parse(raw)?.choices?.[0]?.message?.content || ''
     if (!content) throw new Error('empty response')
     if (scene !== 'writing') {

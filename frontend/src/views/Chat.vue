@@ -458,6 +458,7 @@ async function send() {
   if (!msg && !pendingFile.value) return
   const isFollowUp = pendingFollowUp.value
   pendingFollowUp.value = false
+  lockSelectedGuidedChoices()
 
   refreshLocalSettings()
 
@@ -1185,6 +1186,17 @@ function setAskMode(isFollowUp) {
   pendingFollowUp.value = isFollowUp
 }
 
+function lockGuidedCard(card) {
+  card?.querySelectorAll('.repair-choice, .repair-outcome button')?.forEach(button => {
+    button.disabled = true
+    button.classList.add('is-locked')
+  })
+}
+
+function lockSelectedGuidedChoices() {
+  document.querySelectorAll('.repair-choice.is-selected').forEach(choice => lockGuidedCard(choice.closest('.s-card')))
+}
+
 function handleFollowUpClick(e) {
   const chip = e.target.closest('[data-chat-reply], .rc-followup-chip, .s-followup-chip')
   if (!chip) return
@@ -1192,6 +1204,18 @@ function handleFollowUpClick(e) {
   try { prompt = decodeURIComponent(prompt) } catch {}
   prompt = prompt.trim()
   if (!prompt) return
+  if (chip.classList.contains('repair-choice')) {
+    const group = chip.closest('.repair-choices')
+    group?.querySelectorAll('.repair-choice').forEach(choice => {
+      choice.classList.toggle('is-selected', choice === chip)
+      choice.setAttribute('aria-pressed', choice === chip ? 'true' : 'false')
+    })
+    pendingFollowUp.value = true
+    inputText.value = prompt
+    inputRef.value?.focus()
+    return
+  }
+  if (chip.matches('.repair-outcome button')) lockGuidedCard(chip.closest('.s-card'))
   pendingFollowUp.value = true
   inputText.value = prompt
   send()
@@ -1632,7 +1656,7 @@ function renderStructured(data) {
         if (typeof item === 'string') item = { label: item, message: item }
         const label = structuredText(item.label || item.message)
         const reply = encodeURIComponent(structuredText(item.message || item.label))
-        if (label && reply) parts.push(`<button type="button" class="repair-choice" data-chat-reply="${reply}">${esc(label)}</button>`)
+        if (label && reply) parts.push(`<button type="button" class="repair-choice" data-chat-reply="${reply}" aria-pressed="false">${esc(label)}</button>`)
       })
       parts.push('</div>')
     }
@@ -2726,7 +2750,9 @@ function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&
 .repair-choices { display:grid; grid-template-columns:1fr; gap:7px; }
 .repair-choice { min-height:40px; padding:8px 11px; border:1px solid rgba(141,95,63,.18); border-radius:8px; background:rgba(141,95,63,.08); color:var(--accent-deep); font:inherit; font-size:12px; line-height:1.4; text-align:left; overflow-wrap:anywhere; cursor:pointer; transition:background .12s, transform .12s; }
 .repair-choice:hover { background:rgba(141,95,63,.15); }
+.repair-choice.is-selected { border-color:var(--accent); background:rgba(141,95,63,.16); box-shadow:inset 0 0 0 1px rgba(141,95,63,.12); }
 .repair-choice:active, .repair-outcome button:active { transform:scale(.96); }
+.repair-choice:disabled, .repair-outcome button:disabled { opacity:.55; cursor:default; }
 .repair-outcome { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-top:14px; }
 .repair-outcome button { min-height:38px; padding:7px 8px; border-radius:8px; font:inherit; font-size:12px; font-weight:600; line-height:1.35; overflow-wrap:anywhere; cursor:pointer; transition:background .12s, transform .12s; }
 .repair-outcome-done { border:1px solid #8bbf9b; background:#edf8ef; color:#25603b; }

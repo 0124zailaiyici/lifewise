@@ -87,15 +87,23 @@
                   <span>未找到 "{{ msg._foodDishName }}" 本地图</span>
                   <button class="food-gen-btn" @click="confirmGenerateFoodImage(msg)">手动生成</button>
                 </div>
+                <div v-if="msg._sceneImageError" class="scene-image-error">
+                  <span>{{ msg._sceneImageError }}</span>
+                  <button type="button" @click="retrySceneImage(msg)">重试配图</button>
+                </div>
               </div>
             </div>
 
             <!-- 消息操作按钮 -->
-            <div v-if="!msg._typing" class="card-actions">
+            <div v-if="!msg._typing && !msg._retry" class="card-actions">
               <button @click="copyMsg(i)">📋 复制</button>
               <button @click="shareMsg(i)">📤 分享</button>
               <button @click="addMsgToKnowledge(i)" :disabled="msg._kbSaving">{{ msg._kbSaving ? '入库中…' : msg._kbSaved ? '✅ 已入库' : '📚 入库' }}</button>
               <button @click="toggleFavorite(i)" :class="{ faved: msg._faved }">{{ msg._favProcessing ? '⏳…' : msg._faved ? '⭐ 已收藏' : '☆ 收藏' }}</button>
+            </div>
+            <div v-if="msg._retry" class="request-retry">
+              <span>{{ msg._retry.error }}</span>
+              <button type="button" @click="retryFailedMessage(msg)">重试</button>
             </div>
           </article>
         </template>
@@ -413,10 +421,10 @@ onUnmounted(() => {
   window.removeEventListener('storage', refreshLocalSettings)
   nativeListenerHandles.splice(0).forEach(handle => handle.remove?.())
   messages.value.forEach(m => {
-    if (m._foodImagePoll) {
-      clearInterval(m._foodImagePoll)
-      m._foodImagePoll = null
-    }
+    if (m._foodImagePoll) clearInterval(m._foodImagePoll)
+    if (m._sceneImagePoll) clearInterval(m._sceneImagePoll)
+    m._foodImagePoll = null
+    m._sceneImagePoll = null
   })
 })
 
@@ -453,21 +461,21 @@ async function loadConversation(id) {
   finally { loading.value = false }
 }
 
-async function send() {
-  const msg = inputText.value.trim()
+async function send(retryMessage = null) {
+  const msg = retryMessage?._retry?.message || inputText.value.trim()
   if (!msg && !pendingFile.value) return
-  const isFollowUp = pendingFollowUp.value
+  const isFollowUp = retryMessage?._retry?.followUp ?? pendingFollowUp.value
   pendingFollowUp.value = false
-  lockSelectedGuidedChoices()
+  if (!retryMessage) lockSelectedGuidedChoices()
 
   refreshLocalSettings()
 
 
-  const scene = tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
-  let convId = currentConvId.value
-  let imageUrl = ''
+  const scene = retryMessage?._retry?.scene || tempScene.value || localStorage.getItem('currentScene') || 'other'; tempScene.value = ''
+  let convId = retryMessage?._retry?.conversationId || currentConvId.value
+  let imageUrl = retryMessage?._retry?.imageUrl || ''
 
-  if (pendingFile.value) {
+  if (pendingFile.value && !retryMessage) {
     try {
       const uploadRes = await uploadImage(pendingFile.value, (e) => { uploadProgress.value = Math.round((e.loaded / e.total) * 100) })
       imageUrl = uploadRes.data?.url || ""
@@ -489,14 +497,23 @@ async function send() {
     }
   }
 
-  messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
-  inputText.value = ''
-  promptPrefilled.value = false
+  if (!retryMessage) {
+    messages.value.push({ _id: 'user-' + Date.now(), role: 'user', content: msg, imageUrl, _typing: false, _displayHtml: '', _faved: false })
+    inputText.value = ''
+    promptPrefilled.value = false
+  }
   await nextTick(); scrollBottom()
 
   loading.value = true; currentTyping.value = true
-  const aiIdx = messages.value.length
-  messages.value.push({ _id: 'ai-' + Date.now(), role: 'assistant', content: '', imageUrl: '', _typing: true, _displayHtml: '', _faved: false })
+  const aiIdx = retryMessage ? messages.value.indexOf(retryMessage) : messages.value.length
+  if (retryMessage) {
+    retryMessage.content = ''
+    retryMessage._typing = true
+    retryMessage._displayHtml = ''
+    retryMessage._retry = null
+  } else {
+    messages.value.push({ _id: 'ai-' + Date.now(), role: 'assistant', content: '', imageUrl: '', _typing: true, _displayHtml: '', _faved: false })
+  }
 
   try {
     const res = await sendChat(msg, scene, convId, imageUrl, {
@@ -559,7 +576,11 @@ async function send() {
       else if (e?.response?.status === 401) errMsg = "登录已过期，请重新登录"
       else if (e?.message) errMsg = e.message
       else if (e?.response?.data?.message) errMsg = e.response.data.message
-      m._typing = false; m._displayHtml = '<div style="color:#ef4444;padding:8px;white-space:pre-wrap;line-height:1.5">' + String(errMsg || '').replace(/</g,'&lt;') + '</div>'; currentTyping.value = false
+      m._typing = false
+      m._displayHtml = ''
+      m._retry = { message: msg, scene, conversationId: convId, followUp: isFollowUp, imageUrl, error: String(errMsg || '请求出错，请重试') }
+      unlockGuidedCards()
+      currentTyping.value = false
     }
   } finally { loading.value = false }
 }
@@ -1195,6 +1216,17 @@ function lockGuidedCard(card) {
 
 function lockSelectedGuidedChoices() {
   document.querySelectorAll('.repair-choice.is-selected').forEach(choice => lockGuidedCard(choice.closest('.s-card')))
+}
+
+function unlockGuidedCards() {
+  document.querySelectorAll('.s-card .is-locked').forEach(button => {
+    button.disabled = false
+    button.classList.remove('is-locked')
+  })
+}
+
+function retryFailedMessage(message) {
+  if (message?._retry && !loading.value) send(message)
 }
 
 function handleFollowUpClick(e) {
@@ -2139,6 +2171,8 @@ function attachSceneImage(message, prompt, scene, cacheName) {
     if (message._sceneImageUrl || message._sceneImageLoading) return
     message._sceneImageLoading = true
     message._sceneImageText = '🎨 正在生成场景配图…'
+    message._sceneImageError = ''
+    message._sceneImageRequest = { prompt, scene, cacheName }
   }
 
   generateFoodImage(prompt, scene).then(function(res) {
@@ -2158,24 +2192,24 @@ function attachSceneImage(message, prompt, scene, cacheName) {
       message._foodImageLoading = false
       message._foodImageLoadingText = ''
     } else {
-      message._sceneImageLoading = false
-      message._sceneImageText = ''
+      failSceneImage(message, '场景配图暂时生成失败。')
     }
   }).catch(function() {
     if (isFoodImage) {
       message._foodImageLoading = false
       message._foodImageLoadingText = ''
     } else {
-      message._sceneImageLoading = false
-      message._sceneImageText = ''
+      failSceneImage(message, '场景配图暂时生成失败。')
     }
   })
 }
 
 function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
   const isFoodImage = scene === 'cooking'
+  let attempts = 0
   if (message._sceneImagePoll) clearInterval(message._sceneImagePoll)
   message._sceneImagePoll = setInterval(function() {
+    attempts += 1
     getFoodImageStatus(taskId, provider).then(function(res) {
       var d = res
       if (d && d.code === 200 && d.data && d.data.resultUrl) {
@@ -2187,6 +2221,7 @@ function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
           message._sceneImageUrl = d.data.resultUrl
           message._sceneImageLoading = false
           message._sceneImageText = ''
+          message._sceneImageError = ''
           nextTick(scrollBottom)
         }
       } else if (d && d.code !== 200) {
@@ -2196,8 +2231,7 @@ function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
           message._foodImageLoading = false
           message._foodImageLoadingText = ''
         } else {
-          message._sceneImageLoading = false
-          message._sceneImageText = ''
+          failSceneImage(message, '场景配图暂时生成失败。')
         }
       }
     }).catch(function() {
@@ -2207,11 +2241,33 @@ function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
         message._foodImageLoading = false
         message._foodImageLoadingText = ''
       } else {
-        message._sceneImageLoading = false
-        message._sceneImageText = ''
+        failSceneImage(message, '场景配图暂时生成失败。')
       }
     })
+    if (attempts >= 60) {
+      clearInterval(message._sceneImagePoll)
+      message._sceneImagePoll = null
+      if (isFoodImage) {
+        message._foodImageLoading = false
+        message._foodImageLoadingText = ''
+      } else {
+        failSceneImage(message, '场景配图生成超时。')
+      }
+    }
   }, 3000)
+}
+
+function failSceneImage(message, error) {
+  if (message._sceneImagePoll) clearInterval(message._sceneImagePoll)
+  message._sceneImagePoll = null
+  message._sceneImageLoading = false
+  message._sceneImageText = ''
+  message._sceneImageError = error
+}
+
+function retrySceneImage(message) {
+  const request = message?._sceneImageRequest
+  if (request && !message._sceneImageLoading) attachSceneImage(message, request.prompt, request.scene, request.cacheName)
 }
 
 
@@ -2424,6 +2480,16 @@ button:focus-visible { outline:3px solid rgba(180,83,9,.45); outline-offset:2px;
   padding: 10px 12px; margin-top: 8px;
   border: 1px dashed var(--line); border-radius: 14px;
   background: rgba(255,250,241,.48); color: var(--muted); font-size: 13px;
+}
+.scene-image-error, .request-retry {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin-top:8px; padding:9px 10px; border:1px dashed var(--line); border-radius:8px;
+  color:var(--muted); font-size:12px; line-height:1.4;
+}
+.request-retry { margin:0 18px 14px; color:#b91c1c; border-color:rgba(185,28,28,.35); }
+.scene-image-error button, .request-retry button {
+  flex:none; border:1px solid var(--accent); border-radius:6px; background:#fff8e8;
+  color:var(--accent-deep); font:inherit; font-size:12px; padding:4px 8px; cursor:pointer;
 }
 .food-gen-btn {
   border: 1px solid var(--accent); background: rgba(141,95,63,.08);

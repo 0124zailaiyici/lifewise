@@ -192,7 +192,7 @@
       </div>
       <div class="composer">
         <button class="composer-btn upload-btn" @click="triggerUpload">＋</button>
-        <button class="composer-btn mic-btn" :class="{ listening: isListening }" @click="startVoice" :disabled="loading">🎤</button>
+        <button class="composer-btn mic-btn" :class="{ listening: isListening }" @click="startVoice" :disabled="loading || isTranscribing">🎤</button>
         <textarea ref="inputRef" v-model="inputText" :placeholder="composerPlaceholder" rows="1" @keydown.enter.exact.prevent="send" :disabled="loading" @input="onUserInput"></textarea>
         <button class="composer-btn send-btn" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
       </div>
@@ -202,8 +202,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus } from '../api'
+import { getConversation, sendChat, addFavorite, removeFavorite, uploadImage, updateFavoriteCategory, lookupFoodImage, generateFoodImage, getFoodImageStatus, saveFoodImageCache, addKnowledge, getAiConfigStatus, loadLocalAiConfig, previewAiEndpoints } from '../api'
 import { resolveAssetUrl } from '../config'
+import { normalizeStructuredData, parseStructuredJson, structuredFallbackText, structuredText } from '../local/structuredData.js'
+import { buildNativeSpeechOptions } from '../local/speechConfig.js'
 import { ArrowLeft, DocumentCopy, Microphone, Picture, Promotion, Collection, Share } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Capacitor, registerPlugin } from '@capacitor/core'
@@ -230,6 +232,7 @@ const foodImageEnabled = ref(localStorage.getItem('setting_foodImage') !== 'off'
 const aiConfigStatus = ref(null)
 const NativeSpeech = registerPlugin('NativeSpeech')
 const nativeListenerHandles = []
+const structuredScenes = new Set(['cooking', 'shopping', 'repair', 'housework', 'health', 'fashion', 'etiquette', 'pet', 'mealplan', 'other'])
 const currentModelLabel = computed(() => aiConfigStatus.value?.model || '未配置模型')
 function previewImage(url) { previewImg.value = url }
 function onImgError(e) {
@@ -250,6 +253,7 @@ function cancelFoodImage(m) {
 const tempScene = ref('')
 const shareCardRef = ref(null)
 const isListening = ref(false)
+const isTranscribing = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
 const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false, sharing: false })
 const showExportMenu = ref(false)
@@ -500,9 +504,10 @@ async function send() {
         const target = messages.value[aiIdx]
         if (!target) return
         target.content = content
-        target._displayHtml = scene === 'writing'
-          ? renderMarkdown(content)
-          : '<div class="streaming-preview">' + esc(content) + '</div>'
+        const hideStructuredSource = structuredScenes.has(scene) && !isFollowUp
+        target._displayHtml = hideStructuredSource
+          ? '<div class="streaming-structured"><span class="streaming-spinner"></span><span>正在整理成易读卡片…</span></div>'
+          : renderMarkdown(content)
         target._typing = true
         currentTyping.value = true
         scrollBottom()
@@ -1181,12 +1186,15 @@ function setAskMode(isFollowUp) {
 }
 
 function handleFollowUpClick(e) {
-  const chip = e.target.closest('.rc-followup-chip')
-  if (chip) {
-    pendingFollowUp.value = true
-    inputText.value = chip.textContent
-    send()
-  }
+  const chip = e.target.closest('[data-chat-reply], .rc-followup-chip, .s-followup-chip')
+  if (!chip) return
+  let prompt = chip.dataset.chatReply || chip.textContent || ''
+  try { prompt = decodeURIComponent(prompt) } catch {}
+  prompt = prompt.trim()
+  if (!prompt) return
+  pendingFollowUp.value = true
+  inputText.value = prompt
+  send()
 }
 
 function triggerUpload() {
@@ -1337,10 +1345,23 @@ async function setupNativeSpeechListeners() {
     }))
     nativeListenerHandles.push(await NativeSpeech.addListener('speechError', result => {
       isListening.value = false
+      isTranscribing.value = false
       ElMessage.error(result?.message || '语音识别失败，请检查麦克风权限和网络')
+    }))
+    nativeListenerHandles.push(await NativeSpeech.addListener('speechState', result => {
+      if (result?.state === 'recording') {
+        isListening.value = true
+        isTranscribing.value = false
+        ElMessage.info(result?.fallback ? '系统语音不可用，已切换 AI 识别；说完再点麦克风' : '正在听，请说话…')
+      } else if (result?.state === 'transcribing') {
+        isListening.value = false
+        isTranscribing.value = true
+        ElMessage.info('正在把录音转成文字…')
+      }
     }))
     nativeListenerHandles.push(await NativeSpeech.addListener('speechEnd', () => {
       isListening.value = false
+      isTranscribing.value = false
       if (inputText.value.trim()) ElMessage.success('语音已转成文字，确认后发送')
     }))
   } catch (e) {
@@ -1350,17 +1371,34 @@ async function setupNativeSpeechListeners() {
 
 async function startNativeVoice() {
   if (isListening.value) {
-    await NativeSpeech.stop().catch(() => {})
+    const stopResult = await NativeSpeech.stop().catch(() => null)
     isListening.value = false
-    ElMessage.info('已停止语音输入')
+    if (stopResult?.mode === 'transcribing') {
+      isTranscribing.value = true
+      ElMessage.info('录音已停止，正在识别…')
+    } else {
+      ElMessage.info('正在整理识别结果…')
+    }
     return
   }
   try {
+    const cfg = loadLocalAiConfig()
+    const endpoints = previewAiEndpoints(cfg.baseUrl)
+    const speechEndpoints = cfg.speechBaseUrl ? previewAiEndpoints(cfg.speechBaseUrl) : endpoints
+    if (speechEndpoints?.error) {
+      ElMessage.error('语音接口地址无效，请在“我的”页面检查配置')
+      return
+    }
+    if (!(cfg.speechApiKey || cfg.apiKey) || (!speechEndpoints?.audioUrl && !speechEndpoints?.chatUrl)) {
+      ElMessage.error('请先在“我的”页面配置语音接口地址和 API Key')
+      return
+    }
     isListening.value = true
-    ElMessage.info('正在听，请说话…')
-    await NativeSpeech.start({ language: 'zh-CN' })
+    const result = await NativeSpeech.start(buildNativeSpeechOptions(cfg, endpoints, speechEndpoints))
+    if (result?.mode !== 'recording') ElMessage.info('正在听，请说话…')
   } catch (e) {
     isListening.value = false
+    isTranscribing.value = false
     ElMessage.error(e?.message || '无法启动麦克风，请检查系统权限')
   }
 }
@@ -1385,8 +1423,17 @@ function scrollBottom() {
 function renderContent(content) {
   if (!content) return ''
   const data = tryParseJsonSafe(content)
-  if (data) return renderStructured(data)
-  return renderMarkdown(content)
+  if (data) {
+    try {
+      return renderStructured(data)
+    } catch (error) {
+      console.error('[structured-render]', error)
+      return renderMarkdown(structuredFallbackText(data))
+    }
+  }
+  const html = renderMarkdown(content)
+  if (localStorage.getItem('currentScene') !== 'writing') return html
+  return html + '<div class="writing-outcome"><button type="button" class="writing-outcome-primary" data-chat-reply="请在保留核心信息的前提下润色这版初稿，让表达更自然。">润色初稿</button><button type="button" data-chat-reply="请把这版初稿压缩到更短、更利落的版本。">精简</button><button type="button" data-chat-reply="请把这版初稿改成更正式、得体的语气。">改正式</button><button type="button" data-chat-reply="这版可以定稿了，请只回复最终可直接使用的版本。">确认定稿</button></div>'
 }
 
 function detectDishName(aiContent, userQuestion = '') {
@@ -1441,27 +1488,7 @@ function renderMarkdown(text) {
   return header + '<div class="md-content writing-content">' + html + "</div>"
 }
 
-function tryParseJsonSafe(text) {
-  if (!text) return null
-  // Helper: try parse with trailing comma fix
-  function tryParse(s) {
-    try { const obj = JSON.parse(s); if (obj && typeof obj === 'object') return obj } catch {}
-    try { const fixed = s.replace(/,([\s\n\r]*[}\]])/g, '$1'); const obj = JSON.parse(fixed); if (obj && typeof obj === 'object') return obj } catch {}
-    return null
-  }
-  // Step 1: direct parse (trim first)
-  let r = tryParse(text.trim()); if (r) return r
-  // Step 2: remove code fences
-  let clean = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
-  r = tryParse(clean); if (r) return r
-  // Step 3: regex extract JSON
-  const m = clean.match(/\{[\s\S]*\}/)
-  if (m) {
-    r = tryParse(m[0]); if (r) return r
-    r = tryParse(m[0].replace(/[\x00-\x1f\x7f-\x9f]/g, '')); if (r) return r
-  }
-  return null
-}
+const tryParseJsonSafe = parseStructuredJson
 function isJsonContent(text) {
   return text && (text.trim().startsWith("{")
   || text.trim().startsWith("["))
@@ -1469,17 +1496,18 @@ function isJsonContent(text) {
 
 
 function renderStructured(data) {
+  data = normalizeStructuredData(data)
   const parts = []
   // ===== 1. Detect scene =====
   let scene = "general", sceneIcon = "\u{1f4ac}", sceneLabel = "\u751f\u6d3b\u5e38\u8bc6"
   let title = data.title || ""
   if (data.ingredients && data.steps) { scene = "cooking"; sceneIcon = "\u{1f373}"; sceneLabel = "\u505a\u996d\u52a9\u624b" }
+  else if (data.do_list || data.dont_list || data.key_principles) { scene = "etiquette"; sceneIcon = "\u{1f91d}"; sceneLabel = "\u793e\u4ea4\u793c\u4eea" }
   else if (data.occasion || data.outfits || data.color_palette) { scene = "fashion"; sceneIcon = "\u{1f454}"; sceneLabel = "\u7a7f\u642d\u6307\u5357" }
   else if (data.disclaimer || data.when_to_see_doctor || data.category === "\u75c7\u72b6\u5904\u7406" || data.category === "\u7528\u836f\u5e38\u8bc6" || data.category === "\u8425\u517b\u5efa\u8bae" || data.category === "\u6025\u6551\u77e5\u8bc6" || (data.prevention && !data.ingredients && !data.outfits && !data.selection_steps && !data.tools)) { scene = "health"; sceneIcon = "\u{1f49a}"; sceneLabel = "\u5065\u5eb7\u5e38\u8bc6" }
   else if (data.selection_steps || data.category || data.\u54c1\u7c7b) { scene = "shopping"; sceneIcon = "\u{1f6d2}"; sceneLabel = "\u8d2d\u7269\u6311\u9009" }
   else if (data.problem && (data.tools || (data.steps && data.severity))) { scene = "repair"; sceneIcon = "\u{1f527}"; sceneLabel = "\u4fee\u7406\u6307\u5357" }
   else if (data.problem && (data.materials || data.difficulty)) { scene = "housework"; sceneIcon = "\u{1f9f9}"; sceneLabel = "\u5bb6\u52a1\u6280\u5de7" }
-  else if (data.do_list || data.dont_list || data.key_principles || (data.occasion && (data.occasion.includes("\u793c") || data.occasion.includes("\u5e94\u916c") || data.occasion.includes("\u5bb4") || data.occasion.includes("\u89c1\u5bb6\u957f")))) { scene = "etiquette"; sceneIcon = "\u{1f91d}"; sceneLabel = "\u793e\u4ea4\u793c\u4eea" }
   else if (data.pet_type || data.when_to_see_vet || data.topic === "\u5ba0\u7269") { scene = "pet"; sceneIcon = "\u{1f431}"; sceneLabel = "\u5ba0\u7269\u7167\u987e" }
   else if (data.weekly_plan || data.shopping_list) { scene = "mealplan"; sceneIcon = "\u{1f4c5}"; sceneLabel = "\u98df\u8c31\u89c4\u5212" }
   // For fashion, dont use occasion as title (shown as tag)
@@ -1501,6 +1529,7 @@ function renderStructured(data) {
   if (data.ingredients && data.ingredients.length) {
     parts.push('<div class="s-sec">\u{1f958} \u98df\u6750</div><div class="s-ing-list">')
     data.ingredients.forEach(item => {
+      if (typeof item === 'string') item = { name: item }
       const note = item.note ? ` <span class="s-ing-note">\u{1f4a1} ${esc(item.note)}</span>` : ""
       const alt = item.alternative ? ` <span class="s-ing-note">\uff08\u53ef\u7528${esc(item.alternative)}\u66ff\u4ee3\uff09</span>` : ""
       parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(item.name)}</span>${item.amount ? `<span class="s-ing-amt">${esc(item.amount)}</span>` : ""}${note}${alt}</div>`)
@@ -1535,9 +1564,11 @@ function renderStructured(data) {
   if (data.selection_steps && data.selection_steps.length) {
     parts.push('<div class="s-sec">\u{1f50d} \u6311\u9009\u6b65\u9aa4</div><div class="s-step-list">')
     data.selection_steps.forEach(s => {
-      const fc = s.step_name ? s.step_name.trim().charAt(0) : "\u00b7"
-      const nm = s.step_name ? `<strong>${esc(s.step_name)}</strong> \u2014 ` : ""
-      parts.push(`<div class="s-select-item"><div class="s-select-num">${fc}</div><div class="s-step-body">${nm}${esc(s.action)}</div></div>`)
+      if (typeof s === 'string') s = { action: s }
+      const stepName = structuredText(s.step_name)
+      const fc = stepName ? stepName.charAt(0) : "\u00b7"
+      const nm = stepName ? `<strong>${esc(stepName)}</strong> \u2014 ` : ""
+      parts.push(`<div class="s-select-item"><div class="s-select-num">${fc}</div><div class="s-step-body">${nm}${esc(s.action || s.detail)}</div></div>`)
     })
     parts.push("</div>")
   }
@@ -1553,9 +1584,62 @@ function renderStructured(data) {
     })
     parts.push("</div>")
   }
+  const guidedScene = ["repair", "cooking", "housework", "health", "pet", "shopping", "fashion", "mealplan", "etiquette"].includes(scene)
+  if (guidedScene) {
+    const stage = structuredText(data.stage)
+    const status = structuredText(data.status)
+    const nextAction = structuredText(data.next_action)
+    if (stage || status || nextAction) {
+      parts.push('<section class="repair-flow">')
+      if (stage || status) {
+        parts.push('<div class="repair-flow-meta">')
+        if (stage) parts.push(`<span class="repair-stage">${esc(stage)}</span>`)
+        if (status) parts.push(`<span class="repair-status">${esc(status)}</span>`)
+        parts.push('</div>')
+      }
+      if (nextAction) parts.push(`<div class="repair-next"><span>现在先做</span><strong>${esc(nextAction)}</strong></div>`)
+      parts.push('</section>')
+    }
+    if (data.observations?.length) {
+      parts.push('<div class="s-sec">需要观察</div><div class="repair-observations">')
+      data.observations.forEach(item => {
+        if (typeof item === 'string') item = { label: item }
+        const label = structuredText(item.label || item.item || item.name)
+        const detail = structuredText(item.detail || item.expected || item.description)
+        if (label || detail) parts.push(`<div class="repair-observation"><strong>${esc(label)}</strong>${detail ? `<span>${esc(detail)}</span>` : ''}</div>`)
+      })
+      parts.push('</div>')
+    }
+    if (data.checklist?.length) {
+      parts.push('<div class="s-sec">检查清单</div><div class="repair-checklist">')
+      data.checklist.forEach(item => {
+        if (typeof item === 'string') item = { item }
+        const check = structuredText(item.item || item.label || item.action)
+        const expected = structuredText(item.expected || item.detail || item.result)
+        if (check || expected) parts.push(`<div class="repair-check"><span class="repair-check-dot"></span><div><strong>${esc(check)}</strong>${expected ? `<span>${esc(expected)}</span>` : ''}</div></div>`)
+      })
+      parts.push('</div>')
+    }
+    if (data.stop_conditions?.length) {
+      const stopTitle = scene === 'repair' ? '立即停止并找专业人员' : scene === 'health' ? '立即停止并尽快就医' : scene === 'pet' ? '立即停止并联系宠物医院' : '立即停止并寻求帮助'
+      parts.push(`<div class="repair-stop"><strong>${stopTitle}</strong>`)
+      data.stop_conditions.forEach(item => parts.push(`<span>${esc(structuredText(item))}</span>`))
+      parts.push('</div>')
+    }
+    if (data.choices?.length) {
+      parts.push('<div class="s-sec">选择当前最符合的情况</div><div class="repair-choices">')
+      data.choices.slice(0, 4).forEach(item => {
+        if (typeof item === 'string') item = { label: item, message: item }
+        const label = structuredText(item.label || item.message)
+        const reply = encodeURIComponent(structuredText(item.message || item.label))
+        if (label && reply) parts.push(`<button type="button" class="repair-choice" data-chat-reply="${reply}">${esc(label)}</button>`)
+      })
+      parts.push('</div>')
+    }
+  }
     // ===== Fashion mood board =====
   if (data.occasion || data.style) {
-    const tagText = data.occasion || data.style
+    const tagText = structuredText(data.occasion || data.style)
     let tagBg = "#f0e6ff"
     let tagColor = "#7c3aed"
     if (tagText.includes("休闲") || tagText.includes("出游")) { tagBg = "#fef7e0"; tagColor = "#e37400" }
@@ -1567,7 +1651,7 @@ function renderStructured(data) {
   if (data.color_palette && data.color_palette.length) {
     parts.push('<div class="s-sec">\u{1f3a8} \u63a8\u8350\u914d\u8272</div><div class="s-color-row">')
     data.color_palette.forEach(c => {
-      const cn = c.name || c.color || (typeof c === "string" ? c : "")
+      const cn = structuredText(typeof c === "object" ? (c.name || c.color || c.label || c.value || c) : c)
       const ch = nameToHex(cn) || "#ccc"
       parts.push(`<div class="s-color-dot-lg" style="background:${ch}"><span class="s-color-label">${esc(cn)}</span></div>`)
     })
@@ -1576,9 +1660,10 @@ function renderStructured(data) {
   if (data.outfits && data.outfits.length) {
     parts.push('<div class="s-sec">\u{1f454} \u63a8\u8350\u7a7f\u642d</div><div class="s-mb-list">')
     data.outfits.forEach(o => {
-      const on = o.piece || o.name || ""
-      const od = o.description || o.detail || ""
-      const oc = o.color || ""
+      if (typeof o === 'string') o = { piece: o }
+      const on = structuredText(o.piece || o.name)
+      const od = structuredText(o.description || o.detail)
+      const oc = structuredText(o.color)
       const oi = outfitIcon(on)
       const colorDot = oc ? `<span class="s-mb-c" style="background:${nameToHex(oc)}"></span>` : ""
       let iconBg = "#e3f2fd"
@@ -1594,9 +1679,10 @@ function renderStructured(data) {
   if (data.items && data.items.length) {
     parts.push('<div class="s-sec">\u{1f9e5} \u5355\u54c1\u63a8\u8350</div><div class="s-mb-list">')
     data.items.forEach(it => {
-      const in_ = it.name || it.item || ""
-      const id = it.description || it.recommendation || it.detail || it.note || ""
-      const ic = it.color || ""
+      if (typeof it === 'string') it = { name: it }
+      const in_ = structuredText(it.name || it.item)
+      const id = structuredText(it.description || it.recommendation || it.detail || it.note)
+      const ic = structuredText(it.color)
       const ii = outfitIcon(in_)
       const colorDot = ic ? `<span class="s-mb-c" style="background:${nameToHex(ic)}"></span>` : ""
       let iconBg = "#e3f2fd"
@@ -1611,9 +1697,10 @@ function renderStructured(data) {
   if (data.accessories && data.accessories.length) {
     parts.push('<div class="s-sec">\u{1f48d} \u914d\u9970\u63a8\u8350</div><div class="s-mb-list">')
     data.accessories.forEach(a => {
-      const an = a.name || a.item || ""
-      const ad = a.description || a.recommendation || a.note || ""
-      const ac = a.color || ""
+      if (typeof a === 'string') a = { name: a }
+      const an = structuredText(a.name || a.item)
+      const ad = structuredText(a.description || a.recommendation || a.note)
+      const ac = structuredText(a.color)
       const colorDot = ac ? `<span class="s-mb-c" style="background:${nameToHex(ac)}"></span>` : ""
       parts.push(`<div class="s-mb-item"><div class="s-mb-icon" style="background:#fff3e0">\u{1f48d}</div><div class="s-mb-ifo"><div class="s-mb-n">${esc(an)}</div>${ad ? `<div class="s-mb-d">${esc(ad)}${colorDot}</div>` : ""}</div></div>`)
     })
@@ -1631,21 +1718,23 @@ function renderStructured(data) {
   // ===== Health: symptoms list (from AI field: symptoms) =====
   if (data.symptoms && data.symptoms.length) {
     parts.push('<div class="s-sec">\u{1f9a0} \u5e38\u89c1\u75c7\u72b6</div><div class="s-mistake-list">')
-    data.symptoms.forEach(s => parts.push(`<div class="s-mistake-item">${esc(s)}</div>`))
+    data.symptoms.forEach(s => parts.push(`<div class="s-mistake-item">${esc(structuredText(s))}</div>`))
     parts.push("</div>")
   }
   // ===== Health: causes list (from AI field: causes) =====
   if (data.causes && data.causes.length) {
     parts.push('<div class="s-sec">\u{1f50d} \u53ef\u80fd\u539f\u56e0</div><div class="s-mistake-list">')
-    data.causes.forEach(c => parts.push(`<div class="s-mistake-item">${esc(c)}</div>`))
+    data.causes.forEach(c => parts.push(`<div class="s-mistake-item">${esc(structuredText(c))}</div>`))
     parts.push("</div>")
   }
   // ===== Health: advice steps (from AI field: advice) =====
   if (data.advice && data.advice.length) {
     parts.push('<div class="s-sec">\u{1f4a1} \u5efa\u8bae\u6b65\u9aa4</div><div class="s-step-list">')
     data.advice.forEach((a, ai) => {
-      const aItem = esc(a.item || a.action || a.name || "")
-      const aDetail = a.detail ? ` <span class="s-ing-note">${esc(a.detail)}</span>` : ""
+      if (typeof a === 'string') a = { item: a }
+      const aItem = esc(structuredText(a.item || a.action || a.name))
+      const aDetailText = structuredText(a.detail)
+      const aDetail = aDetailText ? ` <span class="s-ing-note">${esc(aDetailText)}</span>` : ""
       parts.push(`<div class="s-step-item"><div class="s-step-num">${ai+1}</div><div class="s-step-body">${aItem}${aDetail}</div></div>`)
     })
     parts.push("</div>")
@@ -1676,7 +1765,7 @@ function renderStructured(data) {
   // ===== Etiquette: key_principles =====
   if (data.key_principles && data.key_principles.length) {
     parts.push('<div class="s-sec">\u{1f4d6} \u5173\u952e\u539f\u5219</div><div class="s-mistake-list">')
-    data.key_principles.forEach(p => parts.push(`<div class="s-mistake-item">${esc(p)}</div>`))
+    data.key_principles.forEach(p => parts.push(`<div class="s-mistake-item">${esc(structuredText(p))}</div>`))
     parts.push("</div>")
   }
   // ===== Etiquette: cultural_notes =====
@@ -1688,6 +1777,7 @@ function renderStructured(data) {
       parts.push(`<div class="s-plan-day"><div class="s-plan-day-label">${esc(day.day || "")}</div>`)
       if (day.meals && day.meals.length) {
         day.meals.forEach(m => {
+          if (typeof m === 'string') m = { name: m }
           const mt = m.type ? `<span class="s-plan-meal-type">${esc(m.type)}</span>` : ""
           const mn = esc(m.name || "")
           const time = m.time ? ` \u23f1 ${esc(m.time)}` : ""
@@ -1710,14 +1800,14 @@ function renderStructured(data) {
       }
     })
   }
-if (data.common_mistakes && data.common_mistakes.length) {
+  if (data.common_mistakes && data.common_mistakes.length) {
     parts.push('<div class="s-sec">\u26a0\ufe0f \u5e38\u89c1\u8bef\u533a</div><div class="s-mistake-list">')
-    data.common_mistakes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
+    data.common_mistakes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(structuredText(m))}</div>`))
     parts.push("</div>")
   }
   if (data.common_causes && data.common_causes.length) {
     parts.push('<div class="s-sec">\u{1f50d} \u5e38\u89c1\u539f\u56e0</div><div class="s-mistake-list">')
-    data.common_causes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(m)}</div>`))
+    data.common_causes.forEach(m => parts.push(`<div class="s-mistake-item">${esc(structuredText(m))}</div>`))
     parts.push("</div>")
   }
   if (data.season) parts.push(`<span class="s-season-tag">\u{1f33f} ${esc(data.season)}</span>`)
@@ -1746,7 +1836,7 @@ if (data.common_mistakes && data.common_mistakes.length) {
     const ta = Array.isArray(data.tips) ? data.tips : [data.tips]
     ta.forEach(t => parts.push(`<div class="s-text-line">\u00b7 ${esc(t)}</div>`))
   }
-  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time","disclaimer","symptoms","causes","advice","when_to_see_doctor","do_list","dont_list","key_principles","cultural_notes","pet_type","topic","when_to_see_vet","weekly_plan","shopping_list","preference"]
+  const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time","disclaimer","symptoms","causes","advice","when_to_see_doctor","do_list","dont_list","key_principles","cultural_notes","pet_type","topic","when_to_see_vet","weekly_plan","shopping_list","preference","stage","status","next_action","observations","checklist","choices","stop_conditions"]
   Object.keys(data).forEach(k => {
     if (knownKeys.includes(k)) return
     const v = data[k]
@@ -1833,7 +1923,37 @@ if (data.common_mistakes && data.common_mistakes.length) {
       ].sort(() => Math.random() - 0.5).slice(0, 3)
     }
   }
-  if (recQ.length) parts.push(`<div class="s-followups"><div class="s-followup-title">\u{1f4a1} \u4f60\u53ef\u80fd\u8fd8\u60f3\u95ee</div>${recQ.map(q => `<span class="s-followup-chip">${esc(q)}</span>`).join(" ")}</div>`)
+  const outcomeStatuses = scene === 'health' || scene === 'pet'
+    ? ['居家观察', '已缓解']
+    : scene === 'shopping' || scene === 'fashion'
+      ? ['可自行比较', '可自行选择', '已选好']
+      : scene === 'mealplan'
+        ? ['可自行安排', '可自行确认', '已确认']
+        : scene === 'etiquette'
+          ? ['可自行表达', '可自行确认', '已确认']
+        : ['可自行检查', '可自行处理', '已解决']
+  const canConfirmOutcome = outcomeStatuses.includes(data.status)
+  if (guidedScene && canConfirmOutcome) {
+    const outcome = scene === 'cooking'
+      ? { done: '我已按步骤完成，结果符合预期。', more: '我已按步骤操作，但结果不符合预期，请继续指导。', doneLabel: '已完成', moreLabel: '继续指导' }
+        : scene === 'housework'
+          ? { done: '我已按步骤处理，问题已解决。', more: '我已按步骤处理，但问题还没解决，请继续指导。', doneLabel: '已解决', moreLabel: '继续处理' }
+          : scene === 'health'
+            ? { done: '我已按建议观察，症状已缓解。', more: '我已按建议观察，但症状没有缓解或有加重，请继续判断。', doneLabel: '已缓解', moreLabel: '未缓解' }
+            : scene === 'pet'
+              ? { done: '我已按建议观察，宠物情况已缓解。', more: '我已按建议观察，但宠物情况没有缓解或有加重，请继续判断。', doneLabel: '已缓解', moreLabel: '未缓解' }
+              : scene === 'shopping'
+                ? { done: '我已按建议选好商品。', more: '我还需要比较其他选项，请继续指导。', doneLabel: '已选好', moreLabel: '继续比较' }
+                : scene === 'fashion'
+                  ? { done: '我已按建议搭配好。', more: '我还需要调整搭配，请继续指导。', doneLabel: '已选好', moreLabel: '调整搭配' }
+                  : scene === 'mealplan'
+                    ? { done: '我已确认这个菜单安排。', more: '我还需要调整这个菜单，请继续规划。', doneLabel: '已确认', moreLabel: '调整菜单' }
+                    : scene === 'etiquette'
+                      ? { done: '我已确认这段表达可以使用。', more: '我还需要调整这段表达，请继续演练。', doneLabel: '确认表达', moreLabel: '调整表达' }
+                      : { done: '我已按这个步骤检查，问题已解决。', more: '我已按这个步骤检查，问题还没解决，请继续排查。', doneLabel: '已解决', moreLabel: '继续排查' }
+    parts.push(`<div class="repair-outcome"><button type="button" class="repair-outcome-done" data-chat-reply="${encodeURIComponent(outcome.done)}">${outcome.doneLabel}</button><button type="button" class="repair-outcome-more" data-chat-reply="${encodeURIComponent(outcome.more)}">${outcome.moreLabel}</button></div>`)
+  }
+  if (recQ.length) parts.push(`<div class="s-followups"><div class="s-followup-title">\u{1f4a1} \u4f60\u53ef\u80fd\u8fd8\u60f3\u95ee</div>${recQ.map(q => `<button type="button" class="s-followup-chip" data-chat-reply="${encodeURIComponent(structuredText(q))}">${esc(structuredText(q))}</button>`).join(" ")}</div>`)
   return '<div class="s-card">' + parts.join("") + "</div>"
 }
 const COLOR_MAP = {"\u7ea2":"#e74c3c","\u9152\u7ea2":"#8e1b1b","\u6697\u7ea2":"#8b0000","\u7c89":"#f0a8c4","\u73ab\u7ea2":"#d81b60","\u6a59":"#f39c12","\u6a58":"#f39c12","\u674f":"#f7cba0","\u6a59\u7ea2":"#e67e22","\u9ec4":"#f1c40f","\u7c73":"#f5f0e1","\u7c73\u767d":"#f5f0e1","\u5976\u6cb9":"#fff8dc","\u8c61\u7259":"#fffff0","\u6d45\u9ec4":"#fff9c4","\u7eff":"#27ae60","\u58a8\u7eff":"#1e5631","\u519b\u7eff":"#4a5d23","\u8349\u7eff":"#7cb342","\u6d45\u7eff":"#a5d6a7","\u7fe0\u7eff":"#00a86b","\u84dd":"#2980b9","\u6df1\u84dd":"#1a237e","\u6d45\u84dd":"#bbdefb","\u85cf\u84dd":"#13264d","\u7070\u84dd":"#5b7b9a","\u5929\u84dd":"#87ceeb","\u7d2b":"#8e44ad","\u6de1\u7d2b":"#d1b3e0","\u6df1\u7d2b":"#4a148c","\u68d5":"#8d6e63","\u5496\u5561":"#6d4c2e","\u9a7c":"#c49a6c","\u5361\u5176":"#c3a66b","\u68d5\u8910":"#5d4037","\u7070":"#9e9e9e","\u6d45\u7070":"#cfd8dc","\u6df1\u7070":"#424242","\u94f6":"#bdc3c7","\u70ad\u7070":"#36454f","\u9ed1":"#2c2c2c","\u767d":"#ffffff","\u7c73\u8272":"#f5f0e1","\u88f8\u8272":"#e8c4a0","\u91d1":"#d4a017","\u53e4\u94dc":"#cd7f32"}
@@ -2041,12 +2161,15 @@ function pollSceneImage(message, prompt, taskId, provider, scene, cacheName) {
 }
 
 
-function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function esc(s) { return structuredText(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 </script>
 <style scoped>
 /* ===== Claude 风格聊天页 ===== */
 .file-picker { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; left: -9999px; }
 .streaming-preview { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; color: var(--ink); }
+.streaming-structured { display:flex; align-items:center; gap:10px; min-height:42px; color:var(--muted); font-size:14px; }
+.streaming-spinner { width:16px; height:16px; border:2px solid rgba(180,83,9,.18); border-top-color:#b45309; border-radius:50%; animation:streaming-spin .8s linear infinite; flex:none; }
+@keyframes streaming-spin { to { transform:rotate(360deg); } }
 .chat-page {
   display: flex; flex-direction: column; height: 100vh;
   background: var(--paper);
@@ -2490,6 +2613,29 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-select-num { width:22px; height:22px; border-radius:50%; background:var(--sage); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
 .s-tool-list { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px; }
 .s-tool-tag { font-size:11px; padding:3px 10px; border-radius:999px; background:var(--paper-deep); color:var(--ink); border:1px solid var(--line); }
+.repair-flow { margin: 2px 0 14px; padding: 10px 12px; border-left: 3px solid #b7791f; background: #fff8e8; }
+.repair-flow-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:7px; }
+.repair-stage, .repair-status { font-size:11px; line-height:1; padding:4px 7px; border-radius:4px; font-weight:700; }
+.repair-stage { color:#74520d; background:#f7e4b7; }
+.repair-status { color:#285e61; background:#d8f0ef; }
+.repair-next { display:flex; flex-direction:column; gap:3px; color:var(--ink); font-size:13px; line-height:1.45; }
+.repair-next span { color:#8a6d3b; font-size:11px; font-weight:700; }
+.repair-observations, .repair-checklist { display:flex; flex-direction:column; gap:6px; }
+.repair-observation, .repair-check { display:flex; gap:8px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:rgba(255,255,255,.45); font-size:13px; line-height:1.4; }
+.repair-observation { flex-direction:column; gap:2px; }
+.repair-observation span, .repair-check span { color:var(--muted); font-size:12px; }
+.repair-check-dot { width:9px; height:9px; margin-top:5px; border:2px solid #b7791f; border-radius:50%; flex:none; }
+.repair-check > div { display:flex; flex-direction:column; gap:2px; }
+.repair-stop { display:flex; flex-direction:column; gap:4px; margin-top:14px; padding:10px 12px; border:1px solid #f2b8b5; border-radius:6px; background:#fff1f0; color:#a73a35; font-size:12px; line-height:1.45; }
+.repair-stop strong { font-size:13px; }
+.repair-choices { display:grid; grid-template-columns:1fr; gap:7px; }
+.repair-choice { min-height:40px; padding:8px 11px; border:1px solid #d8b36a; border-radius:6px; background:#fffdf8; color:#5f4612; font:inherit; font-size:13px; line-height:1.35; text-align:left; cursor:pointer; }
+.repair-choice:hover { background:#fff4d6; }
+.repair-choice:active, .repair-outcome button:active { transform:scale(.98); }
+.repair-outcome { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+.repair-outcome button { min-height:38px; border-radius:6px; padding:7px 8px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.repair-outcome-done { border:1px solid #8bbf9b; background:#edf8ef; color:#25603b; }
+.repair-outcome-more { border:1px solid #d8b36a; background:#fff8e8; color:#74520d; }
 .s-fashion-style { font-size:14px; font-weight:500; color:var(--ink); padding:2px 0 4px; }
 .s-color-list { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px; }
 .s-color-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); }
@@ -2577,6 +2723,22 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
 .s-select-num { width:22px; height:22px; border-radius:50%; background:var(--sage); color:#fff; font-size:11px; font-weight:600; display:grid; place-items:center; flex-shrink:0; margin-top:1px; }
 .s-tool-list { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:4px; }
 .s-tool-tag { font-size:11px; padding:3px 10px; border-radius:999px; background:var(--paper-deep); color:var(--ink); border:1px solid var(--line); }
+.repair-choices { display:grid; grid-template-columns:1fr; gap:7px; }
+.repair-choice { min-height:40px; padding:8px 11px; border:1px solid rgba(141,95,63,.18); border-radius:8px; background:rgba(141,95,63,.08); color:var(--accent-deep); font:inherit; font-size:12px; line-height:1.4; text-align:left; overflow-wrap:anywhere; cursor:pointer; transition:background .12s, transform .12s; }
+.repair-choice:hover { background:rgba(141,95,63,.15); }
+.repair-choice:active, .repair-outcome button:active { transform:scale(.96); }
+.repair-outcome { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; margin-top:14px; }
+.repair-outcome button { min-height:38px; padding:7px 8px; border-radius:8px; font:inherit; font-size:12px; font-weight:600; line-height:1.35; overflow-wrap:anywhere; cursor:pointer; transition:background .12s, transform .12s; }
+.repair-outcome-done { border:1px solid #8bbf9b; background:#edf8ef; color:#25603b; }
+.repair-outcome-more { border:1px solid rgba(141,95,63,.18); background:rgba(141,95,63,.08); color:var(--accent-deep); }
+.writing-outcome { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line); }
+.writing-outcome button { min-height:32px; padding:4px 12px; border:1px solid rgba(141,95,63,.14); border-radius:999px; background:rgba(141,95,63,.08); color:var(--accent-deep); font:inherit; font-size:12px; line-height:1.35; cursor:pointer; transition:background .12s, transform .12s; }
+.writing-outcome button:hover { background:rgba(141,95,63,.15); }
+.writing-outcome button:active { transform:scale(.96); }
+.writing-outcome-primary { border-color:var(--accent) !important; background:var(--accent) !important; color:#fff7ea !important; }
+@media (max-width: 340px) {
+  .repair-outcome { grid-template-columns:1fr; }
+}
 .s-fashion-style { font-size:14px; font-weight:500; color:var(--ink); padding:2px 0 4px; }
 .s-color-list { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 8px; }
 .s-color-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--ink); }
@@ -2656,4 +2818,3 @@ function esc(s) { if (typeof s !== 'string') return ''; return s.replace(/&/g,'&
   visibility: visible !important;
 }
 </style>
-

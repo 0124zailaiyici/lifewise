@@ -8,6 +8,21 @@ function normalizeBaseUrl(url) {
   return String(url || '').trim().replace(/\/+$/, '')
 }
 
+// 开发服务器代理仅用于浏览器本地调试，避免第三方 AI 服务的 CORS 限制。
+function browserRequestUrl(url) {
+  if (!import.meta.env.DEV) return url
+  const proxyTarget = normalizeBaseUrl(import.meta.env.VITE_AI_DEV_PROXY_TARGET)
+  if (!proxyTarget) return url
+  try {
+    const requestUrl = new URL(url)
+    const targetUrl = new URL(proxyTarget)
+    if (requestUrl.origin !== targetUrl.origin) return url
+    return '/__lifewise_ai' + requestUrl.pathname + requestUrl.search
+  } catch {
+    return url
+  }
+}
+
 /** 把用户随便填的地址，规整成 chat/completions、models、images 三个 URL */
 export function resolveOpenAIEndpoints(baseUrl) {
   let base = normalizeBaseUrl(baseUrl)
@@ -22,6 +37,7 @@ export function resolveOpenAIEndpoints(baseUrl) {
       chatUrl: base.replace(/\/+$/, ''),
       modelsUrl: root + '/models',
       imagesUrl: root + '/images/generations',
+      audioUrl: root + '/audio/transcriptions',
       displayBase: root
     }
   }
@@ -31,6 +47,7 @@ export function resolveOpenAIEndpoints(baseUrl) {
       chatUrl: base + '/chat/completions',
       modelsUrl: base + '/models',
       imagesUrl: base + '/images/generations',
+      audioUrl: base + '/audio/transcriptions',
       displayBase: base
     }
   }
@@ -41,6 +58,7 @@ export function resolveOpenAIEndpoints(baseUrl) {
       chatUrl: root + '/chat/completions',
       modelsUrl: root + '/models',
       imagesUrl: root + '/images/generations',
+      audioUrl: root + '/audio/transcriptions',
       displayBase: root
     }
   }
@@ -49,6 +67,7 @@ export function resolveOpenAIEndpoints(baseUrl) {
     chatUrl: base + '/v1/chat/completions',
     modelsUrl: base + '/v1/models',
     imagesUrl: base + '/v1/images/generations',
+    audioUrl: base + '/v1/audio/transcriptions',
     displayBase: base + '/v1'
   }
 }
@@ -57,12 +76,12 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 45000) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    return await fetch(url, { ...options, signal: controller.signal })
+    return await fetch(browserRequestUrl(url), { ...options, signal: controller.signal })
   } catch (e) {
     if (e?.name === 'AbortError') throw new Error('请求超时（' + Math.round(timeoutMs / 1000) + '秒），请检查接口地址/网络')
     const msg = String(e?.message || e || '')
     if (/Failed to fetch|NetworkError|Load failed|网络/i.test(msg)) {
-      throw new Error('网络请求失败：手机访问不到该地址。请确认地址可公网访问、HTTPS 证书正常；HTTP 明文也需允许。原错误：' + msg)
+      throw new Error('网络请求失败：请检查接口地址、网络、HTTPS 证书或浏览器跨域配置。原错误：' + msg)
     }
     throw new Error(msg || '网络请求失败')
   } finally {
@@ -79,6 +98,10 @@ function extractErrorMessage(status, data, rawText) {
     (rawText ? String(rawText).slice(0, 240) : '') ||
     ('HTTP ' + status)
   )
+}
+
+function isStreamUnsupported(error) {
+  return (error?.status === 400 || error?.status === 422) && /stream|streaming|流式/i.test(String(error?.message || ''))
 }
 
 function extractContent(data) {
@@ -365,6 +388,7 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
     max_tokens: scene === 'writing' ? 8192 : 4096,
     stream: true
   }
+  if (['repair', 'cooking', 'housework', 'health', 'pet', 'shopping', 'fashion', 'mealplan', 'etiquette'].includes(scene)) body.response_format = { type: 'json_object' }
 
   recordAiAudit({
     provider: 'openai-compatible',
@@ -388,26 +412,13 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
         requestUrl: chatUrl
       }
     } catch (e) {
-      const streamUnsupported = (e?.status === 400 || e?.status === 422) && /stream|streaming|流式/i.test(String(e?.message || ''))
-      if (!streamUnsupported) {
+      if (!isStreamUnsupported(e)) {
         recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'error', detail: String(e?.message || e) })
         throw e
       }
-      const fallbackResp = await fetchWithTimeout(chatUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + String(cfg.apiKey || '').trim()
-        },
-        body: JSON.stringify({ ...body, stream: false })
-      }, 120000)
-      const rawText = await fallbackResp.text()
-      let fallbackData = null
-      try { fallbackData = JSON.parse(rawText) } catch {}
-      if (!fallbackResp.ok) throw new Error('AI 调用失败（' + fallbackResp.status + '）：' + extractErrorMessage(fallbackResp.status, fallbackData, rawText))
-      const fallbackContent = extractContent(fallbackData)
+      const fallbackResult = await readNativeChatResponse(chatUrl, cfg.apiKey, { ...body, stream: false }, onChunk)
+      const fallbackContent = fallbackResult.content
       if (!fallbackContent) throw new Error('模型不支持流式输出，普通响应也为空')
-      onChunk?.(fallbackContent, fallbackContent)
       recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'ok', detail: (message || '').slice(0, 40) })
       return {
         content: fallbackContent,
@@ -425,7 +436,7 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
   const timer = setTimeout(() => controller.abort(), 120000)
   let resp
   try {
-    resp = await fetch(chatUrl, {
+    resp = await fetch(browserRequestUrl(chatUrl), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -443,7 +454,7 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
       const errMsg = extractErrorMessage(resp.status, data, rawText)
       const streamUnsupported = (resp.status === 400 || resp.status === 422) && /stream|streaming|流式/i.test(errMsg)
       if (streamUnsupported) {
-        resp = await fetch(chatUrl, {
+        resp = await fetch(browserRequestUrl(chatUrl), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -493,7 +504,7 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
     if (e?.name === 'AbortError') throw new Error('AI 响应超时（120秒），请检查网络或更换模型')
     const msg = String(e?.message || e || '')
     if (/Failed to fetch|NetworkError|Load failed|网络/i.test(msg)) {
-      throw new Error('网络请求失败：手机访问不到该 AI 地址。请检查地址、HTTPS 证书和网络。原错误：' + msg)
+      throw new Error('网络请求失败：请检查 AI 地址、网络、HTTPS 证书或浏览器跨域配置。原错误：' + msg)
     }
     throw e
   } finally {
@@ -673,7 +684,8 @@ export async function generateLocalImage(prompt, configOverride = null) {
  * 测试 AI 配置：
  * 1) 尝试拉 /models
  * 2) 发一条最小 chat 测试
- * 3) 仅检查生图接口路径/模型配置（不强制真生图，省费用）
+ * 3) 验证修理场景所需的 JSON 输出
+ * 4) 仅检查生图接口路径/模型配置（不强制真生图，省费用）
  */
 export async function testAiConnection(configOverride = null) {
   const cfg = { ...getAiConfig(), ...(configOverride || {}) }
@@ -681,6 +693,7 @@ export async function testAiConnection(configOverride = null) {
   if (!cfg.baseUrl) throw new Error('请先填写接口地址')
 
   const { chatUrl, modelsUrl, imagesUrl, displayBase } = resolveOpenAIEndpoints(cfg.baseUrl)
+  const nativePlatform = Capacitor.isNativePlatform()
   const headers = {
     'Content-Type': 'application/json',
     Authorization: 'Bearer ' + String(cfg.apiKey || '').trim()
@@ -699,36 +712,40 @@ export async function testAiConnection(configOverride = null) {
     steps: []
   }
 
-  try {
-    const resp = await fetchWithTimeout(modelsUrl, { method: 'GET', headers }, 20000)
-    const raw = await resp.text()
-    let data = null
-    try { data = JSON.parse(raw) } catch {}
-    if (resp.ok) {
-      const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
-      result.models = list
-        .map(m => m?.id || m?.name || m?.model || '')
-        .filter(Boolean)
-        .slice(0, 80)
-      result.steps.push({ name: '拉取模型列表', ok: true, detail: '成功，共 ' + result.models.length + ' 个' })
-      if (result.models.length && cfg.model && !result.models.includes(cfg.model)) {
+  if (nativePlatform) {
+    result.steps.push({ name: '拉取模型列表', ok: true, detail: 'Android 使用原生网络直连；跳过可能受网页跨域限制的模型列表检测' })
+  } else {
+    try {
+      const resp = await fetchWithTimeout(modelsUrl, { method: 'GET', headers }, 20000)
+      const raw = await resp.text()
+      let data = null
+      try { data = JSON.parse(raw) } catch {}
+      if (resp.ok) {
+        const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+        result.models = list
+          .map(m => m?.id || m?.name || m?.model || '')
+          .filter(Boolean)
+          .slice(0, 80)
+        result.steps.push({ name: '拉取模型列表', ok: true, detail: '成功，共 ' + result.models.length + ' 个' })
+        if (result.models.length && cfg.model && !result.models.includes(cfg.model)) {
+          result.steps.push({
+            name: '模型名检查',
+            ok: false,
+            detail: '当前模型「' + cfg.model + '」不在列表中。可点选下方模型，或确认服务商模型名'
+          })
+        } else if (cfg.model) {
+          result.steps.push({ name: '模型名检查', ok: true, detail: '当前模型「' + cfg.model + '」' })
+        }
+      } else {
         result.steps.push({
-          name: '模型名检查',
+          name: '拉取模型列表',
           ok: false,
-          detail: '当前模型「' + cfg.model + '」不在列表中。可点选下方模型，或确认服务商模型名'
+          detail: 'HTTP ' + resp.status + '：' + extractErrorMessage(resp.status, data, raw) + '（可忽略，继续测聊天）'
         })
-      } else if (cfg.model) {
-        result.steps.push({ name: '模型名检查', ok: true, detail: '当前模型「' + cfg.model + '」' })
       }
-    } else {
-      result.steps.push({
-        name: '拉取模型列表',
-        ok: false,
-        detail: 'HTTP ' + resp.status + '：' + extractErrorMessage(resp.status, data, raw) + '（可忽略，继续测聊天）'
-      })
+    } catch (e) {
+      result.steps.push({ name: '拉取模型列表', ok: false, detail: (e.message || String(e)) + '（可忽略，继续测聊天）' })
     }
-  } catch (e) {
-    result.steps.push({ name: '拉取模型列表', ok: false, detail: (e.message || String(e)) + '（可忽略，继续测聊天）' })
   }
 
   try {
@@ -739,23 +756,37 @@ export async function testAiConnection(configOverride = null) {
         { role: 'user', content: 'ping' }
       ],
       temperature: 0,
-      max_tokens: 16
+      max_tokens: 16,
+      stream: nativePlatform
     }
-    const resp = await fetchWithTimeout(chatUrl, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    }, 45000)
-    const raw = await resp.text()
-    let data = null
-    try { data = JSON.parse(raw) } catch {}
-    if (!resp.ok) {
-      const err = extractErrorMessage(resp.status, data, raw)
-      result.steps.push({ name: '聊天测试', ok: false, detail: 'HTTP ' + resp.status + '：' + err })
-      recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'error', detail: 'test: ' + err })
-      throw new Error('聊天测试失败（' + resp.status + '）：' + err)
+    let content = ''
+    if (nativePlatform) {
+      let nativeResult
+      try {
+        nativeResult = await readNativeChatResponse(chatUrl, cfg.apiKey, body)
+      } catch (error) {
+        if (!isStreamUnsupported(error)) throw error
+        nativeResult = await readNativeChatResponse(chatUrl, cfg.apiKey, { ...body, stream: false })
+      }
+      content = nativeResult.content || ''
+      if (!content) throw new Error('原生聊天测试未收到有效回复，请确认模型支持当前接口')
+    } else {
+      const resp = await fetchWithTimeout(chatUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      }, 45000)
+      const raw = await resp.text()
+      let data = null
+      try { data = JSON.parse(raw) } catch {}
+      if (!resp.ok) {
+        const err = extractErrorMessage(resp.status, data, raw)
+        result.steps.push({ name: '聊天测试', ok: false, detail: 'HTTP ' + resp.status + '：' + err })
+        recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'error', detail: 'test: ' + err })
+        throw new Error('聊天测试失败（' + resp.status + '）：' + err)
+      }
+      content = extractContent(data) || raw.slice(0, 80)
     }
-    const content = extractContent(data) || raw.slice(0, 80)
     result.reply = content
     result.ok = true
     result.steps.push({ name: '聊天测试', ok: true, detail: '成功，回复：' + String(content).slice(0, 60) })
@@ -766,6 +797,45 @@ export async function testAiConnection(configOverride = null) {
     }
     recordAiAudit({ provider: 'openai-compatible', model: cfg.model || '', status: 'error', detail: 'test: ' + (e.message || '') })
     const err = new Error(e.message || '测试失败')
+    err.testResult = result
+    throw err
+  }
+
+  try {
+    const repairBody = {
+      model: cfg.model || 'qwen-plus',
+      messages: [
+        { role: 'system', content: '只输出合法 JSON 对象：{"status":"ok"}' },
+        { role: 'user', content: 'ping' }
+      ],
+      temperature: 0,
+      max_tokens: 32,
+      stream: false,
+      response_format: { type: 'json_object' }
+    }
+    let repairContent = ''
+    if (nativePlatform) {
+      const nativeResult = await readNativeChatResponse(chatUrl, cfg.apiKey, repairBody)
+      repairContent = nativeResult.content || ''
+    } else {
+      const resp = await fetchWithTimeout(chatUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(repairBody)
+      }, 45000)
+      const raw = await resp.text()
+      let data = null
+      try { data = JSON.parse(raw) } catch {}
+      if (!resp.ok) throw new Error('HTTP ' + resp.status + '：' + extractErrorMessage(resp.status, data, raw))
+      repairContent = extractContent(data)
+    }
+    const repairData = JSON.parse(repairContent)
+    if (!repairData || typeof repairData !== 'object' || Array.isArray(repairData)) throw new Error('模型没有返回 JSON 对象')
+    result.steps.push({ name: '修理 JSON 测试', ok: true, detail: '成功，模型支持结构化修理回答' })
+  } catch (e) {
+    result.ok = false
+    result.steps.push({ name: '修理 JSON 测试', ok: false, detail: e.message || String(e) })
+    const err = new Error('修理 JSON 测试失败：' + (e.message || '模型不支持 JSON 输出'))
     err.testResult = result
     throw err
   }

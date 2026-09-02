@@ -44,6 +44,9 @@
             <el-input v-model="aiForm.apiKey" type="password" show-password placeholder="API Key" clearable class="ai-input" />
             <el-input v-model="aiForm.model" placeholder="聊天模型，如 gpt-5.4-mini" clearable class="ai-input" />
             <el-input v-model="aiForm.imageModel" placeholder="生图模型，可留空沿用聊天模型" clearable class="ai-input" />
+            <el-input v-model="aiForm.speechBaseUrl" placeholder="语音接口地址，可留空沿用聊天接口" clearable class="ai-input" />
+            <el-input v-model="aiForm.speechApiKey" type="password" show-password placeholder="语音 API Key，可留空沿用聊天 Key" clearable class="ai-input" />
+            <el-input v-model="aiForm.speechModel" placeholder="语音模型，可留空自动选择" clearable class="ai-input" />
             <div class="ai-config-actions">
               <el-input-number v-model="aiForm.contextRounds" :min="1" :max="20" size="small" />
               <span class="rounds-label">上下文轮数</span>
@@ -167,7 +170,7 @@
       </div>
 
       <div class="footer-info">
-        <div class="app-name">LifeWise v1.0</div>
+        <div class="app-name">LifeWise v1.2</div>
         <div class="app-desc">AI 生活常识助手 · 本地独立版</div>
       </div>
     </div>
@@ -192,7 +195,7 @@ const user = computed(() => userStore.user)
 // ===== 设置状态 =====
 const setting_foodImage = ref(localStorage.getItem('setting_foodImage') !== 'off')
 const setting_aiProvider = ref('local')
-const aiForm = ref({ baseUrl: '', apiKey: '', model: 'qwen-plus', imageModel: '', contextRounds: 5 })
+const aiForm = ref({ baseUrl: '', apiKey: '', model: 'qwen-plus', imageModel: '', speechBaseUrl: '', speechApiKey: '', speechModel: '', contextRounds: 5 })
 const aiConfigured = computed(() => !!(aiForm.value.baseUrl && aiForm.value.apiKey))
 const testLoading = ref(false)
 const testResult = ref(null)
@@ -250,6 +253,9 @@ function currentAiFormPayload() {
     apiKey: String(aiForm.value.apiKey || '').trim(),
     model: String(aiForm.value.model || 'qwen-plus').trim(),
     imageModel: String(aiForm.value.imageModel || '').trim(),
+    speechBaseUrl: String(aiForm.value.speechBaseUrl || '').trim(),
+    speechApiKey: String(aiForm.value.speechApiKey || '').trim(),
+    speechModel: String(aiForm.value.speechModel || '').trim(),
     contextRounds: Number(aiForm.value.contextRounds || 5)
   }
 }
@@ -278,6 +284,9 @@ function loadAiConfigForm() {
     apiKey: cfg.apiKey || '',
     model: cfg.model || 'qwen-plus',
     imageModel: cfg.imageModel || '',
+    speechBaseUrl: cfg.speechBaseUrl || '',
+    speechApiKey: cfg.speechApiKey || '',
+    speechModel: cfg.speechModel || '',
     contextRounds: cfg.contextRounds || 5
   }
   refreshEndpointPreview()
@@ -561,5 +570,3 @@ function handleLogout() {
 }
 .model-chip.active { background: #8d5f3f; color: #fff; border-color: #8d5f3f; }
 </style>
-
-

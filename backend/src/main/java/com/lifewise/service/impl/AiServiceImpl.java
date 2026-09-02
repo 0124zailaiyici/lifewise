@@ -252,22 +252,26 @@ public class AiServiceImpl implements AiService {
         // Image questions must use the configured vision model; text-only provider selection stays unchanged.
         if (hasImage) {
             aiCallAuditService.record(userId, "vision", visionModel, scene, "calling", "[· " + shorten(message, 40) + "] 视觉回答");
-            return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true);
+            return callOpenAICompatible(visionApiUrl, visionApiKey, visionModel, messages, true, "repair".equals(scene));
         }
 
         // Always use Qwen via DashScope
         aiCallAuditService.record(userId, "qwen", dashscopeModel, scene, "calling", "[· " + shorten(message, 40) + "] Qwen回答");
-        return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false);
+        return callOpenAICompatible(dashscopeApiUrl, dashscopeApiKey, dashscopeModel, messages, false, "repair".equals(scene));
     }
 
     /** 调用 OpenAI 兼容接口（DeepSeek / DashScope Qwen） */
     private String callOpenAICompatible(String url, String key, String modelName,
-                                         List<Map<String, Object>> messages, boolean useVision) throws Exception {
+                                         List<Map<String, Object>> messages, boolean useVision,
+                                         boolean forceJsonResponse) throws Exception {
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", modelName);
         requestBody.put("messages", messages);
         requestBody.put("temperature", 0.7);
         requestBody.put("max_tokens", 16384);
+        if (forceJsonResponse) {
+            requestBody.put("response_format", Map.of("type", "json_object"));
+        }
 
         String body = objectMapper.writeValueAsString(requestBody);
         log.debug("AI request to {}: {}", url, body.substring(0, Math.min(200, body.length())));
@@ -322,12 +326,15 @@ public class AiServiceImpl implements AiService {
 
     private String buildSystemPrompt(String scene, boolean hasImage, boolean followUp) {
         // Follow-up mode: natural language when frontend explicitly marks a clicked follow-up chip.
-        if (followUp) {
+        if (followUp && !"repair".equals(scene)) {
             String scenePrompt = scenePromptProperties.getFollowUpPrompt(scene);
             return scenePromptProperties.getFollowUpReturn().replace("{scenePrompt}", scenePrompt);
         }
         String baseRule = scenePromptProperties.getBaseRule();
         String schema = scenePromptProperties.getSchema(scene);
+        if (followUp && "repair".equals(scene)) {
+            return baseRule + "\n" + scenePromptProperties.getFollowUpPrompt(scene) + "\n" + schema;
+        }
         return baseRule + "\n" + schema;
     }
 

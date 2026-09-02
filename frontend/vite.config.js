@@ -1,7 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const aiDevProxyTarget = String(env.VITE_AI_DEV_PROXY_TARGET || '').trim().replace(/\/+$/, '')
+
+  return {
   plugins: [vue()],
   // Capacitor 本地资源加载需要相对路径
   base: './',
@@ -44,7 +48,15 @@ export default defineConfig({
       '/food-image': {
         target: 'http://localhost:8080',
         changeOrigin: true
-      }
+      },
+      ...(aiDevProxyTarget ? {
+        '/__lifewise_ai': {
+          target: aiDevProxyTarget,
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/__lifewise_ai/, '')
+        }
+      } : {})
     }
+  }
   }
 })

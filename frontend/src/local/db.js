@@ -41,6 +41,9 @@ export function getAiConfig() {
     apiKey: '',
     model: 'qwen-plus',
     imageModel: '',
+    speechModel: '',
+    speechBaseUrl: '',
+    speechApiKey: '',
     contextRounds: 5
   }
   const cfg = read(KEYS.ai, null)

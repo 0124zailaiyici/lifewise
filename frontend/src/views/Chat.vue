@@ -265,6 +265,7 @@ const isTranscribing = ref(false)
 const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
 const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false, sharing: false })
 const showExportMenu = ref(false)
+const ACTIVE_CHAT_KEY = 'lw_active_chat_recovery'
 function toggleExportMenu() { showExportMenu.value = !showExportMenu.value }
 const favCategories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
@@ -400,11 +401,18 @@ onMounted(async () => {
   loadAiConfigStatus()
   window.addEventListener('focus', refreshLocalSettings)
   window.addEventListener('storage', refreshLocalSettings)
+  window.addEventListener('lifewise-conversation-updated', handleConversationUpdated)
   await setupNativeSpeechListeners()
   await nextTick()
   inputRef.value?.focus()
   if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
   else {
+    const pendingConversation = getActiveConversationRecovery()
+    if (pendingConversation) {
+      currentConvId.value = pendingConversation
+      await loadConversation(pendingConversation)
+      return
+    }
     const pendingPrompt = localStorage.getItem('pendingPrompt')
     if (pendingPrompt) {
       inputText.value = pendingPrompt
@@ -419,6 +427,7 @@ onUnmounted(() => {
   msgBox.value?.removeEventListener('click', handleFollowUpClick)
   window.removeEventListener('focus', refreshLocalSettings)
   window.removeEventListener('storage', refreshLocalSettings)
+  window.removeEventListener('lifewise-conversation-updated', handleConversationUpdated)
   nativeListenerHandles.splice(0).forEach(handle => handle.remove?.())
   messages.value.forEach(m => {
     if (m._foodImagePoll) clearInterval(m._foodImagePoll)
@@ -427,6 +436,31 @@ onUnmounted(() => {
     m._sceneImagePoll = null
   })
 })
+
+function rememberActiveConversation(id) {
+  sessionStorage.setItem(ACTIVE_CHAT_KEY, JSON.stringify({ id, createdAt: Date.now() }))
+}
+
+function getActiveConversationRecovery() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(ACTIVE_CHAT_KEY) || '{}')
+    if (!Number.isFinite(Number(value.id)) || Date.now() - Number(value.createdAt) > 2 * 60 * 1000) return null
+    return Number(value.id)
+  } catch {
+    return null
+  }
+}
+
+async function handleConversationUpdated(event) {
+  const conversationId = Number(event?.detail?.conversationId)
+  if (!conversationId || currentConvId.value !== conversationId) return
+  inputText.value = ''
+  promptPrefilled.value = false
+  pendingFollowUp.value = false
+  tempScene.value = ''
+  await loadConversation(conversationId)
+  sessionStorage.removeItem(ACTIVE_CHAT_KEY)
+}
 
 function refreshLocalSettings() {
   foodImageEnabled.value = localStorage.getItem('setting_foodImage') !== 'off'
@@ -462,6 +496,7 @@ async function loadConversation(id) {
 }
 
 async function send(retryMessage = null) {
+  if (loading.value) return
   const msg = retryMessage?._retry?.message || inputText.value.trim()
   if (!msg && !pendingFile.value) return
   const isFollowUp = retryMessage?._retry?.followUp ?? pendingFollowUp.value
@@ -518,6 +553,10 @@ async function send(retryMessage = null) {
   try {
     const res = await sendChat(msg, scene, convId, imageUrl, {
       followUp: isFollowUp,
+      onConversationCreated(id) {
+        currentConvId.value = id
+        rememberActiveConversation(id)
+      },
       onChunk(content) {
         const target = messages.value[aiIdx]
         if (!target) return
@@ -582,7 +621,13 @@ async function send(retryMessage = null) {
       unlockGuidedCards()
       currentTyping.value = false
     }
-  } finally { loading.value = false }
+  } finally {
+    loading.value = false
+    currentTyping.value = false
+    messages.value.forEach(message => {
+      if (message._typing) message._typing = false
+    })
+  }
 }
 
 
@@ -1507,7 +1552,7 @@ function renderContent(content) {
   const html = renderMarkdown(content)
   const currentScene = localStorage.getItem('currentScene')
   if (currentScene !== 'writing') {
-    return structuredScenes.has(currentScene) ? '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>请重试以获取结构化步骤。</span></div>' : html
+    return structuredScenes.has(currentScene) ? '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>可以重新生成结构化步骤。</span><button type="button" class="structured-retry" data-chat-reply="请基于上一次回答，严格输出完整、合法的 JSON 对象，不要代码块或额外说明。">重新生成卡片</button></div>' : html
   }
   return html + '<div class="writing-outcome"><button type="button" class="writing-outcome-primary" data-chat-reply="请在保留核心信息的前提下润色这版初稿，让表达更自然。">润色初稿</button><button type="button" data-chat-reply="请把这版初稿压缩到更短、更利落的版本。">精简</button><button type="button" data-chat-reply="请把这版初稿改成更正式、得体的语气。">改正式</button><button type="button" data-chat-reply="这版可以定稿了，请只回复最终可直接使用的版本。">确认定稿</button></div>'
 }

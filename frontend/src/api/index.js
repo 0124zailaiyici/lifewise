@@ -93,6 +93,7 @@ export async function sendChat(message, scene, conversationId, imageUrl, options
     const title = (message || '新对话').slice(0, 50)
     const conv = createConversation(title, scene || 'other')
     convId = conv.id
+    options.onConversationCreated?.(convId)
   }
   try {
     const ai = await callLocalChat({
@@ -105,6 +106,9 @@ export async function sendChat(message, scene, conversationId, imageUrl, options
     })
     addMessage(convId, 'user', message || '', imageUrl || '')
     const aiMsg = addMessage(convId, 'assistant', ai.content, '')
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('lifewise-conversation-updated', { detail: { conversationId: convId } }))
+    }
     return ok({
       id: aiMsg.id,
       conversationId: convId,

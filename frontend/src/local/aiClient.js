@@ -298,7 +298,7 @@ async function readNativeChatResponse(chatUrl, apiKey, body, onChunk) {
           onChunk?.(content, delta)
         } catch {}
       }))
-      handles.push(await NativeAiStream.addListener('streamComplete', async event => {
+      handles.push(await NativeAiStream.addListener('streamComplete', event => {
         if (event?.requestId !== requestId) return
         if (!content && event?.rawText) {
           try {
@@ -307,15 +307,17 @@ async function readNativeChatResponse(chatUrl, apiKey, body, onChunk) {
             if (content) onChunk?.(content, content)
           } catch {}
         }
-        await cleanup()
         resolve({ content, rawText: event?.rawText || '' })
+        // Do not await removal of the listener from inside its own callback.
+        // Capacitor can wait for this callback to return before completing removal.
+        cleanup().catch(() => {})
       }))
-      handles.push(await NativeAiStream.addListener('streamError', async event => {
+      handles.push(await NativeAiStream.addListener('streamError', event => {
         if (event?.requestId !== requestId) return
-        await cleanup()
         const error = new Error(event?.message || '原生流式请求失败')
         error.status = Number(event?.status || 0)
         reject(error)
+        cleanup().catch(() => {})
       }))
 
       timeout = setTimeout(async () => {
@@ -335,6 +337,20 @@ async function readNativeChatResponse(chatUrl, apiKey, body, onChunk) {
       reject(e)
     }
   })
+}
+
+async function requestNativeChatResponse(chatUrl, apiKey, body) {
+  const requestId = 'chat-' + Date.now() + '-' + Math.random().toString(36).slice(2)
+  const result = await NativeAiStream.request({
+    requestId,
+    url: chatUrl,
+    apiKey: String(apiKey || '').trim(),
+    body: JSON.stringify(body)
+  })
+  const rawText = String(result?.rawText || '')
+  let data = null
+  try { data = JSON.parse(rawText) } catch {}
+  return { content: extractContent(data), rawText }
 }
 
 export async function callLocalChat({ message, scene, conversationId, imageUrl, followUp = false, configOverride = null, onChunk = null }) {
@@ -416,9 +432,9 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
         recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'error', detail: String(e?.message || e) })
         throw e
       }
-      const fallbackResult = await readNativeChatResponse(chatUrl, cfg.apiKey, { ...body, stream: false }, onChunk)
+      const fallbackResult = await requestNativeChatResponse(chatUrl, cfg.apiKey, { ...body, stream: false })
       const fallbackContent = fallbackResult.content
-      if (!fallbackContent) throw new Error('模型不支持流式输出，普通响应也为空')
+      if (!fallbackContent) throw new Error('AI 返回为空，请检查当前模型是否支持当前接口')
       recordAiAudit({ provider: 'openai-compatible', model: body.model, status: 'ok', detail: (message || '').slice(0, 40) })
       return {
         content: fallbackContent,

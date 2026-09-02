@@ -38,6 +38,16 @@ function tryParseObject(value) {
     const parsed = JSON.parse(text.replace(/,([\s\n\r]*[}\]])/g, '$1'))
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
   } catch {}
+  try {
+    const cleaned = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g, '')
+    const parsed = JSON.parse(cleaned.replace(/,([\s\n\r]*[}\]])/g, '$1'))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
+  } catch {}
+  try {
+    const flattened = text.replace(/[\r\n]+/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g, '')
+    const parsed = JSON.parse(flattened.replace(/,([\s\n\r]*[}\]])/g, '$1'))
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null
+  } catch {}
   return null
 }
 

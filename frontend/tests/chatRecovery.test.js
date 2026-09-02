@@ -6,11 +6,17 @@ const chatSource = await readFile(new URL('../src/views/Chat.vue', import.meta.u
 const acceptanceSource = await readFile(new URL('../scripts/acceptance-ai.mjs', import.meta.url), 'utf8')
 
 test('failed chat requests retain an in-place retry path', () => {
+  assert.match(chatSource, /async function send\(retryMessage = null\) \{\n\s*if \(loading\.value\) return/)
   assert.match(chatSource, /async function send\(retryMessage = null\)/)
   assert.match(chatSource, /m\._retry = \{ message: msg, scene, conversationId: convId, followUp: isFollowUp, imageUrl/)
   assert.match(chatSource, /function retryFailedMessage\(message\)/)
   assert.match(chatSource, /@click="retryFailedMessage\(msg\)"/)
   assert.match(chatSource, /function unlockGuidedCards\(\)/)
+  assert.match(chatSource, /finally \{\n\s*loading\.value = false\n\s*currentTyping\.value = false/)
+  assert.match(chatSource, /onConversationCreated\(id\) \{\n\s*currentConvId\.value = id/)
+  assert.match(chatSource, /function handleConversationUpdated\(event\)/)
+  assert.match(chatSource, /inputText\.value = ''\n\s*promptPrefilled\.value = false/)
+  assert.match(chatSource, /window\.addEventListener\('lifewise-conversation-updated', handleConversationUpdated\)/)
 })
 
 test('scene image tasks expose recovery and always stop polling', () => {

@@ -5,6 +5,8 @@ import { normalizeStructuredData, parseStructuredJson, structuredFallbackText } 
 test('parses direct, fenced, and embedded structured JSON replies', () => {
   assert.deepEqual(parseStructuredJson('{"title":"直接回复"}'), { title: '直接回复' })
   assert.deepEqual(parseStructuredJson('```json\n{"title":"代码块回复",}\n```'), { title: '代码块回复' })
+  assert.deepEqual(parseStructuredJson('{"title":"含\u0001控制字符"}'), { title: '含控制字符' })
+  assert.deepEqual(parseStructuredJson('{"title":"含\n未转义换行"}'), { title: '含未转义换行' })
   assert.deepEqual(
     parseStructuredJson('说明文字 {"title":"第一段","detail":"花括号 { 不影响解析"} 后面还有 {not json}'),
     { title: '第一段', detail: '花括号 { 不影响解析' }

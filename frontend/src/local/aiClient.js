@@ -353,13 +353,14 @@ async function requestNativeChatResponse(chatUrl, apiKey, body) {
   return { content: extractContent(data), rawText }
 }
 
-export async function callLocalChat({ message, scene, conversationId, imageUrl, followUp = false, configOverride = null, onChunk = null }) {
+export async function callLocalChat({ message, scene, conversationId, imageUrl, followUp = false, configOverride = null, onChunk = null, excludeLatestUser = false }) {
   const cfg = { ...getAiConfig(), ...(configOverride || {}) }
   if (!cfg.apiKey) throw new Error('请先在「我的」页填写 AI API Key')
   if (!cfg.baseUrl) throw new Error('请先在「我的」页填写 AI 接口地址')
 
   const rounds = Number(cfg.contextRounds || 5)
   const history = conversationId ? getMessages(conversationId, rounds * 2) : []
+  if (excludeLatestUser && history.at(-1)?.role === 'user') history.pop()
   const messages = [
     { role: 'system', content: buildSystemPrompt(scene || 'other', !!followUp) }
   ]

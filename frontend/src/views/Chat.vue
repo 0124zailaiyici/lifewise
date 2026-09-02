@@ -48,7 +48,7 @@
             <div v-if="msg.imageUrl" class="msg-image" @click="previewImage(msg.imageUrl)">
               <img :src="imgUrl(msg.imageUrl)" alt="图片" loading="lazy" @error="onImgError($event)" />
             </div>
-            <div v-html="msg._displayHtml || renderContent(msg.content)"></div>
+            <div v-html="msg._displayHtml || renderMarkdown(msg.content)"></div>
           </div>
         </template>
 
@@ -201,8 +201,8 @@
       <div class="composer">
         <button class="composer-btn upload-btn" type="button" aria-label="上传图片" @click="triggerUpload">＋</button>
         <button class="composer-btn mic-btn" type="button" :aria-label="isListening ? '停止语音输入' : '开始语音输入'" :class="{ listening: isListening }" @click="startVoice" :disabled="loading || isTranscribing">🎤</button>
-        <textarea ref="inputRef" v-model="inputText" :placeholder="composerPlaceholder" rows="1" @keydown.enter.exact.prevent="send" :disabled="loading" @input="onUserInput"></textarea>
-        <button class="composer-btn send-btn" type="button" aria-label="发送消息" :disabled="loading || !inputText.trim() && !pendingFile" @click="send">➜</button>
+        <textarea ref="inputRef" v-model="inputText" :placeholder="composerPlaceholder" rows="1" @keydown.enter.exact.prevent="send()" :disabled="loading" @input="onUserInput"></textarea>
+        <button class="composer-btn send-btn" type="button" aria-label="发送消息" :disabled="loading || !inputText.trim() && !pendingFile" @click="send()">➜</button>
       </div>
     </footer>
   </div>
@@ -266,6 +266,10 @@ const favDialog = ref({ show: false, selected: 'other', msgIndex: -1 })
 const shareDialog = ref({ show: false, question: '', html: '', date: '', downloading: false, sharing: false })
 const showExportMenu = ref(false)
 const ACTIVE_CHAT_KEY = 'lw_active_chat_recovery'
+const STREAM_RENDER_INTERVAL = 100
+let pendingStreamUpdate = null
+let streamRenderTimer = null
+let scrollScheduled = false
 function toggleExportMenu() { showExportMenu.value = !showExportMenu.value }
 const favCategories = [
   { key: 'cooking', icon: '🍳', label: '做饭' },
@@ -407,7 +411,7 @@ onMounted(async () => {
   inputRef.value?.focus()
   if (route.params.id) { currentConvId.value = Number(route.params.id); await loadConversation(route.params.id) }
   else {
-    const pendingConversation = getActiveConversationRecovery()
+    const pendingConversation = getActiveConversationRecovery(localStorage.getItem('currentScene') || 'other')
     if (pendingConversation) {
       currentConvId.value = pendingConversation
       await loadConversation(pendingConversation)
@@ -435,16 +439,21 @@ onUnmounted(() => {
     m._foodImagePoll = null
     m._sceneImagePoll = null
   })
+  if (streamRenderTimer) clearTimeout(streamRenderTimer)
+  pendingStreamUpdate = null
+  streamRenderTimer = null
+  scrollScheduled = false
 })
 
-function rememberActiveConversation(id) {
-  sessionStorage.setItem(ACTIVE_CHAT_KEY, JSON.stringify({ id, createdAt: Date.now() }))
+function rememberActiveConversation(id, scene) {
+  sessionStorage.setItem(ACTIVE_CHAT_KEY, JSON.stringify({ id, scene, createdAt: Date.now() }))
 }
 
-function getActiveConversationRecovery() {
+function getActiveConversationRecovery(scene) {
   try {
     const value = JSON.parse(sessionStorage.getItem(ACTIVE_CHAT_KEY) || '{}')
     if (!Number.isFinite(Number(value.id)) || Date.now() - Number(value.createdAt) > 2 * 60 * 1000) return null
+    if (value.scene !== scene) return null
     return Number(value.id)
   } catch {
     return null
@@ -453,7 +462,9 @@ function getActiveConversationRecovery() {
 
 async function handleConversationUpdated(event) {
   const conversationId = Number(event?.detail?.conversationId)
-  if (!conversationId || currentConvId.value !== conversationId) return
+  // sendChat persists then emits this event before its caller receives the final response.
+  // The active request already owns the in-place placeholder, so reloading here races its final render.
+  if (!conversationId || loading.value || currentConvId.value !== conversationId) return
   inputText.value = ''
   promptPrefilled.value = false
   pendingFollowUp.value = false
@@ -553,23 +564,18 @@ async function send(retryMessage = null) {
   try {
     const res = await sendChat(msg, scene, convId, imageUrl, {
       followUp: isFollowUp,
+      persistUser: !retryMessage,
       onConversationCreated(id) {
         currentConvId.value = id
-        rememberActiveConversation(id)
+        rememberActiveConversation(id, scene)
       },
       onChunk(content) {
         const target = messages.value[aiIdx]
         if (!target) return
-        target.content = content
-        const hideStructuredSource = structuredScenes.has(scene) && !isFollowUp
-        target._displayHtml = hideStructuredSource
-          ? '<div class="streaming-structured"><span class="streaming-spinner"></span><span>正在整理成易读卡片…</span></div>'
-          : renderMarkdown(content)
-        target._typing = true
-        currentTyping.value = true
-        scrollBottom()
+        queueStreamUpdate(target, content, scene, isFollowUp)
       }
     })
+    flushStreamUpdate()
     const m = messages.value[aiIdx]
     if (res.data?.id && m) { m._id = res.data.id }
     if (res.data?.conversationId) currentConvId.value = res.data.conversationId
@@ -581,6 +587,7 @@ async function send(retryMessage = null) {
       m._sourceLabel = res.data?.sourceLabel || ''
       m._displayHtml = renderContent(fullContent)
       currentTyping.value = false; scrollBottom()
+      anchorConversationRoute(res.data?.conversationId)
       // Scene image generation: enabled scenes auto-generate; cooking keeps the image in the food-image slot.
       const sceneImageEnabled = localStorage.getItem('setting_foodImage') !== 'off'
       let dishName = ''
@@ -608,6 +615,7 @@ async function send(retryMessage = null) {
       } catch {}
     }
   } catch(e) {
+    flushStreamUpdate()
     const m = messages.value[aiIdx]
     if (m) {
       let errMsg = e?.response?.data?.message || e?.message || '请求出错了，请检查 AI Key/地址'
@@ -622,12 +630,42 @@ async function send(retryMessage = null) {
       currentTyping.value = false
     }
   } finally {
+    flushStreamUpdate()
     loading.value = false
     currentTyping.value = false
     messages.value.forEach(message => {
       if (message._typing) message._typing = false
     })
   }
+}
+
+function anchorConversationRoute(id) {
+  if (!id || route.params.id || typeof window === 'undefined') return
+  // Keep the active component alive while streaming, but make a WebView restart reopen this conversation.
+  const href = router.resolve({ path: '/chat/' + id }).href
+  window.history.replaceState(window.history.state, '', href)
+}
+
+function queueStreamUpdate(target, content, scene, isFollowUp) {
+  pendingStreamUpdate = { target, content, scene, isFollowUp }
+  if (streamRenderTimer) return
+  streamRenderTimer = setTimeout(flushStreamUpdate, STREAM_RENDER_INTERVAL)
+}
+
+function flushStreamUpdate() {
+  if (streamRenderTimer) clearTimeout(streamRenderTimer)
+  streamRenderTimer = null
+  const update = pendingStreamUpdate
+  pendingStreamUpdate = null
+  if (!update) return
+
+  const { target, content, scene, isFollowUp } = update
+  target.content = content
+  const isStructuredStream = structuredScenes.has(scene) && !isFollowUp
+  target._displayHtml = isStructuredStream ? renderStructuredStreamPreview(content) : renderMarkdown(content)
+  target._typing = true
+  currentTyping.value = true
+  scrollBottom()
 }
 
 
@@ -1530,10 +1568,15 @@ async function handleRenameTitle() {
   }
 }
 function scrollBottom() {
+  if (scrollScheduled) return
+  scrollScheduled = true
   nextTick(() => {
-    if (!msgBox.value) return
-    // 直接跳到底部，不用 smooth 动画，避免影响后续手动滚动
-    msgBox.value.scrollTo({ top: msgBox.value.scrollHeight, behavior: 'instant' })
+    requestAnimationFrame(() => {
+      scrollScheduled = false
+      if (!msgBox.value) return
+      // 直接跳到底部，不用 smooth 动画，避免影响后续手动滚动
+      msgBox.value.scrollTo({ top: msgBox.value.scrollHeight, behavior: 'instant' })
+    })
   })
 }
 
@@ -1552,7 +1595,9 @@ function renderContent(content) {
   const html = renderMarkdown(content)
   const currentScene = localStorage.getItem('currentScene')
   if (currentScene !== 'writing') {
-    return structuredScenes.has(currentScene) ? '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>可以重新生成结构化步骤。</span><button type="button" class="structured-retry" data-chat-reply="请基于上一次回答，严格输出完整、合法的 JSON 对象，不要代码块或额外说明。">重新生成卡片</button></div>' : html
+    return structuredScenes.has(currentScene)
+      ? html + '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>已保留回答正文，可以重新生成结构化步骤。</span><button type="button" class="structured-retry" data-chat-reply="请基于上一次回答，严格输出完整、合法的 JSON 对象，不要代码块或额外说明。">重新生成卡片</button></div>'
+      : html
   }
   return html + '<div class="writing-outcome"><button type="button" class="writing-outcome-primary" data-chat-reply="请在保留核心信息的前提下润色这版初稿，让表达更自然。">润色初稿</button><button type="button" data-chat-reply="请把这版初稿压缩到更短、更利落的版本。">精简</button><button type="button" data-chat-reply="请把这版初稿改成更正式、得体的语气。">改正式</button><button type="button" data-chat-reply="这版可以定稿了，请只回复最终可直接使用的版本。">确认定稿</button></div>'
 }
@@ -1607,6 +1652,18 @@ function renderMarkdown(text) {
     .replace(/<\/li><br>/g, "</li>")
     .replace(/<br><li>/g, "<li>")
   return header + '<div class="md-content writing-content">' + html + "</div>"
+}
+
+function renderStructuredStreamPreview(content) {
+  const preview = String(content || '')
+    .replace(/```(?:json)?/gi, '')
+    .replace(/[{}[\]]/g, '')
+    .replace(/"([^"\n]+)"\s*:/g, '$1：')
+    .replace(/,\s*/g, '\n')
+    .replace(/"/g, '')
+    .trim()
+  const body = preview || '正在接收回答…'
+  return '<div class="streaming-structured"><span class="streaming-spinner"></span><span>正在整理成易读卡片</span></div>' + renderMarkdown(body)
 }
 
 const tryParseJsonSafe = parseStructuredJson

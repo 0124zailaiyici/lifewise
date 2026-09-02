@@ -88,13 +88,17 @@ export function resetPassword(phone, code, newPassword) {
 export async function sendChat(message, scene, conversationId, imageUrl, options = {}) {
   await delay(10)
   let convId = conversationId || null
-  // 先创建会话（不含当前消息），再调 AI，避免历史里重复塞当前用户消息
+  let createdConversation = false
+  const persistUser = options.persistUser !== false
   if (!convId) {
     const title = (message || '新对话').slice(0, 50)
     const conv = createConversation(title, scene || 'other')
     convId = conv.id
-    options.onConversationCreated?.(convId)
+    createdConversation = true
   }
+  // Persist the question before the network request so a WebView recreation never restores an empty chat.
+  if (persistUser) addMessage(convId, 'user', message || '', imageUrl || '')
+  if (createdConversation) options.onConversationCreated?.(convId)
   try {
     const ai = await callLocalChat({
       message,
@@ -102,9 +106,9 @@ export async function sendChat(message, scene, conversationId, imageUrl, options
       conversationId: convId,
       imageUrl,
       followUp: !!options.followUp,
+      excludeLatestUser: persistUser,
       onChunk: typeof options.onChunk === 'function' ? options.onChunk : null
     })
-    addMessage(convId, 'user', message || '', imageUrl || '')
     const aiMsg = addMessage(convId, 'assistant', ai.content, '')
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('lifewise-conversation-updated', { detail: { conversationId: convId } }))

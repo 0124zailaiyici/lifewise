@@ -55,4 +55,31 @@ class AiServiceTest {
         assertNotNull(response);
         assertFalse(response.isEmpty());
     }
+
+    @Test
+    void shouldPrioritizeRepairSafetyOverAiOrCache() {
+        String response = aiService.chat("插座冒烟还有焦味怎么办", "repair", 1L, null, null);
+
+        assertTrue(response.contains("安全确认"));
+        assertTrue(response.contains("建议专业人员"));
+        assertTrue(response.contains("不要触碰设备"));
+    }
+
+    @Test
+    void shouldPrioritizeHealthEmergencyOverAiOrCache() {
+        String response = aiService.chat("突然胸痛而且喘不上气", "health", 1L, null, null);
+
+        assertTrue(response.contains("紧急就医"));
+        assertTrue(response.contains("立即联系急救服务"));
+        assertTrue(response.contains("急救知识"));
+    }
+
+    @Test
+    void shouldPrioritizePetEmergencyOverAiOrCache() {
+        String response = aiService.chat("猫误食了百合怎么办", "pet", 1L, null, null);
+
+        assertTrue(response.contains("紧急就诊"));
+        assertTrue(response.contains("不要自行催吐"));
+        assertTrue(response.contains("宠物医院"));
+    }
 }

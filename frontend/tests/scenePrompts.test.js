@@ -26,6 +26,8 @@ test('repair, health, and pet use distinct escalation states', () => {
   assert.match(buildSystemPrompt('repair'), /建议专业人员/)
   assert.match(buildSystemPrompt('health'), /紧急就医/)
   assert.match(buildSystemPrompt('pet'), /紧急就诊/)
+  assert.match(backendConfig, /status: 需补充信息\/居家观察\/建议就医\/紧急就医\/已缓解/)
+  assert.match(backendConfig, /status: 需补充信息\/居家观察\/建议就诊\/紧急就诊\/已缓解/)
 })
 
 test('decision scenes use distinct confirmation states', () => {
@@ -65,4 +67,6 @@ test('specialized scenes require domain-specific response quality', () => {
   assert.match(buildSystemPrompt('mealplan'), /主食、蛋白和蔬菜搭配/)
   assert.match(buildSystemPrompt('etiquette'), /可直接发送或当面说的示例表达/)
   assert.match(buildSystemPrompt('writing'), /文体、对象、语气、长度/)
+  assert.match(backendConfig, /记录频率、持续时间或变化信号/)
+  assert.match(backendConfig, /饮水、进食、排泄、精神状态/)
 })

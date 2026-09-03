@@ -1926,6 +1926,9 @@ function renderStructured(data) {
   if (data.when_to_see_doctor) parts.push(`<div class="s-sec">\u{1f3e5} \u4ec0\u4e48\u60c5\u51b5\u8981\u770b\u533b\u751f</div><div class="s-text">${esc(data.when_to_see_doctor)}</div>`)
   // ===== Health: prevention is handled generically below =====
 
+  // ===== Pet: when_to_see_vet =====
+  if (data.when_to_see_vet) parts.push(`<div class="s-sec">\u{1f3e5} 什么时候要看兽医</div><div class="s-text">${esc(data.when_to_see_vet)}</div>`)
+
   // ===== Etiquette: do_list =====
   if (data.do_list && data.do_list.length) {
     parts.push('<div class="s-sec">\u2705 \u5e94\u8be5\u505a</div><div class="s-mb-list">')

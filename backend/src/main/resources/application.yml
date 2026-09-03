@@ -145,16 +145,20 @@ scene:
       - key_point: 关键要点（一句话总结最核心的技巧）
 
     health: |
-      ### 场景：健康常识
-      输出 JSON 格式，字段说明：
-      - question: 问题描述
-      - category: 分类（症状处理/用药常识/营养建议/急救知识）
-      - disclaimer: 免责声明（此回答仅供参考，不能代替专业医疗建议）
-      - symptoms: 常见症状列表（字符串数组，如["发热38.5℃以上","咽喉肿痛","肌肉酸痛"]）
-      - causes: 可能原因列表（字符串数组，如["病毒或细菌感染","免疫力下降","受凉"]）
-      - advice: 建议步骤列表，每个对象包含 item（步骤名称）、detail（详细说明）
-      - when_to_see_doctor: 什么情况下必须去看医生
-      - prevention: 日常预防措施
+      ### 场景：健康常识安全分流
+      先筛查紧急风险，再决定居家观察或就医建议；不要诊断疾病，也不要给出处方和剂量。
+      输出 JSON 字段：
+      - question, category（症状处理/用药常识/营养建议/急救知识）, disclaimer
+      - stage: 风险筛查/现象确认/居家观察/就医准备/结果确认
+      - status: 需补充信息/居家观察/建议就医/紧急就医/已缓解
+      - next_action: 用户现在应做的一件安全事项
+      - observations: 数组，每项含 label、detail，记录频率、持续时间或变化信号
+      - checklist: 数组，每项含 item、expected
+      - choices: 数组，每项含 label、message；信息不足或关键分支时给 2 到 4 个互斥选项
+      - symptoms, causes, advice（数组，每项含 item、detail）
+      - when_to_see_doctor, prevention, stop_conditions, followUps
+
+      advice 只给低风险的休息、补水、记录等行动，不替代诊断和处方。出现胸痛、呼吸困难、意识异常、严重过敏、持续高热或明显出血等风险时，status 为紧急就医，next_action 只给立即就医等安全行动。直接输出JSON。
 
     fashion: |
       ### 场景：穿搭指南
@@ -176,14 +180,20 @@ scene:
       - cultural_notes: 文化差异说明（如适用）
 
     pet: |
-      ### 场景：宠物照料
-      输出 JSON 格式，字段说明：
-      - pet_type: 宠物类型
-      - topic: 问题主题
-      - difficulty: 难度（入门/初级/中级）
-      - steps: 照料步骤列表，每个对象包含 step（序号）、action（操作描述）、step_image（步骤配图英文关键词如"brushing dog"）
-      - common_mistakes: 常见错误列表
-      - when_to_see_vet: 什么情况下需要看兽医
+      ### 场景：宠物照料安全分流
+      先确认宠物种类、年龄、持续时间、饮食饮水和精神状态，再决定观察或就诊；不要建议人用药或自行强制喂食。
+      输出 JSON 字段：
+      - pet_type, topic, difficulty（入门/初级/中级）
+      - stage: 风险筛查/现象确认/居家观察/就诊准备/结果确认
+      - status: 需补充信息/居家观察/建议就诊/紧急就诊/已缓解
+      - next_action: 用户现在应做的一件安全事项
+      - observations: 数组，每项含 label、detail，必须包含饮水、进食、排泄、精神状态等可记录信号
+      - checklist: 数组，每项含 item、expected
+      - choices: 数组，每项含 label、message；信息不足或关键分支时给 2 到 4 个互斥选项
+      - steps: 数组，每项含 step、action、step_image
+      - common_mistakes, when_to_see_vet, stop_conditions, followUps
+
+      出现呼吸困难、抽搐、误食异物或毒物、严重外伤、无法站立等风险时，status 为紧急就诊，next_action 只给立即联系宠物医院等安全行动。直接输出JSON。
 
     mealplan: |
       ### 场景：食谱规划

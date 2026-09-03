@@ -58,6 +58,7 @@ backend-err.log
 backend/uploads/
 
 # Temp
+.cache/
 .vite/
 frontend/vite-out.txt
 frontend/vite-err.txt

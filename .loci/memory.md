@@ -12,6 +12,7 @@
 - Chat accepts one request at a time and always clears loading/current-typing state plus stale typing cards in `finally`.
 - Chat recovery: remember the active conversation for two minutes per scene; persist a completed conversation URL only after its messages are saved. The active request ignores its own persistence event to avoid a competing reload.
 - Browser click and Enter sends call `send()` without passing DOM events as retry payloads. User bubbles render Markdown only; assistant cards alone use structured rendering. Stream UI batches content updates at 100ms and scrolls once per animation frame.
+- Backend and local AI paths share the ten-scene guided-workflow contract. Follow-ups in cooking, shopping, repair, housework, health, fashion, etiquette, pet, and mealplan retain structured task state; only writing and general queries use natural-language follow-ups. Frontend tests guard this contract and mount `Chat.vue` for send, retry, structured-card, and guided-choice-locking behavior.
 - The chat title is editable for persisted conversations. Key icon-only controls expose accessible names and a visible keyboard focus indicator.
 - Reuse the existing chat history and structured scene cards for the first version. Do not add a general workflow engine or persistent agent-state table yet.
 - Relevant references: Rasa for slot filling and clarification; Dify for workflow/evaluation; Open WebUI for local model, memory, and chat interactions; Coze Studio for future agent orchestration; Home Assistant for device-state modeling.

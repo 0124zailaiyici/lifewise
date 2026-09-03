@@ -5,8 +5,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const aiDevProxyTarget = String(env.VITE_AI_DEV_PROXY_TARGET || '').trim().replace(/\/+$/, '')
 
-  return {
-  plugins: [vue()],
+   return {
+   plugins: [vue()],
+   test: {
+     environment: 'jsdom',
+     include: ['tests/**/*.component.spec.js']
+   },
   // Capacitor 本地资源加载需要相对路径
   base: './',
   build: {

@@ -325,14 +325,18 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildSystemPrompt(String scene, boolean hasImage, boolean followUp) {
-        // Follow-up mode: natural language when frontend explicitly marks a clicked follow-up chip.
-        if (followUp && !"repair".equals(scene)) {
+        boolean structuredWorkflow = switch (scene == null ? "other" : scene) {
+            case "cooking", "shopping", "repair", "housework", "health", "fashion", "etiquette", "pet", "mealplan" -> true;
+            default -> false;
+        };
+        // Guided scenes retain their state fields on follow-up so the card can advance the task.
+        if (followUp && !structuredWorkflow) {
             String scenePrompt = scenePromptProperties.getFollowUpPrompt(scene);
             return scenePromptProperties.getFollowUpReturn().replace("{scenePrompt}", scenePrompt);
         }
         String baseRule = scenePromptProperties.getBaseRule();
         String schema = scenePromptProperties.getSchema(scene);
-        if (followUp && "repair".equals(scene)) {
+        if (followUp) {
             return baseRule + "\n" + scenePromptProperties.getFollowUpPrompt(scene) + "\n" + schema;
         }
         return baseRule + "\n" + schema;

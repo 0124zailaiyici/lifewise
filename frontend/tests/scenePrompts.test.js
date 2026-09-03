@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { buildSystemPrompt } from '../src/local/scenePrompts.js'
+
+const backendConfig = await readFile(new URL('../../backend/src/main/resources/application.yml', import.meta.url), 'utf8')
+const backendAiService = await readFile(new URL('../../backend/src/main/java/com/lifewise/service/impl/AiServiceImpl.java', import.meta.url), 'utf8')
 
 for (const scene of ['cooking', 'housework', 'health', 'pet', 'shopping', 'fashion', 'mealplan', 'etiquette']) {
   test(`${scene} keeps the guided JSON workflow for follow-ups`, () => {
@@ -34,6 +38,17 @@ test('decision scenes use distinct confirmation states', () => {
 test('writing keeps direct draft output for revision actions', () => {
   assert.doesNotMatch(buildSystemPrompt('writing'), /直接输出JSON/)
   assert.match(buildSystemPrompt('writing', true), /直接继续完成用户要的文字/)
+})
+
+test('backend keeps every guided scene structured during follow-ups', () => {
+  for (const scene of ['cooking', 'housework', 'health', 'pet', 'shopping', 'fashion', 'mealplan', 'etiquette']) {
+    assert.match(backendAiService, new RegExp(`"${scene}"`))
+    assert.match(backendConfig, new RegExp(`\\n    ${scene}: 用户正在当前`))
+  }
+  assert.match(backendConfig, /所有场景都必须完成一次可继续推进的任务闭环/)
+  for (const field of ['stage', 'status', 'next_action', 'observations', 'checklist', 'choices', 'stop_conditions', 'followUps']) {
+    assert.match(backendConfig, new RegExp(field))
+  }
 })
 
 test('high-frequency scenes require observable, actionable guidance', () => {

@@ -1589,11 +1589,11 @@ function renderContent(content) {
       return renderStructured(data)
     } catch (error) {
       console.error('[structured-render]', error)
-      return renderMarkdown(structuredFallbackText(data))
+      return renderMarkdown(structuredFallbackText(data), { labelLines: true })
     }
   }
-  const html = renderMarkdown(content)
   const currentScene = localStorage.getItem('currentScene')
+  const html = renderMarkdown(content, { labelLines: currentScene !== 'writing' })
   if (currentScene !== 'writing') {
     return structuredScenes.has(currentScene)
       ? html + '<div class="structured-fallback"><strong>这次回答暂时无法整理成卡片。</strong><span>已保留回答正文，可以重新生成结构化步骤。</span><button type="button" class="structured-retry" data-chat-reply="请基于上一次回答，严格输出完整、合法的 JSON 对象，不要代码块或额外说明。">重新生成卡片</button></div>'
@@ -1611,7 +1611,7 @@ function detectDishName(aiContent, userQuestion = '') {
   return prebuiltFoodNames.find(name => text.includes(name)) || ''
 }
 
-function renderMarkdown(text) {
+function renderMarkdown(text, { labelLines = false } = {}) {
   const sceneLabel = localStorage.getItem("sceneLabel") || ""
   let header = sceneLabel ? '<div class="md-scene-label">✦ ' + esc(sceneLabel) + '</div>' : ''
   let html = (text || "");
@@ -1625,6 +1625,9 @@ function renderMarkdown(text) {
     .replace(/^### (.+)$/gm, "<h4>$1</h4>")
     .replace(/^## (.+)$/gm, "<h3>$1</h3>")
     .replace(/^# (.+)$/gm, "<h2>$1</h2>")
+  if (labelLines) {
+    html = html.replace(/^[ \t]*(?:[-*+]\s+|\d+\.\s+)?\*\*([^*\n]+)\*\*[ \t]*([^\n]+)\n?/gm, '<div class="md-labeled-line"><strong>$1</strong><span>$2</span></div>')
+  }
   // Tables: | col1 | col2 | ... | (need to handle before line breaks)
   html = html.replace(/^\|(.+)\|$/gm, function(m){ return '<tr>' + m.slice(1,-1).split('|').map(function(c){ return '<td>' + c.trim() + '</td>' }).join('') + '</tr>' })
   html = html.replace(/<tr>\s*<td>[-:\s]+<\/td>(?:\s*<td>[-:\s]+<\/td>)+\s*<\/tr>/g, '')
@@ -2911,6 +2914,29 @@ button:focus-visible { outline:3px solid rgba(180,83,9,.45); outline-offset:2px;
 </style>
 <style>
 /* ===== Scene Cards Redesign ===== */
+.assistant-card .md-content { line-height:1.8; }
+.assistant-card .md-content h3, .assistant-card .md-content h4, .assistant-card .md-content h5 { margin:18px 0 9px; color:var(--accent-deep); line-height:1.35; }
+.assistant-card .md-content h3:first-child, .assistant-card .md-content h4:first-child, .assistant-card .md-content h5:first-child { margin-top:0; }
+.assistant-card .md-content .md-labeled-line { display:grid; grid-template-columns:9.5em minmax(0, 1fr); column-gap:10px; align-items:start; margin:9px 0; }
+.assistant-card .md-content .md-labeled-line strong { color:var(--accent-deep); line-height:1.6; overflow-wrap:anywhere; }
+.assistant-card .md-content .md-labeled-line span { min-width:0; color:var(--ink); line-height:1.7; overflow-wrap:anywhere; }
+@media (max-width:340px) { .assistant-card .md-content .md-labeled-line { grid-template-columns:1fr; row-gap:2px; } }
+.repair-flow { margin:2px 0 16px; padding:10px 12px; border-left:3px solid #b7791f; background:#fff8e8; }
+.repair-flow-meta { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:7px; }
+.repair-stage, .repair-status { font-size:11px; line-height:1; padding:4px 7px; border-radius:4px; font-weight:700; }
+.repair-stage { color:#74520d; background:#f7e4b7; }
+.repair-status { color:#285e61; background:#d8f0ef; }
+.repair-next { display:flex; flex-direction:column; gap:3px; color:var(--ink); font-size:13px; line-height:1.45; }
+.repair-next span { color:#8a6d3b; font-size:11px; font-weight:700; }
+.repair-observations, .repair-checklist { display:flex; flex-direction:column; gap:10px; }
+.repair-observation, .repair-check { display:flex; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:rgba(255,255,255,.45); font-size:13px; line-height:1.55; }
+.repair-observation { flex-direction:column; gap:4px; }
+.repair-observation strong, .repair-check strong { color:var(--accent-deep); font-weight:700; }
+.repair-observation span, .repair-check span { color:var(--muted); font-size:13px; }
+.repair-check-dot { width:9px; height:9px; margin-top:6px; border:2px solid #b7791f; border-radius:50%; flex:none; }
+.repair-check > div { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; }
+.repair-stop { display:flex; flex-direction:column; gap:6px; margin-top:16px; padding:11px 12px; border:1px solid #f2b8b5; border-radius:8px; background:#fff1f0; color:#a73a35; font-size:13px; line-height:1.55; }
+.repair-stop strong { font-size:13px; }
 .s-card { border:none; padding:0; margin:0; background:none; }
 .s-hd { display:flex; align-items:center; gap:10px; padding:14px 18px 10px; border-bottom:1px solid var(--line); }
 .s-hd-icon { width:34px; height:34px; border-radius:12px; display:grid; place-items:center; font-size:20px; flex-shrink:0; }

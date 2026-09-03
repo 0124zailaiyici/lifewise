@@ -8,6 +8,7 @@
     "build": "vite build",
     "test": "node --test tests/*.test.js && vitest run",
     "test:component": "vitest run",
+    "test:e2e": "playwright test",
     "test:ai": "node scripts/acceptance-ai.mjs",
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
@@ -32,6 +33,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/test-utils": "^2.5.0",
     "jsdom": "^29.1.1",

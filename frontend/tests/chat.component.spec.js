@@ -124,4 +124,21 @@ describe('Chat', () => {
     expect(choice.classList.contains('is-locked')).toBe(true)
     card.remove()
   })
+
+  it('separates bold labels from descriptions in a guided Markdown fallback', async () => {
+    api.sendChat.mockResolvedValue({
+      data: { id: 25, conversationId: 7, content: '### 检查清单\n**纯色短袖T恤** 白色或灰色，单穿不紧身。' }
+    })
+    localStorage.setItem('currentScene', 'fashion')
+    const wrapper = mountChat()
+    await flushPromises()
+
+    await wrapper.find('textarea').setValue('面试怎么穿？')
+    await wrapper.get('button[aria-label="发送消息"]').trigger('click')
+    await flushPromises()
+
+    const line = wrapper.get('.md-labeled-line')
+    expect(line.find('strong').text()).toBe('纯色短袖T恤')
+    expect(line.find('span').text()).toContain('白色或灰色')
+  })
 })

@@ -1,5 +1,6 @@
 import { buildSystemPrompt } from './scenePrompts.js'
 import { getAiConfig, getMessages, recordAiAudit } from './db.js'
+import { buildSafetyTriage } from './safetyTriage.js'
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
 const NativeAiStream = registerPlugin('NativeAiStream')
@@ -354,6 +355,11 @@ async function requestNativeChatResponse(chatUrl, apiKey, body) {
 }
 
 export async function callLocalChat({ message, scene, conversationId, imageUrl, followUp = false, configOverride = null, onChunk = null, excludeLatestUser = false }) {
+  const safetyReply = buildSafetyTriage(message, scene)
+  if (safetyReply) {
+    recordAiAudit({ provider: 'safety-rule', model: safetyReply.model, status: 'blocked', detail: (message || '').slice(0, 40) })
+    return safetyReply
+  }
   const cfg = { ...getAiConfig(), ...(configOverride || {}) }
   if (!cfg.apiKey) throw new Error('请先在「我的」页填写 AI API Key')
   if (!cfg.baseUrl) throw new Error('请先在「我的」页填写 AI 接口地址')

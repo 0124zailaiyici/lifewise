@@ -7,7 +7,7 @@ const endpoints = {
   chatUrl: 'https://example.com/v1/chat/completions'
 }
 
-test('DashScope uses qwen ASR through chat completions', () => {
+test('DashScope keeps system voice recognition first when speech is not configured', () => {
   const options = buildNativeSpeechOptions({
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     apiKey: 'test-key',
@@ -16,7 +16,8 @@ test('DashScope uses qwen ASR through chat completions', () => {
 
   assert.equal(options.transcribeMode, 'qwen-chat')
   assert.equal(options.speechModel, 'qwen3-asr-flash')
-  assert.equal(options.preferAiTranscription, true)
+  assert.equal(options.allowAiTranscription, false)
+  assert.equal(options.preferAiTranscription, false)
   assert.equal('chatModel' in options, false)
   assert.equal(options.chatUrl, endpoints.chatUrl)
   assert.equal(options.audioUrl, endpoints.audioUrl)
@@ -32,6 +33,7 @@ test('unknown OpenAI-compatible providers use automatic speech fallback', () => 
   assert.equal(options.transcribeMode, 'auto')
   assert.equal(options.speechModel, 'whisper-1')
   assert.equal(options.preferAiTranscription, false)
+  assert.equal(options.allowAiTranscription, false)
   assert.equal(options.chatAudioModel, '')
   assert.equal('chatModel' in options, false)
   assert.equal(options.chatUrl, endpoints.chatUrl)
@@ -49,6 +51,7 @@ test('an explicitly configured qwen ASR model skips the transcription endpoint',
   assert.equal(options.transcribeMode, 'qwen-chat')
   assert.equal(options.speechModel, 'qwen3-asr-flash')
   assert.equal(options.preferAiTranscription, true)
+  assert.equal(options.allowAiTranscription, true)
 })
 
 test('uses a separate speech endpoint and key when configured', () => {
@@ -69,6 +72,7 @@ test('uses a separate speech endpoint and key when configured', () => {
 
   assert.equal(options.apiKey, 'speech-key')
   assert.equal(options.preferAiTranscription, true)
+  assert.equal(options.allowAiTranscription, true)
   assert.equal(options.audioUrl, 'https://speech.example/v1/audio/transcriptions')
   assert.equal(options.chatUrl, 'https://speech.example/v1/chat/completions')
   assert.equal('chatModel' in options, false)

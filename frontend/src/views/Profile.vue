@@ -27,7 +27,15 @@
             </div>
             <el-switch v-model="setting_foodImage" @change="saveFoodImageSetting" />
           </div>
-          <div class="menu-item setting-item">
+          <div
+            class="menu-item setting-item ai-config-summary"
+            role="button"
+            tabindex="0"
+            :aria-expanded="aiConfigExpanded"
+            @click="aiConfigExpanded = !aiConfigExpanded"
+            @keydown.enter.prevent="aiConfigExpanded = !aiConfigExpanded"
+            @keydown.space.prevent="aiConfigExpanded = !aiConfigExpanded"
+          >
             <div class="si-left">
               <el-icon><Cpu /></el-icon>
               <div class="si-text">
@@ -35,23 +43,40 @@
                 <div class="si-desc">{{ aiConfigured ? ('已配置 · ' + (aiForm.model || '未填模型')) : '未配置，聊天前请先填写' }}</div>
               </div>
             </div>
-            <div class="si-right">{{ aiConfigured ? '✅ 就绪' : '⚠️ 待填' }}</div>
+            <div class="ai-config-state">{{ aiConfigured ? '就绪' : '待填' }}</div>
+            <el-icon class="ai-config-arrow" :class="{ open: aiConfigExpanded }"><ArrowDown /></el-icon>
           </div>
-          <div class="ai-config-card">
+          <transition name="fold">
+          <div v-show="aiConfigExpanded" class="ai-config-card">
             <div class="ai-config-tip">本地独立模式：手机直连你的 AI 接口，不经过 LifeWise 服务器。Key 仅保存在本机。建议先点「测试连接」通过后再聊天。</div>
             <el-input v-model="aiForm.baseUrl" placeholder="接口地址，如 https://dashscope.aliyuncs.com/compatible-mode/v1" clearable class="ai-input" @change="refreshEndpointPreview" @blur="refreshEndpointPreview" />
             <div v-if="endpointPreview.chatUrl" class="endpoint-preview">将请求：{{ endpointPreview.chatUrl }}</div>
             <el-input v-model="aiForm.apiKey" type="password" show-password placeholder="API Key" clearable class="ai-input" />
             <el-input v-model="aiForm.model" placeholder="聊天模型，如 gpt-5.4-mini" clearable class="ai-input" />
-            <el-input v-model="aiForm.imageModel" placeholder="生图模型，可留空沿用聊天模型" clearable class="ai-input" />
-            <el-input v-model="aiForm.speechBaseUrl" placeholder="语音接口地址，可留空沿用聊天接口" clearable class="ai-input" />
-            <el-input v-model="aiForm.speechApiKey" type="password" show-password placeholder="语音 API Key，可留空沿用聊天 Key" clearable class="ai-input" />
-            <el-input v-model="aiForm.speechModel" placeholder="语音模型，可留空自动选择" clearable class="ai-input" />
-            <div class="ai-config-actions">
-              <el-input-number v-model="aiForm.contextRounds" :min="1" :max="20" size="small" />
-              <span class="rounds-label">上下文轮数</span>
-            </div>
-            <div class="ai-config-actions" style="margin-top:8px">
+            <button
+              type="button"
+              class="advanced-toggle"
+              :aria-expanded="aiAdvancedExpanded"
+              @click="aiAdvancedExpanded = !aiAdvancedExpanded"
+            >
+              <span>高级设置</span>
+              <el-icon :class="{ open: aiAdvancedExpanded }"><ArrowDown /></el-icon>
+            </button>
+            <transition name="fold">
+              <div v-show="aiAdvancedExpanded" class="advanced-config">
+                <el-input v-model="aiForm.imageModel" placeholder="生图模型，可留空沿用聊天模型" clearable class="ai-input" />
+                <div class="speech-config-heading">语音转写（可选）</div>
+                <div class="speech-config-tip">默认使用手机系统语音识别，无需语音模型。填写后优先使用你的语音转写服务。</div>
+                <el-input v-model="aiForm.speechBaseUrl" placeholder="语音接口地址，可留空沿用聊天接口" clearable class="ai-input" />
+                <el-input v-model="aiForm.speechApiKey" type="password" show-password placeholder="语音 API Key，可留空沿用聊天 Key" clearable class="ai-input" />
+                <el-input v-model="aiForm.speechModel" placeholder="语音模型，如 whisper-1 或 qwen3-asr-flash" clearable class="ai-input" />
+                <div class="ai-config-actions">
+                  <el-input-number v-model="aiForm.contextRounds" :min="1" :max="20" size="small" />
+                  <span class="rounds-label">上下文轮数</span>
+                </div>
+              </div>
+            </transition>
+            <div class="ai-config-actions ai-config-buttons">
               <el-button type="success" size="small" round @click="saveAiConfigForm">保存配置</el-button>
               <el-button type="primary" size="small" round :loading="testLoading" @click="runAiTest">测试连接</el-button>
             </div>
@@ -79,6 +104,7 @@
               </div>
             </div>
           </div>
+          </transition>
         </div>
       </div>
 
@@ -183,7 +209,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
-import { ArrowRight, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
+import { ArrowRight, ArrowDown, DataAnalysis, Notebook, SwitchButton, Picture, Cpu } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { getAiConfigStatus, clearAiAudit, loadLocalAiConfig, saveLocalAiConfig, testAiConnection, previewAiEndpoints } from '../api'
 import BottomTabs from '../components/BottomTabs.vue'
@@ -200,6 +226,8 @@ const aiConfigured = computed(() => !!(aiForm.value.baseUrl && aiForm.value.apiK
 const testLoading = ref(false)
 const testResult = ref(null)
 const endpointPreview = ref({ chatUrl: '', modelsUrl: '', displayBase: '' })
+const aiConfigExpanded = ref(false)
+const aiAdvancedExpanded = ref(false)
 
 const aiStatus = ref(null)
 const aiStatusLoading = ref(false)
@@ -290,6 +318,7 @@ function loadAiConfigForm() {
     contextRounds: cfg.contextRounds || 5
   }
   refreshEndpointPreview()
+  aiConfigExpanded.value = !aiConfigured.value
 }
 
 function pickModel(m) {
@@ -431,6 +460,8 @@ function handleLogout() {
 /* 设置项样式 */
 .setting-item { cursor: default; padding: 14px 16px; }
 .setting-item:active { background: inherit; }
+.ai-config-summary { cursor: pointer; }
+.ai-config-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .setting-item .si-left { display: flex; align-items: center; gap: 12px; flex: 1; }
 .setting-item .si-text { flex: 1; }
 .setting-item .si-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
@@ -530,12 +561,27 @@ function handleLogout() {
   margin-bottom: 10px;
 }
 .ai-input { margin-bottom: 8px; }
+.ai-config-state { color: var(--accent-deep); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ai-config-arrow { margin-left: 2px; color: #9ca3af; transition: transform .2s ease; }
+.ai-config-arrow.open, .advanced-toggle .el-icon.open { transform: rotate(180deg); }
+.advanced-toggle {
+  width: 100%; min-height: 38px; margin: 2px 0 10px; padding: 0 10px;
+  border: 1px solid rgba(87,68,49,.12); border-radius: 8px; background: #fffdf8;
+  color: #6b5e52; display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.advanced-toggle:active { background: #f7efe5; }
+.advanced-toggle .el-icon { transition: transform .2s ease; }
+.advanced-config { overflow: hidden; }
+.speech-config-heading { margin: 4px 0 3px; color: #3f352c; font-size: 12px; font-weight: 800; }
+.speech-config-tip { margin-bottom: 8px; color: #8a7c6d; font-size: 11px; line-height: 1.45; }
 .ai-config-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
+.ai-config-buttons { margin-top: 8px; }
 .rounds-label { font-size: 12px; color: #7b7064; margin-right: auto; }
 
 .endpoint-preview {

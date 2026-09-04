@@ -11,7 +11,10 @@ export function buildNativeSpeechOptions(config = {}, endpoints = {}, speechEndp
 
   return {
     language: 'zh-CN',
-    preferAiTranscription: isDashScope || hasExplicitSpeechConfig,
+    // System recognition is the default. An AI speech service is only selected
+    // when the user has explicitly supplied a speech-specific setting.
+    allowAiTranscription: hasExplicitSpeechConfig,
+    preferAiTranscription: hasExplicitSpeechConfig,
     transcribeMode: usesQwenAsr ? 'qwen-chat' : 'auto',
     transcribeUrl: usesQwenAsr ? speechEndpoints.chatUrl : speechEndpoints.audioUrl,
     audioUrl: speechEndpoints.audioUrl || '',

@@ -49,6 +49,7 @@ public class NativeSpeechPlugin extends Plugin implements RecognitionListener {
     private String speechModel = "whisper-1";
     private String chatAudioModel = "";
     private String transcribeMode = "auto";
+    private boolean allowAiTranscription;
     private boolean fallbackRecording;
 
     @PluginMethod
@@ -79,6 +80,7 @@ public class NativeSpeechPlugin extends Plugin implements RecognitionListener {
         speechModel = call.getString("speechModel", "whisper-1");
         chatAudioModel = call.getString("chatAudioModel", "");
         transcribeMode = call.getString("transcribeMode", "auto");
+        allowAiTranscription = call.getBoolean("allowAiTranscription", false);
         boolean preferAiTranscription = call.getBoolean("preferAiTranscription", false);
         String language = call.getString("language", Locale.getDefault().toLanguageTag());
 
@@ -111,6 +113,12 @@ public class NativeSpeechPlugin extends Plugin implements RecognitionListener {
     }
 
     private void startFallbackRecording(PluginCall call) {
+        if (!allowAiTranscription) {
+            String message = "手机系统语音服务不可用。请点输入框后使用系统输入法的语音按钮；如需应用内麦克风，请在“我的”页面高级设置配置语音转写";
+            if (call != null) call.reject(message);
+            else emitErrorMessage(message, -2);
+            return;
+        }
         boolean hasEndpoint = "qwen-chat".equals(transcribeMode)
             ? !effectiveChatUrl().isEmpty()
             : !effectiveAudioUrl().isEmpty() || !effectiveChatUrl().isEmpty();

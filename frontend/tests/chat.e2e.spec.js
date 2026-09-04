@@ -118,3 +118,25 @@ test('guided Markdown fallback separates a bold label from its description', asy
   const labelColumnWidth = await line.evaluate(element => Number.parseFloat(getComputedStyle(element).gridTemplateColumns.split(' ')[0]))
   expect(labelColumnWidth).toBeGreaterThan(100)
 })
+
+test('AI direct configuration keeps optional speech settings collapsed by default', async ({ page }) => {
+  await page.goto('/#/profile')
+
+  const configSummary = page.locator('.ai-config-summary')
+  const advancedToggle = page.getByRole('button', { name: '高级设置' })
+  const speechModel = page.getByPlaceholder('语音模型，如 whisper-1 或 qwen3-asr-flash')
+
+  await expect(configSummary).toHaveAttribute('aria-expanded', 'false')
+  await expect(advancedToggle).toBeHidden()
+  await expect(speechModel).toBeHidden()
+
+  await configSummary.click()
+  await expect(configSummary).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByPlaceholder('聊天模型，如 gpt-5.4-mini')).toBeVisible()
+  await expect(advancedToggle).toBeVisible()
+  await expect(speechModel).toBeHidden()
+
+  await advancedToggle.click()
+  await expect(speechModel).toBeVisible()
+  await expect(page.getByText('默认使用手机系统语音识别，无需语音模型。填写后优先使用你的语音转写服务。')).toBeVisible()
+})

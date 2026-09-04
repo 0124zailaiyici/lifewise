@@ -411,7 +411,7 @@ export async function callLocalChat({ message, scene, conversationId, imageUrl, 
     max_tokens: scene === 'writing' ? 8192 : 4096,
     stream: true
   }
-  if (['repair', 'cooking', 'housework', 'health', 'pet', 'shopping', 'fashion', 'mealplan', 'etiquette'].includes(scene)) body.response_format = { type: 'json_object' }
+  if (scene !== 'writing') body.response_format = { type: 'json_object' }
 
   recordAiAudit({
     provider: 'openai-compatible',

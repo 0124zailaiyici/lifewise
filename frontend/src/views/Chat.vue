@@ -193,11 +193,6 @@
         <span class="ch-main">{{ costHint.text }}</span>
         <span class="ch-sub">{{ costHint.sub }}</span>
       </div>
-      <div v-if="currentConvId" class="mode-row">
-        <button class="mode-chip" :class="{ active: !pendingFollowUp }" @click="setAskMode(false)" :disabled="loading">正常提问</button>
-        <button class="mode-chip follow" :class="{ active: pendingFollowUp }" @click="setAskMode(true)" :disabled="loading">追问</button>
-        <span class="mode-tip">{{ pendingFollowUp ? '结合上文补充' : '按新问题回答' }}</span>
-      </div>
       <div class="composer">
         <button class="composer-btn upload-btn" type="button" aria-label="上传图片" @click="triggerUpload">＋</button>
         <button class="composer-btn mic-btn" type="button" :aria-label="isListening ? '停止语音输入' : '开始语音输入'" :class="{ listening: isListening }" @click="startVoice" :disabled="loading || isTranscribing">🎤</button>
@@ -368,7 +363,10 @@ const welcomePools = {
     '适合招待朋友的菜？', '孩子不爱吃饭怎么办？', '周末在家做什么好吃的？',
     '吃不完的食材怎么处理？', '早餐做什么又快又营养？', '低脂晚餐推荐？'
   ],
-  writing: [],
+  writing: [
+    '帮我写一篇今天的日记', '把这段话润色得更自然', '帮我列一份周末待办清单',
+    '写一条礼貌的请假消息', '整理一份学习笔记模板', '帮我写购物清单'
+  ],
   general: [
     '家里临时有问题怎么处理？', '帮我整理一个解决步骤', '这个生活问题有什么注意事项？',
     '有什么实用的生活小技巧？', '怎么提高做事效率？', '哪些生活习惯值得坚持？',
@@ -1286,10 +1284,6 @@ function onUserInput() {
   promptPrefilled.value = false
 }
 
-function setAskMode(isFollowUp) {
-  pendingFollowUp.value = isFollowUp
-}
-
 function lockGuidedCard(card) {
   card?.querySelectorAll('.repair-choice, .repair-outcome button')?.forEach(button => {
     button.disabled = true
@@ -1691,9 +1685,8 @@ function renderStructured(data) {
   else if (data.problem && (data.materials || data.difficulty)) { scene = "housework"; sceneIcon = "\u{1f9f9}"; sceneLabel = "\u5bb6\u52a1\u6280\u5de7" }
   else if (data.pet_type || data.when_to_see_vet || data.topic === "\u5ba0\u7269") { scene = "pet"; sceneIcon = "\u{1f431}"; sceneLabel = "\u5ba0\u7269\u7167\u987e" }
   else if (data.weekly_plan || data.shopping_list) { scene = "mealplan"; sceneIcon = "\u{1f4c5}"; sceneLabel = "\u98df\u8c31\u89c4\u5212" }
-  // For fashion, dont use occasion as title (shown as tag)
   if (!title) title = data.\u54c1\u7c7b || data.problem || data.question || data.topic || ""
-  if (!title && scene !== "fashion") title = data.occasion || ""
+  if (!title) title = data.occasion || ""
   // ===== 2. Card header =====
   let iconGrad = "s-icon-" + scene
   parts.push(`<div class="s-hd"><div class="s-hd-icon ${iconGrad}">${sceneIcon}</div><div class="s-hd-meta"><div class="s-hd-label">${sceneLabel}</div><div class="s-hd-title">${esc(title)}</div></div></div>`)
@@ -1722,8 +1715,9 @@ function renderStructured(data) {
     data.materials.forEach(m => {
       if (typeof m === "string") parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(m)}</span></div>`)
       else {
+        const amount = m.amount ? `<span class="s-ing-amt">${esc(m.amount)}</span>` : ""
         const alt = m.alternative ? ` <span class="s-ing-note">\uff08\u53ef\u7528${esc(m.alternative)}\u66ff\u4ee3\uff09</span>` : ""
-        parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(m.name)}</span>${alt}</div>`)
+        parts.push(`<div class="s-ing-item"><span class="s-ing-cb"></span><span>${esc(m.name)}</span>${amount}${alt}</div>`)
       }
     })
     parts.push("</div>")
@@ -1766,7 +1760,8 @@ function renderStructured(data) {
     parts.push("</div>")
   }
   const guidedScene = ["repair", "cooking", "housework", "health", "pet", "shopping", "fashion", "mealplan", "etiquette"].includes(scene)
-  if (guidedScene) {
+  const hasTaskFlow = guidedScene || Boolean(data.stage || data.status || data.next_action || data.observations || data.checklist || data.choices)
+  if (hasTaskFlow) {
     const stage = structuredText(data.stage)
     const status = structuredText(data.status)
     const nextAction = structuredText(data.next_action)
@@ -1959,6 +1954,14 @@ function renderStructured(data) {
   }
   // ===== Etiquette: cultural_notes =====
   if (data.cultural_notes) parts.push(`<div class="s-sec">\u{1f30d} \u6587\u5316\u8bf4\u660e</div><div class="s-text">${esc(data.cultural_notes)}</div>`)
+  if (data.example_phrases?.length) {
+    parts.push('<div class="s-sec">可直接这样说</div><div class="s-mistake-list">')
+    data.example_phrases.forEach(item => {
+      const phrase = structuredText(typeof item === "object" ? (item.text || item.phrase || item.action || item) : item)
+      if (phrase) parts.push(`<div class="s-mistake-item">${esc(phrase)}</div>`)
+    })
+    parts.push('</div>')
+  }
   // ===== Mealplan: weekly_plan =====
   if (data.weekly_plan && data.weekly_plan.length) {
     parts.push('<div class="s-sec">\u{1f4c5} \u6bcf\u5468\u8ba1\u5212</div>')
@@ -2031,6 +2034,8 @@ function renderStructured(data) {
     ta.forEach(t => parts.push(`<div class="s-text-line">\u00b7 ${esc(t)}</div>`))
   }
   const knownKeys = ["title","difficulty","time","servings","id","_id","__v","createdAt","updatedAt","problem","question","occasion","ingredients","steps","selection_steps","tools","tips","key_point","safety_tip","answer","suggestions","followUps","style","items","outfits","color_palette","accessories","materials","recommendations","category","tags","season","common_mistakes","storage_tip","summary_slogan","severity","need_professional","professional_advice","prevention","difficulty","servings","avoid","\u54c1\u7c7b","common_causes","principle","estimated_time","disclaimer","symptoms","causes","advice","when_to_see_doctor","do_list","dont_list","key_principles","cultural_notes","pet_type","topic","when_to_see_vet","weekly_plan","shopping_list","preference","stage","status","next_action","observations","checklist","choices","stop_conditions"]
+  if (data.need_professional === true) parts.push('<div class="s-sec">专业处理建议</div><div class="s-text">当前情况不建议继续自行处理，请联系相关专业人员。</div>')
+  if (data.example_phrases) data.example_phrases = null
   Object.keys(data).forEach(k => {
     if (knownKeys.includes(k)) return
     const v = data[k]
@@ -2048,6 +2053,7 @@ function renderStructured(data) {
     }
   })
   parts.push("</div>")
+  if (!data.title && data.occasion) data.title = data.occasion
   let recQ = data.followUps || []
   if (!recQ.length) {
     const kw = (data.title || data.question || data.problem || data.\u54c1\u7c7b || "").replace(/[\u3001\uff0c\u3002]/g, " ").trim()
@@ -2690,20 +2696,6 @@ button:focus-visible { outline:3px solid rgba(180,83,9,.45); outline-offset:2px;
 .cost-hint.free { background: rgba(125,139,111,.10); border-color: rgba(125,139,111,.18); color: var(--sage); }
 .cost-hint.warn { background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.18); color: #92400e; }
 .cost-hint.danger { background: rgba(185,28,28,.06); border-color: rgba(185,28,28,.14); color: #b91c1c; }
-
-.mode-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 2px 2px 6px;
-}
-.mode-chip {
-  border: 1px solid var(--line); background: rgba(255,250,241,.48);
-  color: var(--muted); border-radius: 999px; padding: 5px 10px;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-}
-.mode-chip.active { border-color: var(--accent); background: rgba(141,95,63,.08); color: var(--accent-deep); }
-.mode-chip.follow.active { border-color: var(--sage); background: rgba(125,139,111,.10); color: var(--sage); }
-.mode-chip:disabled { opacity: .5; cursor: default; }
-.mode-tip { margin-left: auto; color: var(--soft); font-size: 11px; }
 
 .composer {
   display: flex; align-items: flex-end; gap: 8px;

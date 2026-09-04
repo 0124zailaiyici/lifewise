@@ -157,17 +157,20 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildSafetyReply(String message, String scene) {
-        if (!hasText(message)) return null;
-        return switch (scene == null ? "" : scene) {
-            case "repair" -> buildRepairSafetyReply(message);
-            case "health" -> buildHealthSafetyReply(message);
-            case "pet" -> buildPetSafetyReply(message);
-            default -> null;
-        };
+        if (!hasText(message) || "writing".equals(scene)) return null;
+        String repairReply = buildRepairSafetyReply(message);
+        if (repairReply != null) return repairReply;
+        String healthReply = buildHealthSafetyReply(message);
+        if (healthReply != null) return healthReply;
+        if ("pet".equals(scene) || containsAny(message.toLowerCase(), "猫", "狗", "宠物", "兔", "仓鼠", "鸟")) {
+            return buildPetSafetyReply(message);
+        }
+        return null;
     }
 
     private String buildRepairSafetyReply(String message) {
         String text = message.toLowerCase();
+        text = text.replace("闻到燃气", "燃气味").replace("闻到煤气", "煤气味").replace("电线起火", "冒烟");
         Map<String, Object> reply = new LinkedHashMap<>();
         reply.put("stage", "安全确认");
         reply.put("status", "建议专业人员");
@@ -209,6 +212,9 @@ public class AiServiceImpl implements AiService {
 
     private String buildHealthSafetyReply(String message) {
         String text = message.toLowerCase();
+        text = text.replace("胸闷", "胸痛").replace("气短", "呼吸困难").replace("呼吸不畅", "呼吸困难")
+                .replace("昏倒", "昏迷").replace("失去意识", "意识不清").replace("过敏性休克", "严重过敏")
+                .replace("黑便", "便血").replace("血便", "便血");
         Map<String, Object> reply = new LinkedHashMap<>();
         reply.put("question", message);
         reply.put("category", "急救知识");
@@ -226,7 +232,7 @@ public class AiServiceImpl implements AiService {
             reply.put("next_action", "立即联系急救服务或前往急诊；等待帮助时保持安全体位，不要自行驾车。");
             reply.put("advice", List.of(Map.of("item", "立即寻求急救", "detail", "胸痛或呼吸困难需要尽快由专业人员评估。")));
             reply.put("when_to_see_doctor", "现在就应就医，不要等待症状自行缓解。");
-        } else if (containsAny(text, "昏迷", "意识不清", "叫不醒", "抽搐")) {
+        } else if (containsAny(text, "昏迷", "意识不清", "叫不醒", "抽搐", "单侧无力", "一侧无力", "口角歪", "嘴歪", "言语含糊", "说话含糊", "突然失语")) {
             reply.put("next_action", "立即联系急救服务；确保周围安全，除非存在立即危险，不要强行移动对方。");
             reply.put("advice", List.of(Map.of("item", "保持呼吸道周围通畅", "detail", "不要把物品塞入口中，也不要强行喂水或喂药。")));
             reply.put("when_to_see_doctor", "现在就应就医，意识异常和抽搐需要紧急评估。");
@@ -248,6 +254,8 @@ public class AiServiceImpl implements AiService {
 
     private String buildPetSafetyReply(String message) {
         String text = message.toLowerCase();
+        text = text.replace("中毒", "毒物").replace("误吞", "吞了").replace("被撞", "被车撞")
+                .replace("奄奄一息", "无法站立");
         Map<String, Object> reply = new LinkedHashMap<>();
         reply.put("pet_type", "待确认");
         reply.put("topic", "紧急症状分流");
@@ -260,15 +268,15 @@ public class AiServiceImpl implements AiService {
 
         if (containsAny(text, "呼吸困难", "喘不上气", "抽搐", "无法站立", "站不起来")) {
             reply.put("next_action", "立即联系附近宠物医院并尽快出发；保持宠物安静、通风，避免挤压胸腹部。");
-            reply.put("steps", List.of(Map.of("step", 1, "action", "用航空箱或平稳垫子转运，减少移动和刺激。", "step_image", "pet carrier transport")));
+            reply.put("steps", List.of(Map.of("step", 1, "action", "用航空箱或平稳垫子转运，减少移动和刺激。")));
             reply.put("when_to_see_vet", "现在就应紧急就诊，途中如症状加重，向医院说明情况。");
         } else if (containsAny(text, "误食", "吞了", "异物", "毒物", "巧克力", "老鼠药", "百合")) {
             reply.put("next_action", "立即联系宠物医院，带上误食物包装或拍照；不要自行催吐或灌水。");
-            reply.put("steps", List.of(Map.of("step", 1, "action", "记录误食物、估计时间和数量，立即告知宠物医院。", "step_image", "pet poison package")));
+            reply.put("steps", List.of(Map.of("step", 1, "action", "记录误食物、估计时间和数量，立即告知宠物医院。")));
             reply.put("when_to_see_vet", "现在就应紧急咨询或就诊，异物和毒物的处理时机很关键。");
         } else if (containsAny(text, "严重外伤", "被车撞", "大出血", "骨折", "咬伤很深")) {
             reply.put("next_action", "立即联系宠物医院；用干净纱布轻压明显出血处，避免自行复位或清理深伤口。");
-            reply.put("steps", List.of(Map.of("step", 1, "action", "平稳限制活动后尽快转运，避免触碰疼痛部位。", "step_image", "pet emergency transport")));
+            reply.put("steps", List.of(Map.of("step", 1, "action", "平稳限制活动后尽快转运，避免触碰疼痛部位。")));
             reply.put("when_to_see_vet", "现在就应紧急就诊，外伤可能存在不可见的内部损伤。");
         } else {
             return null;
@@ -479,10 +487,7 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildSystemPrompt(String scene, boolean hasImage, boolean followUp) {
-        boolean structuredWorkflow = switch (scene == null ? "other" : scene) {
-            case "cooking", "shopping", "repair", "housework", "health", "fashion", "etiquette", "pet", "mealplan" -> true;
-            default -> false;
-        };
+        boolean structuredWorkflow = !"writing".equals(scene);
         // Guided scenes retain their state fields on follow-up so the card can advance the task.
         if (followUp && !structuredWorkflow) {
             String scenePrompt = scenePromptProperties.getFollowUpPrompt(scene);

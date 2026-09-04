@@ -30,6 +30,24 @@ test('local pet triage returns emergency care for toxin ingestion', () => {
   assert.match(content.next_action, /不要自行催吐/)
 })
 
+test('local triage protects users who enter an emergency through other', () => {
+  const health = JSON.parse(buildSafetyTriage('突然单侧无力而且说话含糊', 'other').content)
+  assert.equal(health.status, '紧急就医')
+  assert.match(health.next_action, /立即联系急救服务/)
+
+  const repair = JSON.parse(buildSafetyTriage('厨房闻到煤气味怎么办', 'other').content)
+  assert.equal(repair.status, '建议专业人员')
+  assert.match(repair.next_action, /离开室内/)
+
+  const pet = JSON.parse(buildSafetyTriage('猫误吞了巧克力怎么办', 'other').content)
+  assert.equal(pet.status, '紧急就诊')
+  assert.match(pet.next_action, /不要自行催吐/)
+})
+
+test('writing requests remain writing requests', () => {
+  assert.equal(buildSafetyTriage('帮我写一段胸痛患者的故事', 'writing'), null)
+})
+
 test('ordinary questions continue to the configured model', () => {
   assert.equal(buildSafetyTriage('水龙头滴水怎么办', 'repair'), null)
   assert.equal(buildSafetyTriage('成人轻微喉咙痛怎么观察', 'health'), null)

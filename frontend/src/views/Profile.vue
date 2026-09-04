@@ -72,7 +72,7 @@
                 <el-input v-model="aiForm.speechModel" placeholder="语音模型，如 whisper-1 或 qwen3-asr-flash" clearable class="ai-input" />
                 <div class="ai-config-actions">
                   <el-input-number v-model="aiForm.contextRounds" :min="1" :max="20" size="small" />
-                  <span class="rounds-label">上下文轮数</span>
+                  <span class="rounds-label">保留最近 {{ aiForm.contextRounds }} 轮聊天记录</span>
                 </div>
               </div>
             </transition>

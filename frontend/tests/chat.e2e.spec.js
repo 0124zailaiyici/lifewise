@@ -140,3 +140,34 @@ test('AI direct configuration keeps optional speech settings collapsed by defaul
   await expect(speechModel).toBeVisible()
   await expect(page.getByText('默认使用手机系统语音识别，无需语音模型。填写后优先使用你的语音转写服务。')).toBeVisible()
 })
+
+test('structured content presents task flow and actionable details', async ({ page }) => {
+  await page.route('**/v1/chat/completions', async route => {
+    await route.fulfill({
+      contentType: 'text/event-stream; charset=utf-8',
+      body: streamResponse(JSON.stringify({
+        title: 'E2E 家务处理方案',
+        problem: '白衣服局部染色',
+        stage: '处理中',
+        status: '可自行处理',
+        next_action: '先在衣角测试清洁剂',
+        materials: [{ name: '中性洗衣液', amount: '10 ml' }],
+        choices: [{ label: '棉质衣物', message: '衣服是棉质的。' }],
+        need_professional: true,
+        followUps: ['处理后怎么预防再次染色？']
+      }))
+    })
+  })
+
+  await page.goto('/#/home')
+  await page.locator('.scene-card').filter({ hasText: '家务技巧' }).click()
+  await page.locator('textarea').fill('白衣服染色怎么办？')
+  await page.getByRole('button', { name: '发送消息' }).click()
+
+  const assistantCard = page.locator('article.assistant-card').last()
+  await expect(assistantCard).toContainText('处理中')
+  await expect(assistantCard).toContainText('先在衣角测试清洁剂')
+  await expect(assistantCard).toContainText('10 ml')
+  await expect(assistantCard).toContainText('专业处理建议')
+  await expect(assistantCard.getByRole('button', { name: '棉质衣物' })).toBeVisible()
+})

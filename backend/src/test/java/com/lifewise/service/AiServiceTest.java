@@ -82,4 +82,32 @@ class AiServiceTest {
         assertTrue(response.contains("不要自行催吐"));
         assertTrue(response.contains("宠物医院"));
     }
+
+    @Test
+    void shouldRecognizeEquivalentEmergencyWording() {
+        String healthResponse = aiService.chat("突然胸闷气短，还觉得呼吸不畅", "health", 1L, null, null);
+        assertTrue(healthResponse.contains("紧急就医"));
+        assertTrue(healthResponse.contains("立即联系急救服务"));
+
+        String petResponse = aiService.chat("猫误吞了巧克力怎么办", "pet", 1L, null, null);
+        assertTrue(petResponse.contains("紧急就诊"));
+        assertTrue(petResponse.contains("不要自行催吐"));
+
+        String repairResponse = aiService.chat("厨房闻到煤气味怎么办", "repair", 1L, null, null);
+        assertTrue(repairResponse.contains("燃气泄漏"));
+        assertTrue(repairResponse.contains("先撤离通风"));
+    }
+
+    @Test
+    void shouldProtectEmergencySignalsInOtherScenes() {
+        String healthResponse = aiService.chat("突然单侧无力而且说话含糊", "other", 1L, null, null);
+        assertTrue(healthResponse.contains("紧急就医"));
+        assertTrue(healthResponse.contains("立即联系急救服务"));
+
+        String repairResponse = aiService.chat("厨房闻到煤气味怎么办", "other", 1L, null, null);
+        assertTrue(repairResponse.contains("燃气泄漏"));
+
+        String petResponse = aiService.chat("猫误吞了巧克力怎么办", "other", 1L, null, null);
+        assertTrue(petResponse.contains("紧急就诊"));
+    }
 }

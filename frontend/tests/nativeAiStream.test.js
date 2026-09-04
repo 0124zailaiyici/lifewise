@@ -20,5 +20,5 @@ test('native completion resolves before it removes its own listener', () => {
 test('Android chat uses a complete response while browsers keep streaming', () => {
   assert.match(clientSource, /NativeAiStream\.request\(/)
   assert.match(clientSource, /requestNativeChatResponse\(chatUrl, cfg\.apiKey, \{ \.\.\.body, stream: false \}\)/)
-  assert.match(clientSource, /stream: true\n\s*}\n\s*if \(\[/)
+  assert.match(clientSource, /stream: true/)
 })

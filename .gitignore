@@ -87,3 +87,31 @@ start-local.ps1
 
 # H2 database
 backend/data/
+
+# ---------------------------------------------------------------------------
+# Repo hygiene (2026-10-15): keep build outputs, runtime data and local scratch
+# out of git. Every path below is regenerated or is private per-user data.
+# ---------------------------------------------------------------------------
+
+# Deploy build outputs: .github/workflows/deploy.yml downloads fresh artifacts
+# into deploy/ on every push, so committed copies only go stale.
+deploy/assets/
+deploy/frontend/
+deploy/index.html
+
+# Generated QC / contact-sheet images (regenerable, see docs/image-generation-notes.md)
+docs/generated-images/
+docs/food-image-*.jpg
+
+# Runtime data and user uploads (private per user)
+data/
+backend/uploads/
+
+# Local scratch / debug output
+_debug*.txt
+_debug_out.txt
+maven_output.txt
+gen_mood.js
+frontend/vite-*.txt
+frontend/dev-frontend.*
+start_backend.bat

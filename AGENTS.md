@@ -1,4 +1,4 @@
-﻿# LifeWise agent notes (compact)
+# LifeWise agent notes (compact)
 
 ## Mandatory: prevent Codex/AiMaMi 413
 - If error URL looks like `127.0.0.1:*/codex/router/v1/responses`, root cause is Codex/AiMaMi model-router payload too large, NOT LifeWise app Nginx upload.
@@ -6,6 +6,20 @@
 - Never run broad recursive reads/searches over whole repo unless excluding: `.git`, `.codex`, `node_modules`, `dist`, `target`, `uploads`, `data`, `*.log`, `*.jar`, `*.zip`, images, PDFs.
 - Before debugging anything after a 413, first shrink context: keep AGENTS.md compact, rely on `.codexignore`, read only exact source files needed.
 - This mistake has forced many session restarts. Treat context-size hygiene as a blocking rule.
+
+## Architecture reality (2026-10-15) — read before changing anything
+- Two forms coexist. **Local-first is the mainline** (Android APK): `frontend/src/local/` owns both the AI calls and the data (`localStorage`).
+- `frontend/src/api/index.js` is fully localised — it no longer calls the backend and imports no axios. `frontend/src/config.js` `API_BASE` is unused.
+- `backend/` (Spring Boot) only serves the legacy Web-deploy form. A local-mode bug is almost never a backend bug.
+- Web `npm run dev` proxies `/api` and `/uploads` to `:8080`, but that only matters for the legacy form.
+- Port 8080 is frequently taken by unrelated local servers — check `netstat -ano | findstr :8080` before blaming LifeWise.
+
+## Repo hygiene — never commit build outputs or runtime data
+- `.gitignore` ends with a "Repo hygiene" section; add new generated paths there instead of committing them.
+- Never commit: `deploy/assets/`, `deploy/frontend/`, `deploy/index.html`, `deploy/lifewise-backend.jar`, `docs/generated-images/`, `docs/food-image-*.jpg`, `data/`, `backend/uploads/`, `release/`, `*.log`, `*.zip`, `*.jar`.
+- CI (`.github/workflows/deploy.yml`) downloads fresh artifacts into `deploy/` on every push. Committed copies there are exactly what caused the historical "stale bundle / export menu not updated" bug.
+- Consequence of untracking the JAR: `deploy-latest.sh`'s `wget .../master/deploy/lifewise-backend.jar` fallback now 404s. The CI artifact path is unaffected.
+- `frontend/.env.production` is gitignored and local-only. It was once written with literal `\n` (no real newlines), making the whole file a comment; keep real line endings.
 
 ## Diagnose before fixing
 - If error page says `nginx`, check active Nginx config first (`nginx -T`), not just app code.
@@ -118,8 +132,9 @@
 - overflow-x:clip on .page-container can interfere with touch/click events on mobile for fixed children.
 - Desktop @media with overflow:hidden + order-radius on page-container creates hit-test issues for fixed tabs.
 - Rule: don't put overflow props on page-container when bottom tabs are fixed children inside it.
-- Favorites filter dropdown: position:absolute with left when parent uses justify-content:flex-end causes wrong popup position. Always use 
-ight when button is on the right side.## Auto-deploy watchdog (2026-06-12)
+- Favorites filter dropdown: position:absolute with left when parent uses justify-content:flex-end causes wrong popup position. Always use `right` when button is on the right side.
+
+## Auto-deploy watchdog (2026-06-12)
 - Server has systemd service lifewise-watchdog running /opt/lifewise/auto-deploy.sh
 - Polls GitHub API every 30s for new commits on master, auto-deploys frontend
 - To check: systemctl status lifewise-watchdog; tail -f /opt/lifewise/auto-deploy.log
@@ -138,3 +153,13 @@ ight when button is on the right side.## Auto-deploy watchdog (2026-06-12)
 - Chat.vue: dvh height, iOS momentum + overscroll on messages
 - All views with tabs updated: Home, History, Favorites, Profile, Dashboard, KB
 - Touch-friendly active states, safe-area padding unified
+
+## Repo cleanup -- 2026-10-15
+- Tracked repo went from **91.5 MB to ~2.9 MB**; working tree freed **~280 MB**.
+- Removed 101 root scratch files (logs, request dumps, one-off `.py`/`.js`, zips, jars) plus `backend/*.log`, `frontend/dist*.zip`, `release/gradle-build.log`, `FoodImageController.java.bak`.
+- Untracked (files kept on disk) via `git rm --cached`: `deploy/lifewise-backend.jar` (72.9 MB), `deploy/assets/`, `deploy/frontend/`, `deploy/index.html`, `docs/generated-images/`, `docs/food-image-*.jpg`, `data/lifewise.mv.db`, `backend/uploads/`.
+- Deleted tracked scratch: `_debug2.txt`, `_debug_out.txt`, `maven_output.txt`, `gen_mood.js`, `start`, `frontend/dev-frontend.err`, `frontend/vite-err.txt`, `frontend/vite-out.txt`.
+- Fixed `frontend/.env.production` (was one line of literal `\n`, so Vite saw only a comment).
+- Fixed a corrupted line in this file (broken newline + missing `r` in `right`).
+- Verification after cleanup: `npm run build` OK (861 ms); `mvn test` = **50 tests, 0 failures, BUILD SUCCESS**.
+- Note: `start.bat` / `stop.bat` / `check.bat` were deliberately kept (documented in `.codex/lessons.md`); `start_backend.bat` was removed as a one-off.

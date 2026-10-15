@@ -1,4 +1,4 @@
-﻿# LifeWise 🌿
+# LifeWise 🌿
 
 AI 生活常识助手 — 帮你解决做饭、买菜、修理、家务等日常问题。
 
@@ -14,21 +14,41 @@ LifeWise 是一个基于 AI 的日常生活助手应用，专为缺乏生活经�
 - 结构化 JSON Schema 驱动的 AI 输出解析
 - 完整的 JWT 认证 + 手机号注册登录
 
+## 🧭 两种运行形态（先看这里）
+
+仓库里同时存在两套形态，改代码前务必确认改的是哪一套：
+
+| | 本地优先（**当前主线**，Android APK） | 服务端（历史形态，Web 部署） |
+|---|---|---|
+| 入口 | `frontend/src/local/` | `backend/` + `frontend/src/api/index.js` |
+| 数据 | WebView / 浏览器 `localStorage` | MySQL / H2 + JPA |
+| AI | 用户在「我的」页自配 OpenAI 兼容接口 | 服务端持有 Key 调 Qwen |
+| 认证 | 本地校验 | JWT + 手机号 |
+| 产物 | `release/LifeWise-*.apk` | `deploy/` + nginx |
+
+`frontend/src/api/index.js` 已完全本地化，**不再请求后端**（文件内已无 axios 调用）；`backend/` 目前只服务于 Web 部署形态。
+
 ## 🚀 快速启动
 
-### 后端
-```bash
-cd backend
-mvn spring-boot:run
+### 构建 Android APK（当前主线）
+```bat
+build-apk.bat
 ```
+产物：`release/LifeWise-local-debug.apk`
 
-### 前端
+### Web 前端
 ```bash
 cd frontend
 npm run dev
 ```
-
 启动后访问 http://localhost:5173
+
+### 后端（仅 Web 部署形态需要）
+```bash
+cd backend
+mvn spring-boot:run
+```
+> ⚠️ 后端占用 8080；启动前先确认该端口没有被其他进程占用（`netstat -ano | findstr :8080`）。
 
 ### MySQL 模式
 ```bash
@@ -77,27 +97,49 @@ mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 
 ```
 LifeWise/
-├── backend/                  # Spring Boot 后端
-│   ├── src/main/java/
-│   │   └── com/lifewise/
-│   │       ├── config/       # JWT、CORS、异常处理
-│   │       ├── controller/   # REST API
-│   │       ├── dto/          # 数据传输对象
-│   │       ├── entity/       # JPA 实体
-│   │       ├── repository/   # 数据访问
-│   │       ├── service/      # 业务逻辑
-│   │       └── common/       # 公共类
-│   └── src/test/             # 单元测试
+├── backend/                  # Spring Boot 后端（Web 部署形态）
+│   ├── src/main/java/com/lifewise/
+│   │   ├── config/           # JWT、CORS、场景提示词配置、异常处理
+│   │   ├── controller/       # REST API
+│   │   ├── dto/              # 数据传输对象
+│   │   ├── entity/           # JPA 实体
+│   │   ├── repository/       # 数据访问
+│   │   └── service/          # 业务逻辑
+│   └── src/test/             # 单元测试（50 项）
 ├── frontend/                 # Vue 3 前端
-│   └── src/
-│       ├── views/            # 页面组件
-│       ├── api/              # API 封装
-│       ├── stores/           # Pinia 状态
-│       └── router/           # 路由配置
-└── docs/                     # 项目文档
+│   ├── src/
+│   │   ├── views/            # 页面组件（Chat.vue 为聊天主界面）
+│   │   ├── local/            # ★ 本地优先核心：AI 客户端 / 本地数据层 / 场景提示词
+│   │   ├── api/              # 已本地化，不再请求后端
+│   │   ├── stores/           # Pinia 状态
+│   │   └── router/           # 路由配置（hash 模式，兼容 Capacitor）
+│   ├── android/              # Capacitor 工程 + 原生插件（流式 AI / 语音）
+│   ├── tests/                # 单元 / 组件 / e2e 测试
+│   └── public/               # 静态资源（favicon、manifest）
+├── deploy/                   # 服务器部署脚本、nginx、systemd watchdog
+├── docs/                     # 项目文档（含交接文档与开发计划）
+├── uploads/                  # 预置菜品图片（部署包会带上）
+├── release/                  # APK 产物（不进 git）
+└── build-apk.bat             # 一键构建 APK
 ```
 
+## 🧹 仓库卫生
+
+构建产物、运行时数据和本机调试残留**一律不进 git**（详见 `.gitignore` 末尾的「Repo hygiene」段）：
+
+| 不进 git 的内容 | 原因 |
+|---|---|
+| `deploy/assets/`、`deploy/frontend/`、`deploy/index.html` | CI 每次 push 都会重新下载 artifact 覆盖，提交副本只会造成**过期 bundle** |
+| `deploy/lifewise-backend.jar` | CI 在 `backend` job 里重新打包（见 `deploy.yml`） |
+| `docs/generated-images/`、`docs/food-image-*.jpg` | 生图 QC 接触表，可重新生成 |
+| `data/`、`backend/uploads/` | 运行时数据库与**用户私有上传** |
+| `release/`、`*.apk`、`*.zip`、`*.jar`、`*.log` | 构建产物与日志 |
+
+> ⚠️ `deploy/lifewise-backend.jar` 已从 git 移除，因此 `deploy-latest.sh` 里 `wget .../master/deploy/lifewise-backend.jar` 这条**后备路径会 404**；主路径（下载 CI artifact）不受影响。
+
 ## 📊 API 概览
+
+> 下表**仅适用于服务端（Web 部署）形态**。本地优先的 APK 不经过这些接口。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -133,11 +175,23 @@ LifeWise/
 ## 🧪 测试
 
 ```bash
-cd backend
-mvn test
+# 后端单元测试（50 项）
+cd backend && mvn test
+
+# 前端单元 / 组件测试
+cd frontend && npm test
+
+# 浏览器端到端验收
+cd frontend && npm run test:e2e
+
+# 十场景真实模型验收（会消耗 API 额度）
+cd frontend && npm run test:ai
 ```
 
 ## 🔧 自定义配置
+
+> 本地优先形态下，AI 接口地址 / Key / 模型在 App 内「我的」页面配置，存于本地 `localStorage`，不读下面的服务端配置。
+> 下面这些配置项**仅对服务端（Web 部署）形态生效**。
 
 编辑 `backend/src/main/resources/application.yml`，或通过环境变量覆盖：
 - `ai.dashscope-api-key` / `AI_DASHSCOPE_KEY` — 千问 Qwen API Key（默认文本模型）

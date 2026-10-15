@@ -151,6 +151,6 @@
 - [x] 构建产物、运行时数据库与用户上传不再进 git（`deploy/` 下的前端包与 JAR 由 CI 每次 push 重新生成）
 - [x] `.gitignore` 与 `AGENTS.md` 同步维护「不进 git」路径清单
 - [x] 清理根目录 101 个调试残留（日志、请求 dump、一次性脚本、zip、jar）
-- [x] 跟踪体积 91.5 MB → 约 2.9 MB；工作区释放约 280 MB
+- [x] 跟踪体积 91.5 MB → 5.1 MB（减少 86.4 MB）；工作区释放约 280 MB
 - [x] 修复 `frontend/.env.production` 的字面量 `\n` 问题（整文件曾被 Vite 当注释）
 - [x] 清理时验证：`npm run build` 成功；`mvn test` 50 项全通过

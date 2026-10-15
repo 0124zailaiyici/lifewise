@@ -72,6 +72,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=mysql
 | **UI** | Element Plus | 组件库 |
 | **状态管理** | Pinia | 前端状态 |
 | **路由** | Vue Router | 前端路由 |
+| **移动端** | Capacitor 8 + 原生插件 | Android APK 打包、流式 AI、语音识别 |
 | **容器** | Docker | MySQL 容器化 |
 
 ## ✨ 功能特性

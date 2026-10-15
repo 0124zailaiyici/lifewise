@@ -155,7 +155,7 @@
 - Touch-friendly active states, safe-area padding unified
 
 ## Repo cleanup -- 2026-10-15
-- Tracked repo went from **91.5 MB to ~2.9 MB**; working tree freed **~280 MB**.
+- Tracked repo went from **91.5 MB to 5.1 MB** (saved 86.4 MB); working tree freed **~280 MB**.
 - Removed 101 root scratch files (logs, request dumps, one-off `.py`/`.js`, zips, jars) plus `backend/*.log`, `frontend/dist*.zip`, `release/gradle-build.log`, `FoodImageController.java.bak`.
 - Untracked (files kept on disk) via `git rm --cached`: `deploy/lifewise-backend.jar` (72.9 MB), `deploy/assets/`, `deploy/frontend/`, `deploy/index.html`, `docs/generated-images/`, `docs/food-image-*.jpg`, `data/lifewise.mv.db`, `backend/uploads/`.
 - Deleted tracked scratch: `_debug2.txt`, `_debug_out.txt`, `maven_output.txt`, `gen_mood.js`, `start`, `frontend/dev-frontend.err`, `frontend/vite-err.txt`, `frontend/vite-out.txt`.
